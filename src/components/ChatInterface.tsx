@@ -107,9 +107,10 @@ export function ChatInterface({ wikiContext }: Props) {
       }
     } catch (err: unknown) {
       if ((err as Error).name !== 'AbortError') {
+        const msg = (err as Error).message || 'Unknown error'
         setMessages((prev) => {
           const updated = [...prev]
-          updated[updated.length - 1] = { role: 'assistant', content: 'Error reaching TELA. Check your API connection.' }
+          updated[updated.length - 1] = { role: 'assistant', content: `[Error: ${msg}]` }
           return updated
         })
       }
