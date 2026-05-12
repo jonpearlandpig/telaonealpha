@@ -131,16 +131,10 @@ export function ContinuityPanel({ data, pearlItems, onCapturePearl, onRefreshPea
   const waitingOn = data?.waitingOn ?? []
 
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr 1fr',
-      gap: 1,
-      height: 'calc(100vh - 56px - 44px)',
-      background: 'rgba(234,224,210,0.04)',
-    }}>
+    <div className="continuity-grid">
 
       {/* Column 1: Conversion Acts */}
-      <div style={{ background: '#0D1B2A', padding: '28px 24px', overflowY: 'auto' }}>
+      <div className="continuity-col" style={{ background: '#0D1B2A', padding: '28px 24px', overflowY: 'auto' }}>
         <SectionLabel>What Is Real Right Now</SectionLabel>
 
         {syncing && acts.length === 0 ? (
@@ -184,7 +178,7 @@ export function ContinuityPanel({ data, pearlItems, onCapturePearl, onRefreshPea
       </div>
 
       {/* Column 2: Also In Motion + This Week */}
-      <div style={{ background: '#0D1B2A', padding: '28px 24px', overflowY: 'auto', borderLeft: '1px solid rgba(234,224,210,0.04)', borderRight: '1px solid rgba(234,224,210,0.04)' }}>
+      <div className="continuity-col" style={{ background: '#0D1B2A', padding: '28px 24px', overflowY: 'auto', borderLeft: '1px solid rgba(234,224,210,0.04)', borderRight: '1px solid rgba(234,224,210,0.04)' }}>
         <SectionLabel>Also In Motion</SectionLabel>
 
         {alsoInMotion.length === 0 ? (
@@ -233,7 +227,7 @@ export function ContinuityPanel({ data, pearlItems, onCapturePearl, onRefreshPea
       </div>
 
       {/* Column 3: Pearl Box */}
-      <div style={{ background: '#0D1B2A', padding: '28px 24px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div className="continuity-col" style={{ background: '#0D1B2A', padding: '28px 24px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <PearlBoxCapture
           items={pearlItems}
           onCapture={onCapturePearl}

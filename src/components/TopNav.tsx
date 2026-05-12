@@ -104,11 +104,11 @@ export function TopNav({ lastSynced, onSync, syncing, activeView, onViewChange }
         </div>
 
         {/* Right: clock + sync */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+        <div className="nav-right" style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <LiveClock />
 
           {lastSynced && (
-            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: 'rgba(234,224,210,0.25)' }}>
+            <span className="nav-sync-label" style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: 'rgba(234,224,210,0.25)' }}>
               Synced {formatSyncTime(lastSynced)}
             </span>
           )}

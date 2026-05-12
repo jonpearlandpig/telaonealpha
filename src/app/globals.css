@@ -92,3 +92,36 @@ body {
 .gold-left-border {
   border-left: 2px solid #C4973A;
 }
+
+/* Responsive continuity panel */
+.continuity-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1px;
+  height: calc(100vh - 56px - 44px);
+  background: rgba(234,224,210,0.04);
+}
+
+/* Mobile: single column, scrollable */
+@media (max-width: 767px) {
+  .continuity-grid {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: calc(100vh - 56px - 44px);
+  }
+
+  .continuity-col {
+    min-height: auto !important;
+    height: auto !important;
+    overflow-y: visible !important;
+  }
+
+  .nav-sync-label {
+    display: none !important;
+  }
+
+  .nav-right {
+    gap: 10px !important;
+  }
+}
+
