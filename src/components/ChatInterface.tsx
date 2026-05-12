@@ -67,6 +67,11 @@ export function ChatInterface({ wikiContext }: Props) {
         signal: abortRef.current.signal,
       })
 
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({ error: `HTTP ${res.status}` }))
+        throw new Error(errBody.error || `HTTP ${res.status}`)
+      }
+
       const reader = res.body?.getReader()
       const decoder = new TextDecoder()
       let accumulated = ''
@@ -86,6 +91,7 @@ export function ChatInterface({ wikiContext }: Props) {
           if (data === '[DONE]') break
           try {
             const parsed = JSON.parse(data)
+            if (parsed.error) throw new Error(parsed.error)
             if (parsed.text) {
               accumulated += parsed.text
               setMessages((prev) => {
@@ -94,8 +100,8 @@ export function ChatInterface({ wikiContext }: Props) {
                 return updated
               })
             }
-          } catch {
-            // skip malformed
+          } catch (parseErr) {
+            if ((parseErr as Error).message !== 'Unexpected token') throw parseErr
           }
         }
       }
