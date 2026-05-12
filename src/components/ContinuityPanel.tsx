@@ -71,14 +71,14 @@ function ConversionActCard({ act }: { act: SyncPayload['conversionActs'][0] }) {
         </p>
       )}
 
-      {expanded && act.detail && (
+      {expanded && (
         <div style={{
           marginTop: 10,
           paddingTop: 10,
           borderTop: '1px solid rgba(234,224,210,0.08)',
           paddingLeft: 18,
         }}>
-          <p style={{ fontSize: 12, color: 'rgba(234,224,210,0.5)', lineHeight: 1.6 }}>{act.detail}</p>
+          <p style={{ fontSize: 12, color: 'rgba(234,224,210,0.5)', lineHeight: 1.6 }}>{act.oneLineStatus}</p>
           <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
             {['Advance', 'Pause', 'Remove'].map((action) => (
               <button

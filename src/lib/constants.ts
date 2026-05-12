@@ -61,17 +61,20 @@ CURRENT OPERATIONAL CONTEXT:
 {WIKI_CONTEXT}
 `
 
+// Projects
 export const HHO_LIST = [
-  { id: 1, name: 'Tim Womble',      version: 'v2.1', status: 'active',   notionId: '' },
-  { id: 2, name: 'Juan Otero',      version: 'v1.4', status: 'active',   notionId: '' },
-  { id: 3, name: 'John Bowers',     version: 'v1.2', status: 'warm',     notionId: '' },
-  { id: 4, name: 'Michael Torres',  version: 'v1.0', status: 'pending',  notionId: '' },
-  { id: 5, name: 'David Kim',       version: 'v1.1', status: 'pending',  notionId: '' },
-  { id: 6, name: 'Robert Chen',     version: 'v2.0', status: 'warm',     notionId: '' },
-  { id: 7, name: 'James Wilson',    version: 'v1.3', status: 'pending',  notionId: '' },
-  { id: 8, name: 'Carlos Mendez',   version: 'v1.0', status: 'pending',  notionId: '' },
-  { id: 9, name: 'William Park',    version: 'v1.5', status: 'active',   notionId: '' },
-  { id: 10, name: 'Thomas Lee',     version: 'v1.2', status: 'pending',  notionId: '' },
-  { id: 11, name: 'Richard Adams',  version: 'v1.0', status: 'warm',     notionId: '' },
-  { id: 12, name: 'Joseph Martin',  version: 'v1.1', status: 'pending',  notionId: '' },
+  { id: 1,  name: 'Crusade: The Musical',          version: 'v1.1', status: 'active',  notionId: '3519289b-3079-81b0-8fba-e0d6e8233600', category: 'project' },
+  { id: 2,  name: 'One More Question',             version: 'v1.2', status: 'active',  notionId: '3579289b-3079-813a-9e7e-e24a3d5fe349', category: 'project' },
+  { id: 3,  name: 'The Family Rock Show',          version: 'v1.3', status: 'warm',    notionId: '3519289b-3079-813a-88db-edc1b3942c00', category: 'project' },
+  { id: 4,  name: 'Tour of Testimonies',           version: 'v1.0', status: 'warm',    notionId: '3519289b-3079-8181-93a0-ca32507f96a6', category: 'project' },
+  { id: 5,  name: 'Rodney / TFM / The Keepers',   version: 'v1.0', status: 'warm',    notionId: '3519289b-3079-81a8-a4f2-c1b0b0f83933', category: 'project' },
+  { id: 6,  name: 'TIA / Hizzy TI',               version: 'v1.0', status: 'paused',  notionId: '3519289b-3079-8140-ba7b-e0e51a3dd990', category: 'project' },
+  { id: 7,  name: 'TourText',                      version: 'v1.0', status: 'paused',  notionId: '3519289b-3079-8186-a2c3-d92290bf1bf1', category: 'project' },
+  // Relationships
+  { id: 8,  name: 'Juan Otero',                    version: 'v1.0', status: 'active',  notionId: '35d9289b-3079-81be-8271-c195e29626b3', category: 'relationship' },
+  { id: 9,  name: 'Caleb Cook',                    version: 'v1.0', status: 'paused',  notionId: '35d9289b-3079-81d5-8c36-d60ebabbd332', category: 'relationship' },
+  { id: 10, name: 'Ken & Susan / Alive Fest',      version: 'v1.0', status: 'warm',    notionId: '35d9289b-3079-8180-bbeb-cdbc440706cf', category: 'relationship' },
+  // Systems
+  { id: 11, name: 'Pig Pen Operator Registry',     version: 'v1.0', status: 'pending', notionId: '35c9289b-3079-8174-bc68-efa601eb6ef9', category: 'system' },
+  { id: 12, name: 'TELA One',                      version: 'v1.0', status: 'warm',    notionId: '35d9289b-3079-81f8-bb49-cde5b8d33740', category: 'system' },
 ]
