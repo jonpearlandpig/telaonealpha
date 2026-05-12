@@ -11,6 +11,96 @@ type Props = {
   wikiContext: string
 }
 
+type SaveState = 'idle' | 'saving' | 'saved' | 'error'
+
+type SaveResult = {
+  destination: string
+  provenanceId: string
+}
+
+function SaveToNotion({ content }: { content: string }) {
+  const [state, setState] = useState<SaveState>('idle')
+  const [result, setResult] = useState<SaveResult | null>(null)
+
+  async function handleSave() {
+    if (state !== 'idle') return
+    setState('saving')
+    try {
+      const res = await fetch('/api/update-pearl-box', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, sourceThread: 'Chat' }),
+      })
+      const data = await res.json() as { destination?: string; provenanceId?: string; error?: string }
+      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`)
+      setResult({ destination: data.destination ?? 'GENERAL', provenanceId: data.provenanceId ?? '' })
+      setState('saved')
+    } catch {
+      setState('error')
+      setTimeout(() => setState('idle'), 3000)
+    }
+  }
+
+  if (state === 'saved' && result) {
+    return (
+      <div style={{
+        marginTop: 8,
+        fontFamily: "'DM Mono', monospace",
+        fontSize: 10,
+        color: '#C4973A',
+        letterSpacing: '0.06em',
+      }}>
+        ⊞ {result.destination} [{result.provenanceId}]
+      </div>
+    )
+  }
+
+  return (
+    <button
+      onClick={handleSave}
+      disabled={state === 'saving'}
+      style={{
+        marginTop: 8,
+        background: 'none',
+        border: 'none',
+        cursor: state === 'saving' ? 'default' : 'pointer',
+        fontFamily: "'DM Mono', monospace",
+        fontSize: 10,
+        color: state === 'error' ? 'rgba(224,85,85,0.6)' : 'rgba(196,151,58,0.35)',
+        letterSpacing: '0.06em',
+        padding: 0,
+        display: 'block',
+        transition: 'color 0.15s',
+      }}
+      onMouseEnter={(e) => {
+        if (state === 'idle') (e.currentTarget as HTMLButtonElement).style.color = 'rgba(196,151,58,0.8)'
+      }}
+      onMouseLeave={(e) => {
+        if (state === 'idle') (e.currentTarget as HTMLButtonElement).style.color = 'rgba(196,151,58,0.35)'
+      }}
+    >
+      {state === 'saving' ? 'Saving…' : state === 'error' ? 'Save failed — retry' : 'Save →'}
+    </button>
+  )
+}
+
+const AKB_WRITE_PATTERN = /^(update pearl box|update akb|akb:|create |draft |write |explore |edit |summarize )/i
+
+async function tryAKBWrite(content: string): Promise<string> {
+  try {
+    const res = await fetch('/api/update-pearl-box', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content, sourceThread: 'Chat' }),
+    })
+    const data = await res.json() as { destination?: string; provenanceId?: string; title?: string; error?: string }
+    if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`)
+    return `[System: Pearl Box write confirmed — ${data.destination} → ${data.title} | ${data.provenanceId}]`
+  } catch (err) {
+    return `[System: Pearl Box write failed — ${String(err)}]`
+  }
+}
+
 export function ChatInterface({ wikiContext }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -36,10 +126,13 @@ export function ChatInterface({ wikiContext }: Props) {
       textareaRef.current.style.height = 'auto'
     }
 
-    const isPearlBox = input.trim().toLowerCase().startsWith('pearl box:')
+    const trimmed = input.trim()
+    const isPearlBox = trimmed.toLowerCase().startsWith('pearl box:')
+    const isAKBWrite = AKB_WRITE_PATTERN.test(trimmed)
 
+    // Legacy Pearl Box quick capture
     if (isPearlBox) {
-      const content = input.trim().slice('pearl box:'.length).trim()
+      const content = trimmed.slice('pearl box:'.length).trim()
       try {
         await fetch('/api/pearl-box', {
           method: 'POST',
@@ -47,8 +140,14 @@ export function ChatInterface({ wikiContext }: Props) {
           body: JSON.stringify({ content, source: 'Chat' }),
         })
       } catch {
-        // Silent — TELA will confirm in its response
+        // Silent — TELA will confirm
       }
+    }
+
+    // Governed AKB write — await before sending to chat so TELA knows the result
+    let akbNote = ''
+    if (isAKBWrite && !isPearlBox) {
+      akbNote = await tryAKBWrite(trimmed)
     }
 
     const assistantMsg: Message = { role: 'assistant', content: '' }
@@ -56,13 +155,18 @@ export function ChatInterface({ wikiContext }: Props) {
 
     abortRef.current = new AbortController()
 
+    // Augment wiki context with AKB write result so TELA can acknowledge accurately
+    const augmentedContext = akbNote
+      ? `${wikiContext}\n\n${akbNote}`
+      : wikiContext
+
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: nextMessages,
-          wikiContext,
+          wikiContext: augmentedContext,
         }),
         signal: abortRef.current.signal,
       })
@@ -199,6 +303,10 @@ export function ChatInterface({ wikiContext }: Props) {
                       }} />
                     )}
                   </p>
+                  {/* Save to Notion — only on completed messages */}
+                  {!(streaming && i === messages.length - 1) && msg.content && (
+                    <SaveToNotion content={msg.content} />
+                  )}
                 </div>
               )}
             </div>
