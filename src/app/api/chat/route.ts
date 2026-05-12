@@ -1,11 +1,11 @@
-import { anthropic, buildSystemPrompt, MODEL } from '@/lib/anthropic'
+import { getAnthropicClient, buildSystemPrompt, MODEL } from '@/lib/anthropic'
 
 export async function POST(req: Request) {
   try {
     const { messages, wikiContext } = await req.json()
     const systemPrompt = buildSystemPrompt(wikiContext || '')
 
-    const stream = await anthropic.messages.stream({
+    const stream = await getAnthropicClient().messages.stream({
       model: MODEL,
       max_tokens: 2048,
       system: systemPrompt,
