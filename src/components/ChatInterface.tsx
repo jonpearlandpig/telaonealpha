@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, KeyboardEvent } from 'react'
-import { extractArtifactFromAssistant } from '@/lib/artifacts/runtime'
+import { extractArtifactsFromAssistant } from '@/lib/artifacts/runtime'
 import { findArtifactById, upsertArtifact } from '@/lib/artifacts/artifactStore'
 import { extractEntities } from '@/lib/entities/entityEngine'
 import { upsertEntities } from '@/lib/entities/entityStore'
@@ -233,16 +233,18 @@ export function ChatInterface({ wikiContext }: Props) {
       }
 
       if (accumulated.trim()) {
-        const artifact = extractArtifactFromAssistant({
+        const artifacts = extractArtifactsFromAssistant({
           threadId: 'chat-main',
           sourcePrompt: trimmed,
           assistantText: accumulated,
           parentArtifactId: continueFromRef.current,
         })
-        upsertArtifact(artifact)
-        const entities = extractEntities(accumulated, artifact)
-        upsertEntities(entities)
-        continueFromRef.current = artifact.id
+        for (const artifact of artifacts) {
+          upsertArtifact(artifact)
+          const entities = extractEntities(accumulated, artifact)
+          upsertEntities(entities)
+        }
+        continueFromRef.current = artifacts[artifacts.length - 1]?.id
         window.dispatchEvent(new Event('tela-artifacts-updated'))
       }
     } catch (err: unknown) {
