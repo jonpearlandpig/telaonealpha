@@ -30,8 +30,7 @@ export function ArtifactCard({ artifact, onTogglePin, onContinue }: { artifact: 
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>{tabs.map((t) => <button key={t} onClick={() => setTab(t)} style={{ fontSize: 11, border: '1px solid rgba(196,151,58,0.32)', background: t === tab ? 'rgba(196,151,58,0.18)' : 'transparent', color: '#EAE0D2', borderRadius: 999, padding: '4px 10px' }}>{t}</button>)}</div>
         {tab === 'Preview' && <ArtifactRenderer artifact={artifact} />}
         {tab === 'Structure' && <pre style={{ color: '#EAE0D2', whiteSpace: 'pre-wrap' }}>{artifact.structure || 'No structure.'}</pre>}
-        {tab === 'Open' && <a href={downloadHref} target="_blank" rel="noreferrer" style={{ color: '#EAE0D2' }}>Open Artifact</a>}
-        {tab === 'View Source' && <pre style={{ color: '#C4973A', whiteSpace: 'pre-wrap' }}>{artifact.code || artifact.html || artifact.markdown || artifact.text || 'No source captured.'}</pre>}
+        {tab === 'Code' && <pre style={{ color: '#C4973A', whiteSpace: 'pre-wrap' }}>{artifact.code || 'Code hidden by default unless captured.'}</pre>}
         {tab === 'Download' && <a href={downloadHref} download={artifact.fileName || `${artifact.id}.txt`} style={{ color: '#EAE0D2' }}>Download Generated File</a>}
       </div>
     </div>}
