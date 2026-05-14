@@ -118,8 +118,11 @@ function conversationalPreview(text: string): string {
 
 function buildArtifactFirstMessage(raw: string, fileNames: string[]): string {
   const cleaned = stripFencedBlocks(raw)
-  const header = `Generated ${fileNames.length} artifact${fileNames.length > 1 ? 's' : ''}: ${fileNames.join(', ')}`
-  return cleaned ? `${header}\n\n${cleaned}` : `${header}\n\nPreview, open, download, or continue from the artifact runtime cards.`
+  const header = `Generated ${fileNames.length} runtime artifact${fileNames.length > 1 ? 's' : ''}: ${fileNames.join(', ')}`
+  const summary = cleaned.split(/\n+/).map((line) => line.trim()).filter(Boolean).slice(0, 2).join(' ')
+  return summary
+    ? `${header}\n\n${summary}`
+    : `${header}\n\nPreview, open, download, continue, or view source from the artifact cards.`
 }
 
 export function ChatInterface({ wikiContext }: Props) {
@@ -263,6 +266,12 @@ export function ChatInterface({ wikiContext }: Props) {
           upsertEntities(entities)
         }
         continueFromRef.current = artifacts[artifacts.length - 1]?.id
+        const artifactMessage = buildArtifactFirstMessage(accumulated, artifacts.map((artifact) => artifact.fileName || artifact.id))
+        setMessages((prev) => {
+          const updated = [...prev]
+          updated[updated.length - 1] = { role: 'assistant', content: artifactMessage }
+          return updated
+        })
         window.dispatchEvent(new Event('tela-artifacts-updated'))
       }
     } catch (err: unknown) {
