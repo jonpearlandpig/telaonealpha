@@ -1,13 +1,21 @@
 'use client'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ArtifactRecord } from '@/lib/artifacts/artifactStore'
 import { ArtifactRenderer } from './ArtifactRenderer'
 
-const tabs = ['Preview', 'Structure', 'Code', 'Download'] as const
+type ArtifactTab = 'Preview' | 'Structure' | 'Code' | 'Download' | 'Open' | 'Continue' | 'View Source'
+const tabs: ArtifactTab[] = ['Preview', 'Open', 'Structure', 'Code', 'View Source', 'Download', 'Continue']
 export function ArtifactCard({ artifact, onTogglePin, onContinue }: { artifact: ArtifactRecord; onTogglePin: (id: string) => void; onContinue: (id: string) => void }) {
   const [open, setOpen] = useState(false)
-  const [tab, setTab] = useState<(typeof tabs)[number]>('Preview')
+  const [tab, setTab] = useState<ArtifactTab>('Preview')
   const [startX, setStartX] = useState<number | null>(null)
+  const downloadHref = useMemo(() => {
+    if (artifact.previewUrl) return artifact.previewUrl
+    const materialized = artifact.html ?? artifact.markdown ?? artifact.code ?? artifact.text
+    if (!materialized) return '#'
+    const blob = new Blob([materialized], { type: artifact.mimeType || 'text/plain' })
+    return URL.createObjectURL(blob)
+  }, [artifact])
 
   return <>
     <button onClick={() => setOpen(true)} style={{ width: '100%', textAlign: 'left', background: 'rgba(8,19,33,0.75)', border: '1px solid rgba(234,224,210,0.08)', borderRadius: 12, padding: 12, color: '#EAE0D2' }}>
@@ -24,7 +32,10 @@ export function ArtifactCard({ artifact, onTogglePin, onContinue }: { artifact: 
         {tab === 'Preview' && <ArtifactRenderer artifact={artifact} />}
         {tab === 'Structure' && <pre style={{ color: '#EAE0D2', whiteSpace: 'pre-wrap' }}>{artifact.structure || 'No structure.'}</pre>}
         {tab === 'Code' && <pre style={{ color: '#C4973A', whiteSpace: 'pre-wrap' }}>{artifact.code || 'Code hidden by default unless captured.'}</pre>}
-        {tab === 'Download' && <a href={artifact.previewUrl || '#'} download style={{ color: '#EAE0D2' }}>Download Preview</a>}
+        {tab === 'Open' && <a href={downloadHref} target="_blank" rel="noreferrer" style={{ color: '#EAE0D2' }}>Open Artifact</a>}
+        {tab === 'Continue' && <button onClick={() => onContinue(artifact.id)} style={{ color: '#EAE0D2', background: 'none', border: '1px solid rgba(234,224,210,0.2)', borderRadius: 8, padding: '6px 10px' }}>Continue From Artifact</button>}
+        {tab === 'View Source' && <pre style={{ color: '#C4973A', whiteSpace: 'pre-wrap' }}>{artifact.code || artifact.html || artifact.markdown || artifact.text || 'No source captured.'}</pre>}
+        {tab === 'Download' && <a href={downloadHref} download={artifact.fileName || `${artifact.id}.txt`} style={{ color: '#EAE0D2' }}>Download Generated File</a>}
       </div>
     </div>}
   </>
