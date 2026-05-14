@@ -109,7 +109,7 @@ export async function updatePearlBox(input: UpdatePearlBoxInput): Promise<Update
       type: 'callout',
       callout: {
         rich_text: [{ text: { content: provenanceText } }],
-        icon: { emoji: '⊞' },
+        icon: { emoji: '🧠'},
         color: 'yellow_background',
       },
     },
