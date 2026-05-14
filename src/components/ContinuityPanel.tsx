@@ -1,9 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { StatusDot } from './StatusDot'
 import { PearlBoxCapture } from './PearlBoxCapture'
 import type { SyncPayload } from '@/lib/notion'
+import { ArtifactLibrary } from './artifacts/ArtifactLibrary'
+import { ContinuityMap } from './artifacts/ContinuityMap'
+import { EntityPanel } from './entities/EntityPanel'
+import { buildArtifactGraph } from '@/lib/artifacts/artifactGraph'
+import { loadArtifacts, togglePinArtifact, type ArtifactRecord } from '@/lib/artifacts/artifactStore'
+import { loadEntities } from '@/lib/entities/entityStore'
+import type { EntityRecord } from '@/lib/entities/entityEngine'
 
 type PearlItem = {
   id: string
@@ -125,10 +132,44 @@ function SectionLabel({ children }: { children: string }) {
 }
 
 export function ContinuityPanel({ data, pearlItems, onCapturePearl, onRefreshPearl, pearlLoading, syncing }: Props) {
-  const acts = data?.conversionActs ?? []
+  const acts = useMemo(() => data?.conversionActs ?? [], [data])
   const alsoInMotion = data?.alsoInMotion ?? []
   const thisWeek = data?.thisWeek?.length ? data.thisWeek : THIS_WEEK_PLACEHOLDER
   const waitingOn = data?.waitingOn ?? []
+
+  const [artifacts, setArtifacts] = useState<ArtifactRecord[]>(() => loadArtifacts())
+  const [entities, setEntities] = useState<EntityRecord[]>(() => loadEntities())
+  const [focusedEntityId, setFocusedEntityId] = useState<string | undefined>(undefined)
+
+
+  useEffect(() => {
+    const refresh = () => { setArtifacts(loadArtifacts()); setEntities(loadEntities()) }
+    window.addEventListener('tela-artifacts-updated', refresh)
+    window.addEventListener('storage', refresh)
+    return () => {
+      window.removeEventListener('tela-artifacts-updated', refresh)
+      window.removeEventListener('storage', refresh)
+    }
+  }, [])
+
+  const seededArtifacts = useMemo(() => {
+    if (artifacts.length > 0) return artifacts
+    return acts.slice(0, 4).map((act, idx) => ({
+      id: `seed-${idx}`,
+      title: `${act.name} continuity artifact`,
+      threadId: 'continuity',
+      sessionId: 'runtime-v1',
+      prompt: act.nextAction,
+      structure: `status: ${act.status}`,
+      entities: [act.name],
+      projects: ['telaone'],
+      lineageId: `lineage-${idx % 2}`,
+      createdAt: `2026-01-01T00:0${idx}:00.000Z`,
+      pinned: idx === 0,
+    }))
+  }, [acts, artifacts])
+
+  const graph = useMemo(() => buildArtifactGraph(seededArtifacts), [seededArtifacts])
 
   return (
     <div className="continuity-grid">
@@ -198,6 +239,18 @@ export function ContinuityPanel({ data, pearlItems, onCapturePearl, onRefreshPea
             ))}
           </div>
         )}
+
+
+        <div style={{ marginTop: 24 }}>
+          <SectionLabel>Cinematic Continuity Map · Operational Overlay</SectionLabel>
+          <ContinuityMap graph={graph} entities={entities} focusedEntityId={focusedEntityId} />
+        </div>
+
+        <div style={{ marginTop: 24 }}>
+          <SectionLabel>Artifact Library · Preview First</SectionLabel>
+          <ArtifactLibrary artifacts={seededArtifacts} onTogglePin={(id) => setArtifacts(togglePinArtifact(id))} onContinue={(id) => window.dispatchEvent(new CustomEvent('tela-artifact-continue', { detail: { artifactId: id } }))} />
+          <EntityPanel entities={entities} onFocus={setFocusedEntityId} />
+        </div>
 
         <SectionLabel>This Week</SectionLabel>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

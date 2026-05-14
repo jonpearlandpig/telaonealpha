@@ -1,0 +1,31 @@
+'use client'
+import { useState } from 'react'
+import type { ArtifactRecord } from '@/lib/artifacts/artifactStore'
+import { ArtifactRenderer } from './ArtifactRenderer'
+
+const tabs = ['Preview', 'Structure', 'Code', 'Download'] as const
+export function ArtifactCard({ artifact, onTogglePin, onContinue }: { artifact: ArtifactRecord; onTogglePin: (id: string) => void; onContinue: (id: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [tab, setTab] = useState<(typeof tabs)[number]>('Preview')
+  const [startX, setStartX] = useState<number | null>(null)
+
+  return <>
+    <button onClick={() => setOpen(true)} style={{ width: '100%', textAlign: 'left', background: 'linear-gradient(155deg, rgba(11,24,38,0.92), rgba(8,19,33,0.76))', border: '1px solid rgba(234,224,210,0.08)', borderRadius: 12, padding: 12, color: '#EAE0D2', boxShadow: '0 10px 24px rgba(0,0,0,0.2)' }}>
+      <div style={{ fontSize: 14 }}>{artifact.pinned ? '★ ' : ''}{artifact.title}</div>
+      <div style={{ fontSize: 10, color: 'rgba(234,224,210,0.6)' }}>{artifact.threadId} · {new Date(artifact.createdAt).toLocaleString()}</div>
+    </button>
+    {open && <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(3,8,16,0.76)', zIndex: 50, display: 'flex', alignItems: 'flex-end' }}>
+      <div onClick={(e) => e.stopPropagation()} onTouchStart={(e) => setStartX(e.touches[0].clientX)} onTouchEnd={(e) => { if (startX == null) return; const dx = e.changedTouches[0].clientX - startX; const idx = tabs.indexOf(tab); if (dx < -40 && idx < tabs.length - 1) setTab(tabs[idx + 1]); if (dx > 40 && idx > 0) setTab(tabs[idx - 1]); }} style={{ width: '100%', maxHeight: '88vh', background: '#0D1B2A', borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 14, boxShadow: '0 -12px 28px rgba(0,0,0,0.35)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+          <button onClick={() => onTogglePin(artifact.id)} style={{ color: '#C4973A', background: 'none', border: 0 }}>{artifact.pinned ? 'Unpin' : 'Pin'}</button>
+          <button onClick={() => onContinue(artifact.id)} style={{ color: '#EAE0D2', background: 'none', border: 0 }}>Continue</button>
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>{tabs.map((t) => <button key={t} onClick={() => setTab(t)} style={{ fontSize: 11, border: '1px solid rgba(196,151,58,0.32)', background: t === tab ? 'rgba(196,151,58,0.18)' : 'transparent', color: '#EAE0D2', borderRadius: 999, padding: '4px 10px' }}>{t}</button>)}</div>
+        {tab === 'Preview' && <ArtifactRenderer artifact={artifact} />}
+        {tab === 'Structure' && <pre style={{ color: '#EAE0D2', whiteSpace: 'pre-wrap' }}>{artifact.structure || 'No structure.'}</pre>}
+        {tab === 'Code' && <pre style={{ color: '#C4973A', whiteSpace: 'pre-wrap' }}>{artifact.code || 'Code hidden by default unless captured.'}</pre>}
+        {tab === 'Download' && <a href={artifact.previewUrl || '#'} download style={{ color: '#EAE0D2' }}>Download Preview</a>}
+      </div>
+    </div>}
+  </>
+}

@@ -1,5 +1,5 @@
 import { NOTION_PAGES } from './constants'
-import { buildProvenance, formatProvenanceBlock, type ProvenanceMetadata } from './provenance'
+import { buildProvenance, formatProvenanceBlock } from './provenance'
 
 const NOTION_VERSION = '2022-06-28'
 
@@ -104,6 +104,11 @@ export async function updatePearlBox(input: UpdatePearlBoxInput): Promise<Update
       paragraph: { rich_text: [{ text: { content: chunk } }] },
     })),
     { object: 'block', type: 'divider', divider: {} },
+    {
+      object: 'block',
+      type: 'paragraph',
+      paragraph: { rich_text: [{ text: { content: provenanceText.slice(0, 2000) } }] },
+    },
     {
   object: 'block',
   type: 'callout',
