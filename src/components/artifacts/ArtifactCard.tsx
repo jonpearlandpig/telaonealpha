@@ -32,9 +32,6 @@ export function ArtifactCard({ artifact, onTogglePin, onContinue }: { artifact: 
         {tab === 'Preview' && <ArtifactRenderer artifact={artifact} />}
         {tab === 'Structure' && <pre style={{ color: '#EAE0D2', whiteSpace: 'pre-wrap' }}>{artifact.structure || 'No structure.'}</pre>}
         {tab === 'Code' && <pre style={{ color: '#C4973A', whiteSpace: 'pre-wrap' }}>{artifact.code || 'Code hidden by default unless captured.'}</pre>}
-        {tab === 'Open' && <a href={downloadHref} target="_blank" rel="noreferrer" style={{ color: '#EAE0D2' }}>Open Artifact</a>}
-        {tab === 'Continue' && <button onClick={() => onContinue(artifact.id)} style={{ color: '#EAE0D2', background: 'none', border: '1px solid rgba(234,224,210,0.2)', borderRadius: 8, padding: '6px 10px' }}>Continue From Artifact</button>}
-        {tab === 'View Source' && <pre style={{ color: '#C4973A', whiteSpace: 'pre-wrap' }}>{artifact.code || artifact.html || artifact.markdown || artifact.text || 'No source captured.'}</pre>}
         {tab === 'Download' && <a href={downloadHref} download={artifact.fileName || `${artifact.id}.txt`} style={{ color: '#EAE0D2' }}>Download Generated File</a>}
       </div>
     </div>}
