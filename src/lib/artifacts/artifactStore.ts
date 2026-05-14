@@ -5,12 +5,17 @@ export type ArtifactRecord = {
   sessionId: string
   prompt?: string
   html?: string
+  markdown?: string
+  text?: string
+  fileName?: string
+  mimeType?: string
   previewUrl?: string
   code?: string
   structure?: string
   entities?: string[]
   projects?: string[]
   lineageId?: string
+  artifactGroupId?: string
   createdAt: string
   pinned?: boolean
 }

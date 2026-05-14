@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, KeyboardEvent } from 'react'
-import { extractArtifactFromAssistant } from '@/lib/artifacts/runtime'
+import { extractArtifactsFromAssistant } from '@/lib/artifacts/runtime'
 import { findArtifactById, upsertArtifact } from '@/lib/artifacts/artifactStore'
 import { extractEntities } from '@/lib/entities/entityEngine'
 import { upsertEntities } from '@/lib/entities/entityStore'
@@ -103,6 +103,16 @@ async function tryAKBWrite(content: string): Promise<string> {
   } catch (err) {
     return `[System: Pearl Box write failed — ${String(err)}]`
   }
+}
+
+function stripFencedBlocks(text: string): string {
+  return text.replace(/```[a-zA-Z0-9_-]*\n[\s\S]*?```/g, '').trim()
+}
+
+function buildArtifactFirstMessage(raw: string, fileNames: string[]): string {
+  const cleaned = stripFencedBlocks(raw)
+  const header = `Generated ${fileNames.length} artifact${fileNames.length > 1 ? 's' : ''}: ${fileNames.join(', ')}`
+  return cleaned ? `${header}\n\n${cleaned}` : `${header}\n\nPreview, open, download, or continue from the artifact runtime cards.`
 }
 
 export function ChatInterface({ wikiContext }: Props) {
@@ -220,9 +230,10 @@ export function ChatInterface({ wikiContext }: Props) {
             if (parsed.error) throw new Error(parsed.error)
             if (parsed.text) {
               accumulated += parsed.text
+              const streamingPreview = stripFencedBlocks(accumulated)
               setMessages((prev) => {
                 const updated = [...prev]
-                updated[updated.length - 1] = { role: 'assistant', content: accumulated }
+                updated[updated.length - 1] = { role: 'assistant', content: streamingPreview || 'Generating artifact…' }
                 return updated
               })
             }
@@ -233,16 +244,23 @@ export function ChatInterface({ wikiContext }: Props) {
       }
 
       if (accumulated.trim()) {
-        const artifact = extractArtifactFromAssistant({
+        const artifacts = extractArtifactsFromAssistant({
           threadId: 'chat-main',
           sourcePrompt: trimmed,
           assistantText: accumulated,
           parentArtifactId: continueFromRef.current,
         })
-        upsertArtifact(artifact)
-        const entities = extractEntities(accumulated, artifact)
-        upsertEntities(entities)
-        continueFromRef.current = artifact.id
+        for (const artifact of artifacts) {
+          upsertArtifact(artifact)
+          const entities = extractEntities(accumulated, artifact)
+          upsertEntities(entities)
+        }
+        setMessages((prev) => {
+          const updated = [...prev]
+          updated[updated.length - 1] = { role: 'assistant', content: buildArtifactFirstMessage(accumulated, artifacts.map((a) => a.fileName || `${a.id}.txt`)) }
+          return updated
+        })
+        continueFromRef.current = artifacts[artifacts.length - 1]?.id
         window.dispatchEvent(new Event('tela-artifacts-updated'))
       }
     } catch (err: unknown) {
