@@ -105,14 +105,24 @@ export async function updatePearlBox(input: UpdatePearlBoxInput): Promise<Update
     })),
     { object: 'block', type: 'divider', divider: {} },
     {
-      object: 'block',
-      type: 'callout',
-      callout: {
-        rich_text: [{ text: { content: provenanceText } }],
-        icon: { emoji: '🧠'},
-        color: 'yellow_background',
-      },
-    },
+  object: 'block',
+  type: 'callout',
+  callout: {
+    rich_text: [
+      {
+        type: 'text',
+        text: {
+          content: 'TELA Memory Entry'
+        }
+      }
+    ],
+    color: 'yellow_background'
+  },
+  icon: {
+    type: 'emoji',
+    emoji: '🧠'
+  }
+},
   ]
 
   await notionREST(`/blocks/${page.id}/children`, {
