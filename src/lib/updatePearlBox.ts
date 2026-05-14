@@ -121,6 +121,7 @@ export async function updatePearlBox(input: UpdatePearlBoxInput): Promise<Update
   icon: {
     type: 'emoji',
     emoji: '🧠'
+  }
   },
   ]
 
