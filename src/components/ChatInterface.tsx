@@ -1,6 +1,10 @@
 'use client'
 
 import { useState, useRef, useEffect, KeyboardEvent } from 'react'
+import { extractArtifactFromAssistant } from '@/lib/artifacts/runtime'
+import { findArtifactById, upsertArtifact } from '@/lib/artifacts/artifactStore'
+import { extractEntities } from '@/lib/entities/entityEngine'
+import { upsertEntities } from '@/lib/entities/entityStore'
 
 type Message = {
   role: 'user' | 'assistant'
@@ -108,10 +112,28 @@ export function ChatInterface({ wikiContext }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const continueFromRef = useRef<string | undefined>(undefined)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const custom = event as CustomEvent<{ artifactId: string }>
+      const id = custom.detail?.artifactId
+      if (!id) return
+      const artifact = findArtifactById(id)
+      if (!artifact) return
+      continueFromRef.current = artifact.id
+      setInput(`Continue from artifact: ${artifact.title}`)
+      textareaRef.current?.focus()
+    }
+    window.addEventListener('tela-artifact-continue', handler as EventListener)
+    return () => window.removeEventListener('tela-artifact-continue', handler as EventListener)
+  }, [])
+
 
   async function sendMessage() {
     if (!input.trim() || streaming) return
@@ -208,6 +230,20 @@ export function ChatInterface({ wikiContext }: Props) {
             if ((parseErr as Error).message !== 'Unexpected token') throw parseErr
           }
         }
+      }
+
+      if (accumulated.trim()) {
+        const artifact = extractArtifactFromAssistant({
+          threadId: 'chat-main',
+          sourcePrompt: trimmed,
+          assistantText: accumulated,
+          parentArtifactId: continueFromRef.current,
+        })
+        upsertArtifact(artifact)
+        const entities = extractEntities(accumulated, artifact)
+        upsertEntities(entities)
+        continueFromRef.current = artifact.id
+        window.dispatchEvent(new Event('tela-artifacts-updated'))
       }
     } catch (err: unknown) {
       if ((err as Error).name !== 'AbortError') {
