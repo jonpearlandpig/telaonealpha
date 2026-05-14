@@ -242,12 +242,12 @@ export function ContinuityPanel({ data, pearlItems, onCapturePearl, onRefreshPea
 
 
         <div style={{ marginTop: 24 }}>
-          <SectionLabel>Cinematic Continuity Map · Operational Overlay</SectionLabel>
+          <SectionLabel>Cinematic Continuity Map</SectionLabel>
           <ContinuityMap graph={graph} entities={entities} focusedEntityId={focusedEntityId} />
         </div>
 
         <div style={{ marginTop: 24 }}>
-          <SectionLabel>Artifact Library · Preview First</SectionLabel>
+          <SectionLabel>Artifact Library</SectionLabel>
           <ArtifactLibrary artifacts={seededArtifacts} onTogglePin={(id) => setArtifacts(togglePinArtifact(id))} onContinue={(id) => window.dispatchEvent(new CustomEvent('tela-artifact-continue', { detail: { artifactId: id } }))} />
           <EntityPanel entities={entities} onFocus={setFocusedEntityId} />
         </div>
