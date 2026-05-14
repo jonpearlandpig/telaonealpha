@@ -145,8 +145,12 @@ export default function Home() {
   }, [loadPearl])
 
   useEffect(() => {
-    doSync()
-    loadPearl()
+    const timer = setTimeout(() => {
+      void doSync()
+      void loadPearl()
+    }, 0)
+
+    return () => clearTimeout(timer)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
