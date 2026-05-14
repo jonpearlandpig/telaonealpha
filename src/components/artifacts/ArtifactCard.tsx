@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ArtifactRecord } from '@/lib/artifacts/artifactStore'
 import { ArtifactRenderer } from './ArtifactRenderer'
 
@@ -8,6 +8,13 @@ export function ArtifactCard({ artifact, onTogglePin, onContinue }: { artifact: 
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<(typeof tabs)[number]>('Preview')
   const [startX, setStartX] = useState<number | null>(null)
+  const downloadHref = useMemo(() => {
+    if (artifact.previewUrl) return artifact.previewUrl
+    const materialized = artifact.html ?? artifact.markdown ?? artifact.code ?? artifact.text
+    if (!materialized) return '#'
+    const blob = new Blob([materialized], { type: artifact.mimeType || 'text/plain' })
+    return URL.createObjectURL(blob)
+  }, [artifact])
 
   return <>
     <button onClick={() => setOpen(true)} style={{ width: '100%', textAlign: 'left', background: 'rgba(8,19,33,0.75)', border: '1px solid rgba(234,224,210,0.08)', borderRadius: 12, padding: 12, color: '#EAE0D2' }}>
@@ -24,7 +31,7 @@ export function ArtifactCard({ artifact, onTogglePin, onContinue }: { artifact: 
         {tab === 'Preview' && <ArtifactRenderer artifact={artifact} />}
         {tab === 'Structure' && <pre style={{ color: '#EAE0D2', whiteSpace: 'pre-wrap' }}>{artifact.structure || 'No structure.'}</pre>}
         {tab === 'Code' && <pre style={{ color: '#C4973A', whiteSpace: 'pre-wrap' }}>{artifact.code || 'Code hidden by default unless captured.'}</pre>}
-        {tab === 'Download' && <a href={artifact.previewUrl || '#'} download style={{ color: '#EAE0D2' }}>Download Preview</a>}
+        {tab === 'Download' && <a href={downloadHref} download={artifact.fileName || `${artifact.id}.txt`} style={{ color: '#EAE0D2' }}>Download Generated File</a>}
       </div>
     </div>}
   </>
