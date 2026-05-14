@@ -262,12 +262,6 @@ export function ChatInterface({ wikiContext }: Props) {
           const entities = extractEntities(accumulated, artifact)
           upsertEntities(entities)
         }
-        const conversationalText = stripFencedBlocks(accumulated)
-        setMessages((prev) => {
-          const updated = [...prev]
-          updated[updated.length - 1] = { role: 'assistant', content: buildArtifactFirstMessage(conversationalText, artifacts.map((a) => a.fileName || `${a.id}.txt`)) }
-          return updated
-        })
         continueFromRef.current = artifacts[artifacts.length - 1]?.id
         window.dispatchEvent(new Event('tela-artifacts-updated'))
       }
