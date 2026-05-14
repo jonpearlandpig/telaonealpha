@@ -105,6 +105,23 @@ async function tryAKBWrite(content: string): Promise<string> {
   }
 }
 
+function stripFencedBlocks(text: string): string {
+  return text.replace(/```[a-zA-Z0-9_-]*\n[\s\S]*?```/g, '').trim()
+}
+
+function conversationalPreview(text: string): string {
+  const withoutComplete = stripFencedBlocks(text)
+  const danglingFence = withoutComplete.lastIndexOf('```')
+  if (danglingFence === -1) return withoutComplete
+  return withoutComplete.slice(0, danglingFence).trim()
+}
+
+function buildArtifactFirstMessage(raw: string, fileNames: string[]): string {
+  const cleaned = stripFencedBlocks(raw)
+  const header = `Generated ${fileNames.length} artifact${fileNames.length > 1 ? 's' : ''}: ${fileNames.join(', ')}`
+  return cleaned ? `${header}\n\n${cleaned}` : `${header}\n\nPreview, open, download, or continue from the artifact runtime cards.`
+}
+
 export function ChatInterface({ wikiContext }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -220,9 +237,10 @@ export function ChatInterface({ wikiContext }: Props) {
             if (parsed.error) throw new Error(parsed.error)
             if (parsed.text) {
               accumulated += parsed.text
+              const streamingPreview = conversationalPreview(accumulated)
               setMessages((prev) => {
                 const updated = [...prev]
-                updated[updated.length - 1] = { role: 'assistant', content: accumulated }
+                updated[updated.length - 1] = { role: 'assistant', content: streamingPreview || 'Generating artifact…' }
                 return updated
               })
             }

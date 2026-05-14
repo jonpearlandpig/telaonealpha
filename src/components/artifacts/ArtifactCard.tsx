@@ -3,10 +3,11 @@ import { useMemo, useState } from 'react'
 import type { ArtifactRecord } from '@/lib/artifacts/artifactStore'
 import { ArtifactRenderer } from './ArtifactRenderer'
 
-const tabs = ['Preview', 'Structure', 'Code', 'Download'] as const
+type ArtifactTab = 'Preview' | 'Structure' | 'Code' | 'Download' | 'Open' | 'Continue' | 'View Source'
+const tabs: ArtifactTab[] = ['Preview', 'Open', 'Structure', 'Code', 'View Source', 'Download', 'Continue']
 export function ArtifactCard({ artifact, onTogglePin, onContinue }: { artifact: ArtifactRecord; onTogglePin: (id: string) => void; onContinue: (id: string) => void }) {
   const [open, setOpen] = useState(false)
-  const [tab, setTab] = useState<(typeof tabs)[number]>('Preview')
+  const [tab, setTab] = useState<ArtifactTab>('Preview')
   const [startX, setStartX] = useState<number | null>(null)
   const downloadHref = useMemo(() => {
     if (artifact.previewUrl) return artifact.previewUrl
