@@ -26,6 +26,10 @@ export function upsertEntities(incoming: EntityRecord[]): EntityRecord[] {
       linkedThreads: Array.from(new Set([...prev.linkedThreads, ...entity.linkedThreads])),
       operationalContexts: Array.from(new Set([...prev.operationalContexts, ...entity.operationalContexts])),
       continuityCount: prev.continuityCount + 1,
+      unresolvedLinks: prev.unresolvedLinks + entity.unresolvedLinks,
+      relatedArtifacts: Array.from(new Set([...(prev.relatedArtifacts ?? []), ...(entity.relatedArtifacts ?? [])])),
+      relatedThreads: Array.from(new Set([...(prev.relatedThreads ?? []), ...(entity.relatedThreads ?? [])])),
+      temporalClusters: Array.from(new Set([...(prev.temporalClusters ?? []), ...(entity.temporalClusters ?? [])])),
     })
   }
   const next = Array.from(map.values()).sort((a,b)=>b.continuityCount-a.continuityCount)

@@ -12,6 +12,10 @@ export type EntityRecord = {
   linkedThreads: string[]
   operationalContexts: string[]
   continuityCount: number
+  unresolvedLinks: number
+  relatedArtifacts: string[]
+  relatedThreads: string[]
+  temporalClusters: string[]
 }
 
 const PATTERNS: Array<{ type: EntityType; regex: RegExp }> = [
@@ -45,6 +49,10 @@ export function extractEntities(text: string, artifact: ArtifactRecord): EntityR
         linkedThreads: [artifact.threadId],
         operationalContexts: [artifact.sessionId],
         continuityCount: 1,
+        unresolvedLinks: /todo|unresolved|follow-up|pending|waiting/i.test(text) ? 1 : 0,
+        relatedArtifacts: [artifact.id],
+        relatedThreads: [artifact.threadId],
+        temporalClusters: [now.slice(0, 10)],
       })
     }
   }
