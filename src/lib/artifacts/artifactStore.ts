@@ -18,6 +18,7 @@ export type ArtifactRecord = {
   artifactGroupId?: string
   createdAt: string
   pinned?: boolean
+  classification?: 'runtime_artifact' | 'assistant_message'
 }
 
 const STORAGE_KEY = 'telaone_artifacts_v1'

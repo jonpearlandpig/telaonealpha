@@ -2,13 +2,17 @@
 
 import { useState, useRef, useEffect, KeyboardEvent } from 'react'
 import { extractArtifactsFromAssistant } from '@/lib/artifacts/runtime'
-import { findArtifactById, upsertArtifact } from '@/lib/artifacts/artifactStore'
+import { findArtifactById, loadArtifacts, upsertArtifact, type ArtifactRecord } from '@/lib/artifacts/artifactStore'
 import { extractEntities } from '@/lib/entities/entityEngine'
-import { upsertEntities } from '@/lib/entities/entityStore'
+import { loadEntities, upsertEntities } from '@/lib/entities/entityStore'
+import { ArtifactRenderer } from './artifacts/ArtifactRenderer'
+import { retrieveOperationalContinuity } from '@/lib/runtime/continuityRetrieval'
+import { restoreContinuitySnapshot } from '@/lib/runtime/continuitySnapshots'
 
 type Message = {
   role: 'user' | 'assistant'
   content: string
+  artifactIds?: string[]
 }
 
 type Props = {
@@ -106,30 +110,55 @@ async function tryAKBWrite(content: string): Promise<string> {
 }
 
 function stripFencedBlocks(text: string): string {
-  return text.replace(/```[a-zA-Z0-9_-]*\n[\s\S]*?```/g, '').trim()
+  return text
+    .replace(/```[a-zA-Z0-9_-]*\n[\s\S]*?```/g, '')
+    .replace(/```[\s\S]*$/g, '')
+    .trim()
 }
 
 function conversationalPreview(text: string): string {
   const withoutComplete = stripFencedBlocks(text)
-  const danglingFence = withoutComplete.lastIndexOf('```')
-  if (danglingFence === -1) return withoutComplete
-  return withoutComplete.slice(0, danglingFence).trim()
+  return withoutComplete
+    .replace(/\b(html|md|json|tsx|jsx|yaml|txt)\s*$/gim, '')
+    .trim()
 }
 
-function buildArtifactFirstMessage(raw: string, fileNames: string[]): string {
-  const cleaned = stripFencedBlocks(raw)
-  const header = `Generated ${fileNames.length} artifact${fileNames.length > 1 ? 's' : ''}: ${fileNames.join(', ')}`
-  return cleaned ? `${header}\n\n${cleaned}` : `${header}\n\nPreview, open, download, or continue from the artifact runtime cards.`
+function buildArtifactFirstMessage(fileNames: string[]): string {
+  if (fileNames.length <= 1) {
+    return `Generated 1 runtime artifact:\n${fileNames[0] || 'artifact'}`
+  }
+  return `Generated ${fileNames.length} runtime artifacts:\n${fileNames.map((name) => `- ${name}`).join('\n')}`
 }
 
 export function ChatInterface({ wikiContext }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
+  const [messageArtifacts, setMessageArtifacts] = useState<Record<number, ArtifactRecord[]>>({})
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const abortRef = useRef<AbortController | null>(null)
   const continueFromRef = useRef<string | undefined>(undefined)
+
+  type ContinuePayload = { artifactId: string }
+
+  const onContinueFromArtifact = ({ artifactId }: ContinuePayload) => {
+    const artifact = findArtifactById(artifactId)
+    if (!artifact) return
+    const continuity = retrieveOperationalContinuity({
+      prompt: `continue ${artifact.title}`,
+      currentThreadId: artifact.threadId,
+      currentLineageId: artifact.lineageId,
+      currentEntityIds: artifact.entities,
+      artifacts: loadArtifacts(),
+      entities: loadEntities(),
+    })
+    const restored = restoreContinuitySnapshot()
+    const contextLine = `Context: ${continuity.relatedEntities.slice(0, 3).map((e) => e.name).join(', ')} | unresolved ${continuity.unresolvedContinuity.length} | snapshot ${restored?.id ?? 'none'}`
+    continueFromRef.current = artifact.id
+    setInput(`Continue from artifact: ${artifact.title}\n${contextLine}`)
+    textareaRef.current?.focus()
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -141,11 +170,7 @@ export function ChatInterface({ wikiContext }: Props) {
       const custom = event as CustomEvent<{ artifactId: string }>
       const id = custom.detail?.artifactId
       if (!id) return
-      const artifact = findArtifactById(id)
-      if (!artifact) return
-      continueFromRef.current = artifact.id
-      setInput(`Continue from artifact: ${artifact.title}`)
-      textareaRef.current?.focus()
+      onContinueFromArtifact({ artifactId: id })
     }
     window.addEventListener('tela-artifact-continue', handler as EventListener)
     return () => window.removeEventListener('tela-artifact-continue', handler as EventListener)
@@ -257,12 +282,27 @@ export function ChatInterface({ wikiContext }: Props) {
           assistantText: accumulated,
           parentArtifactId: continueFromRef.current,
         })
+        if (artifacts.length === 0) {
+          setMessages((prev) => {
+            const updated = [...prev]
+            updated[updated.length - 1] = { role: 'assistant', content: conversationalPreview(accumulated) || accumulated.trim() }
+            return updated
+          })
+          return
+        }
         for (const artifact of artifacts) {
           upsertArtifact(artifact)
           const entities = extractEntities(accumulated, artifact)
           upsertEntities(entities)
         }
         continueFromRef.current = artifacts[artifacts.length - 1]?.id
+        const artifactMessage = buildArtifactFirstMessage(artifacts.map((artifact) => artifact.fileName || artifact.id))
+        setMessages((prev) => {
+          const updated = [...prev]
+          updated[updated.length - 1] = { role: 'assistant', content: artifactMessage, artifactIds: artifacts.map((artifact) => artifact.id) }
+          return updated
+        })
+        setMessageArtifacts((prev) => ({ ...prev, [nextMessages.length]: artifacts }))
         window.dispatchEvent(new Event('tela-artifacts-updated'))
       }
     } catch (err: unknown) {
@@ -340,7 +380,7 @@ export function ChatInterface({ wikiContext }: Props) {
                 }}>
                   <p style={{
                     fontSize: 14,
-                    color: '#EAE0D2',
+                    color: msg.artifactIds?.length ? 'rgba(234,224,210,0.82)' : '#EAE0D2',
                     fontFamily: "'DM Sans', sans-serif",
                     fontWeight: 300,
                     lineHeight: 1.7,
@@ -362,6 +402,25 @@ export function ChatInterface({ wikiContext }: Props) {
                   {/* Save to Notion — only on completed messages */}
                   {!(streaming && i === messages.length - 1) && msg.content && (
                     <SaveToNotion content={msg.content} />
+                  )}
+                  {msg.artifactIds && msg.artifactIds.length > 0 && (
+                    <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {(messageArtifacts[i] || []).map((artifact) => (
+                        <div key={artifact.id} style={{ border: '1px solid rgba(196,151,58,0.35)', borderRadius: 14, padding: 12, background: 'rgba(8,19,33,0.9)' }}>
+                          <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 8 }}>{artifact.fileName}</div>
+                          <ArtifactRenderer artifact={artifact} mode={artifact.mimeType === 'text/html' ? 'open' : 'preview'} />
+                          <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            <button onClick={() => onContinueFromArtifact({ artifactId: artifact.id })} style={{ border: '1px solid rgba(196,151,58,0.4)', background: 'rgba(196,151,58,0.1)', color: '#EAE0D2', borderRadius: 999, padding: '8px 12px' }}>Continue</button>
+                            <a href={URL.createObjectURL(new Blob([artifact.html ?? artifact.markdown ?? artifact.code ?? artifact.text ?? ''], { type: artifact.mimeType || 'text/plain' }))} download={artifact.fileName || `${artifact.id}.txt`} style={{ border: '1px solid rgba(234,224,210,0.24)', color: '#EAE0D2', borderRadius: 999, padding: '8px 12px', textDecoration: 'none' }}>Download</a>
+                            <button onClick={() => window.dispatchEvent(new CustomEvent('tela-artifact-continue', { detail: { artifactId: artifact.id } }))} style={{ border: '1px solid rgba(234,224,210,0.24)', background: 'transparent', color: '#EAE0D2', borderRadius: 999, padding: '8px 12px' }}>Open</button>
+                            <details>
+                              <summary style={{ cursor: 'pointer', color: '#C4973A' }}>View Source</summary>
+                              <ArtifactRenderer artifact={artifact} mode='source' />
+                            </details>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               )}
