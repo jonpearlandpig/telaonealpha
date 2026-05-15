@@ -62,47 +62,6 @@ function inferFormat(lang?: string, content?: string): ArtifactFormat {
   return 'txt'
 }
 
-function stripOuterFences(input: string): string {
-  return input
-    .replace(/^\s*```(?:html|tsx|jsx|react|md|markdown|json|yaml|yml|txt|text)?\s*\n/i, '')
-    .replace(/\n```\s*$/i, '')
-    .trim()
-}
-
-function extractHtmlPayload(input: string): string {
-  const text = stripOuterFences(input)
-  const doctypeIdx = text.search(/<!doctype html>/i)
-  const htmlIdx = text.search(/<html[\s>]/i)
-  const start = doctypeIdx >= 0 ? doctypeIdx : htmlIdx
-  if (start < 0) return text
-  const sliced = text.slice(start)
-  const endHtml = sliced.match(/<\/html>/i)
-  if (!endHtml || endHtml.index == null) return sliced.trim()
-  return sliced.slice(0, endHtml.index + endHtml[0].length).trim()
-}
-
-function extractCodePayload(input: string): string {
-  const text = stripOuterFences(input)
-  const firstFence = text.indexOf('```')
-  return firstFence >= 0 ? text.slice(0, firstFence).trim() : text
-}
-
-function sanitizePayload(format: ArtifactFormat, payload: string): string {
-  if (!payload) return payload
-  if (format === 'html') return extractHtmlPayload(payload)
-  if (format === 'tsx' || format === 'jsx' || format === 'txt' || format === 'yaml') return extractCodePayload(payload)
-  if (format === 'json') {
-    const text = stripOuterFences(payload)
-    const start = text.search(/[\[{]/)
-    const endObj = text.lastIndexOf('}')
-    const endArr = text.lastIndexOf(']')
-    const end = Math.max(endObj, endArr)
-    if (start >= 0 && end > start) return text.slice(start, end + 1).trim()
-    return text
-  }
-  return stripOuterFences(payload)
-}
-
 function defaultName(format: ArtifactFormat, prompt: string, index: number): string {
   const root = slugify(prompt.split(/[.\n]/)[0] || 'artifact')
   if (format === 'html') return 'landing-page'
@@ -113,7 +72,6 @@ function defaultName(format: ArtifactFormat, prompt: string, index: number): str
 }
 
 function materializeArtifact(ctx: ArtifactInputContext, format: ArtifactFormat, payload: string, createdAt: string, groupId: string, index: number): ArtifactRecord {
-  const cleanPayload = sanitizePayload(format, payload)
   const meta = FORMAT_META[format]
   const lineageId = ctx.parentArtifactId ?? `${ctx.threadId}-root`
   const fileName = `${defaultName(format, ctx.sourcePrompt, index)}.${meta.extension}`
@@ -126,10 +84,10 @@ function materializeArtifact(ctx: ArtifactInputContext, format: ArtifactFormat, 
     sessionId: format,
     prompt: ctx.sourcePrompt,
     structure: `format=${format}; parent=${ctx.parentArtifactId ?? 'none'}; group=${groupId}; file=${fileName}`,
-    code: format === 'tsx' || format === 'jsx' || format === 'txt' || format === 'yaml' ? cleanPayload : undefined,
-    html: format === 'html' ? cleanPayload : undefined,
-    markdown: format === 'markdown' ? cleanPayload : undefined,
-    text: format === 'json' ? cleanPayload : format === 'txt' ? cleanPayload : undefined,
+    code: format === 'tsx' || format === 'jsx' || format === 'txt' || format === 'yaml' ? payload : undefined,
+    html: format === 'html' ? payload : undefined,
+    markdown: format === 'markdown' ? payload : undefined,
+    text: format === 'json' ? payload : format === 'txt' ? payload : undefined,
     mimeType: meta.mimeType,
     fileName,
     entities: [],
