@@ -3,8 +3,8 @@ import { useMemo, useState } from 'react'
 import type { ArtifactRecord } from '@/lib/artifacts/artifactStore'
 import { ArtifactRenderer } from './ArtifactRenderer'
 
-type ArtifactTab = 'Preview' | 'Open' | 'Continue' | 'Download' | 'View Source'
-const tabs: ArtifactTab[] = ['Preview', 'Open', 'Continue', 'Download', 'View Source']
+type ArtifactTab = 'Preview' | 'Open' | 'Structure' | 'Code' | 'View Source' | 'Download' | 'Continue'
+const tabs: ArtifactTab[] = ['Preview', 'Open', 'Structure', 'Code', 'View Source', 'Download', 'Continue']
 
 export function ArtifactCard({ artifact, onTogglePin, onContinue }: { artifact: ArtifactRecord; onTogglePin: (id: string) => void; onContinue: (id: string) => void }) {
   const [open, setOpen] = useState(false)
@@ -22,7 +22,7 @@ export function ArtifactCard({ artifact, onTogglePin, onContinue }: { artifact: 
   return <>
     <button onClick={() => setOpen(true)} style={{ width: '100%', textAlign: 'left', background: 'rgba(8,19,33,0.75)', border: '1px solid rgba(234,224,210,0.08)', borderRadius: 14, padding: 14, color: '#EAE0D2' }}>
       <div style={{ fontSize: 15, fontWeight: 500 }}>{artifact.pinned ? '★ ' : ''}{artifact.fileName || artifact.title}</div>
-      <div style={{ fontSize: 12, color: 'rgba(234,224,210,0.7)' }}>{new Date(artifact.createdAt).toLocaleString()}</div>
+      <div style={{ fontSize: 11, color: 'rgba(234,224,210,0.6)' }}>{artifact.mimeType} · {new Date(artifact.createdAt).toLocaleString()}</div>
     </button>
     {open && <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(3,8,16,0.76)', zIndex: 50, display: 'flex', alignItems: 'flex-end' }}>
       <div onClick={(e) => e.stopPropagation()} onTouchStart={(e) => setStartX(e.touches[0].clientX)} onTouchEnd={(e) => { if (startX == null) return; const dx = e.changedTouches[0].clientX - startX; const idx = tabs.indexOf(tab); if (dx < -40 && idx < tabs.length - 1) setTab(tabs[idx + 1]); if (dx > 40 && idx > 0) setTab(tabs[idx - 1]); }} style={{ width: '100%', maxHeight: '88vh', background: '#0D1B2A', borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 14 }}>
@@ -33,6 +33,8 @@ export function ArtifactCard({ artifact, onTogglePin, onContinue }: { artifact: 
         <div style={{ display: 'flex', gap: 8, marginBottom: 10, overflowX: 'auto' }}>{tabs.map((t) => <button key={t} onClick={() => setTab(t)} style={{ fontSize: 11, border: '1px solid rgba(196,151,58,0.32)', background: t === tab ? 'rgba(196,151,58,0.18)' : 'transparent', color: '#EAE0D2', borderRadius: 999, padding: '6px 12px', whiteSpace: 'nowrap' }}>{t}</button>)}</div>
         {tab === 'Preview' && <ArtifactRenderer artifact={artifact} mode='preview' />}
         {tab === 'Open' && <ArtifactRenderer artifact={artifact} mode='open' />}
+        {tab === 'Structure' && <pre style={{ color: '#EAE0D2', whiteSpace: 'pre-wrap' }}>{artifact.structure || 'No structure.'}</pre>}
+        {tab === 'Code' && <ArtifactRenderer artifact={artifact} mode='source' />}
         {tab === 'View Source' && <ArtifactRenderer artifact={artifact} mode='source' />}
         {tab === 'Download' && <a href={downloadHref} download={artifact.fileName || `${artifact.id}.txt`} style={{ color: '#EAE0D2' }}>Download Generated File</a>}
         {tab === 'Continue' && <button onClick={() => onContinue(artifact.id)} style={{ border: '1px solid rgba(196,151,58,0.5)', background: 'rgba(196,151,58,0.1)', color: '#EAE0D2', borderRadius: 10, padding: '10px 14px' }}>Continue from this artifact lineage</button>}

@@ -123,34 +123,13 @@ function conversationalPreview(text: string): string {
     .trim()
 }
 
-function buildArtifactFirstMessage(fileNames: string[]): string {
-  if (fileNames.length <= 1) {
-    return `Generated 1 runtime artifact:\n${fileNames[0] || 'artifact'}`
-  }
-  return `Generated ${fileNames.length} runtime artifacts:\n${fileNames.map((name) => `- ${name}`).join('\n')}`
-}
-
-function onContinueFromArtifact(
-  artifactId: string,
-  setInput: (value: string) => void,
-  textareaRef: RefObject<HTMLTextAreaElement | null>,
-  continueFromRef: MutableRefObject<string | undefined>,
-) {
-  const artifact = findArtifactById(artifactId)
-  if (!artifact) return
-  const continuity = retrieveOperationalContinuity({
-    prompt: `continue ${artifact.title}`,
-    currentThreadId: artifact.threadId,
-    currentLineageId: artifact.lineageId,
-    currentEntityIds: artifact.entities,
-    artifacts: loadArtifacts(),
-    entities: loadEntities(),
-  })
-  const restored = restoreContinuitySnapshot()
-  const contextLine = `Context: ${continuity.relatedEntities.slice(0, 3).map((e) => e.name).join(', ')} | unresolved ${continuity.unresolvedContinuity.length} | snapshot ${restored?.id ?? 'none'}`
-  continueFromRef.current = artifact.id
-  setInput(`Continue from artifact: ${artifact.title}\n${contextLine}`)
-  textareaRef.current?.focus()
+function buildArtifactFirstMessage(raw: string, fileNames: string[]): string {
+  const cleaned = stripFencedBlocks(raw)
+  const header = `Generated ${fileNames.length} runtime artifact${fileNames.length > 1 ? 's' : ''}: ${fileNames.join(', ')}`
+  const summary = cleaned.split(/\n+/).map((line) => line.trim()).filter(Boolean).slice(0, 2).join(' ')
+  return summary
+    ? `${header}\n\n${summary}`
+    : `${header}\n\nPreview, open, download, continue, or view source from the artifact cards.`
 }
 
 export function ChatInterface({ wikiContext }: Props) {
@@ -291,13 +270,12 @@ export function ChatInterface({ wikiContext }: Props) {
           upsertEntities(entities)
         }
         continueFromRef.current = artifacts[artifacts.length - 1]?.id
-        const artifactMessage = buildArtifactFirstMessage(artifacts.map((artifact) => artifact.fileName || artifact.id))
+        const artifactMessage = buildArtifactFirstMessage(accumulated, artifacts.map((artifact) => artifact.fileName || artifact.id))
         setMessages((prev) => {
           const updated = [...prev]
-          updated[updated.length - 1] = { role: 'assistant', content: artifactMessage, artifactIds: artifacts.map((artifact) => artifact.id) }
+          updated[updated.length - 1] = { role: 'assistant', content: artifactMessage }
           return updated
         })
-        setMessageArtifacts((prev) => ({ ...prev, [nextMessages.length]: artifacts }))
         window.dispatchEvent(new Event('tela-artifacts-updated'))
       }
     } catch (err: unknown) {
