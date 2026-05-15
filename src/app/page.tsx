@@ -114,13 +114,8 @@ export default function Home() {
   const capturePearl = useCallback(async () => {
     const content = pearlText.trim()
     if (!content) return
-
     try {
-      await fetch('/api/pearl-box', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, source: 'PEARL_DROP' }),
-      })
+      await fetch('/api/pearl-box', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content, source: 'PEARL_DROP' }) })
       setPearlText('')
       await loadPearl()
     } catch {
