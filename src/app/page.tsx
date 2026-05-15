@@ -13,8 +13,7 @@ type MemoryRailItem = {
   id: string
   label: string
   helper: string
-  tone: 'gold' | 'active' | 'dormant'
-  unresolved?: number
+  tone: 'gold' | 'navy'
   image: string
 }
 
@@ -32,23 +31,50 @@ type FeedCard = {
 }
 
 const MEMORY_RAIL: MemoryRailItem[] = [
-  { id: 'pearl-drop', label: 'You / Pearl Drop', helper: 'Capture continuity instantly', tone: 'gold', image: 'radial-gradient(circle at 38% 26%, #D8B46A 0%, #C4973A 52%, #8b6a2d 100%)' },
-  { id: 'crusade', label: 'Crusade', helper: 'Routing pressure', unresolved: 3, tone: 'active', image: 'linear-gradient(155deg, #8A8175 0%, #3A4754 52%, #0D1B2A 100%)' },
-  { id: 'rodney', label: 'Rodney Jerkins', helper: 'Session continuity', unresolved: 1, tone: 'active', image: 'linear-gradient(145deg, #6C7884 0%, #3A4754 58%, #0D1B2A 100%)' },
-  { id: 'tourtext', label: 'TourText', helper: 'Launch branch open', unresolved: 2, tone: 'dormant', image: 'linear-gradient(150deg, #8A8175 0%, #6C7884 52%, #0D1B2A 100%)' },
-  { id: 'pearl-box', label: 'Pearl Box', helper: 'Lineage indexed', tone: 'dormant', image: 'linear-gradient(150deg, #8A8175 0%, #6C7884 50%, #3A4754 100%)' },
-  { id: 'runtime', label: 'TELA Runtime', helper: 'Operationally calm', tone: 'dormant', image: 'linear-gradient(145deg, #6C7884 0%, #3A4754 50%, #0D1B2A 100%)' },
+  { id: 'pearl-drop', label: 'You / Pearl Drop', helper: 'Capture continuity instantly', tone: 'gold', image: 'radial-gradient(circle at 35% 25%, #f8d48c 0%, #c4973a 42%, #70521a 100%)' },
+  { id: 'crusade', label: 'Crusade', helper: '3 unresolved threads', tone: 'navy', image: 'linear-gradient(135deg, #3a5268 0%, #162433 62%, #0d1b2a 100%)' },
+  { id: 'rodney', label: 'Rodney Jerkins', helper: 'Routing thread active', tone: 'navy', image: 'linear-gradient(155deg, #6e8595 0%, #273b50 45%, #0d1b2a 100%)' },
+  { id: 'tourtext', label: 'TourText', helper: 'Lineage updated', tone: 'navy', image: 'linear-gradient(140deg, #607f8c 0%, #273746 50%, #0d1b2a 100%)' },
+  { id: 'pearl-box', label: 'Pearl Box', helper: 'Memory depth indexed', tone: 'navy', image: 'linear-gradient(130deg, #8f7f5d 0%, #50462f 52%, #1f2730 100%)' },
+  { id: 'runtime', label: 'TELA Runtime', helper: 'Operational state stable', tone: 'navy', image: 'linear-gradient(145deg, #7d7c73 0%, #37404c 46%, #0d1b2a 100%)' },
 ]
 
 const FEED_CARDS: FeedCard[] = [
   {
-    id: '1', entity: 'Crusade Routing', status: 'Backline reroute pending before call time.', continuitySummary: 'Shuttle handoff and stage-right credential transfer remain unresolved; this branch now holds highest operational gravity.', unresolvedCount: 2, participants: ['JH', 'RC', 'TM'], metadata: 'Thread · Venue Ops · Artifact lineage linked', timestamp: '12m ago', image: 'linear-gradient(160deg, #8A8175 0%, #6C7884 38%, #3A4754 72%, #0D1B2A 100%)', stateLabel: 'Unresolved handoff pressure',
+    id: '1',
+    entity: 'Crusade Routing',
+    status: 'Backline reroute still pending before call time.',
+    continuitySummary: 'Reconfirm shuttle handoff and stage-right credential transfer; unresolved branch is now the highest continuity risk in venue ops.',
+    unresolvedCount: 2,
+    participants: ['JH', 'RC', 'TM'],
+    metadata: 'Thread · Venue Ops · Artifact lineage linked',
+    timestamp: '12m ago',
+    image: 'linear-gradient(150deg, #7f8a94 0%, #44515f 36%, #1f2e3f 68%, #0d1b2a 100%)',
+    stateLabel: 'Unresolved handoff pressure',
   },
   {
-    id: '2', entity: 'Rodney Session Timeline', status: 'Continuity retained; one approval branch open.', continuitySummary: 'Arrangement decisions stayed aligned through intake. Remaining signoff path is visible and ready for fast thread recovery.', unresolvedCount: 1, participants: ['RJ', 'JH', 'PC'], metadata: 'Entity · Session Memory · Provenance verified', timestamp: '35m ago', image: 'linear-gradient(150deg, #D8B46A 0%, #8A8175 32%, #6C7884 64%, #0D1B2A 100%)', stateLabel: 'Continuity intact',
+    id: '2',
+    entity: 'Rodney Session Timeline',
+    status: 'Session continuity retained; one approval branch open.',
+    continuitySummary: 'Arrangement decisions and producer notes stayed aligned through intake; pending signoff path remains visible and recoverable.',
+    unresolvedCount: 1,
+    participants: ['RJ', 'JH', 'PC'],
+    metadata: 'Entity · Session Memory · Provenance verified',
+    timestamp: '35m ago',
+    image: 'linear-gradient(145deg, #91958c 0%, #63695f 35%, #2d3b4b 66%, #0d1b2a 100%)',
+    stateLabel: 'Continuity intact',
   },
   {
-    id: '3', entity: 'TourText Launch', status: 'Execution window open with active momentum.', continuitySummary: 'Voice intake and launch brief are merged. Partner dependency remains unresolved but continuity map is stable and current.', unresolvedCount: 3, participants: ['TL', 'MK', 'JH'], metadata: 'Program · Runtime Thread · Freshness high', timestamp: '1h ago', image: 'linear-gradient(155deg, #C4973A 0%, #8A8175 34%, #6C7884 68%, #0D1B2A 100%)', stateLabel: 'Active execution window',
+    id: '3',
+    entity: 'TourText Launch',
+    status: 'Execution window open with routed next actions.',
+    continuitySummary: 'Voice intake and launch brief are now merged; rollout momentum is stable but unresolved partner dependency remains active.',
+    unresolvedCount: 3,
+    participants: ['TL', 'MK', 'JH'],
+    metadata: 'Program · Runtime Thread · Freshness high',
+    timestamp: '1h ago',
+    image: 'linear-gradient(150deg, #9d8d6a 0%, #65563e 34%, #334455 70%, #0d1b2a 100%)',
+    stateLabel: 'Active execution window',
   },
 ]
 
@@ -109,83 +135,77 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#EAE0D2] text-[#0D1B2A]">
-      <div className="mx-auto flex min-h-screen w-full max-w-[393px] flex-col bg-[#EAE0D2]">
-        <header className="sticky top-0 z-20 border-b border-[rgba(13,27,42,0.08)] bg-[#EAE0D2]/93 px-5 pb-2.5 pt-3 backdrop-blur-sm">
+      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-[#EAE0D2]">
+        <header className="sticky top-0 z-20 border-b border-[#0D1B2A]/10 bg-[#EAE0D2]/95 px-4 pb-3 pt-4 backdrop-blur-md">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[27px] font-semibold leading-none tracking-[-0.02em]">TELAOne</p>
-              <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-[#6C7884]">Home Runtime · Continuity First</p>
+              <p className="text-[28px] font-semibold leading-none tracking-tight">TELAOne</p>
+              <p className="mt-1.5 text-[11px] uppercase tracking-[0.2em] text-[#0D1B2A]/65">Home Runtime · Continuity-first</p>
             </div>
-            <button onClick={doSync} className="flex h-10 w-10 items-center justify-center rounded-full border border-[#C4973A]/50 bg-[#F8F2E8] text-[10px] font-semibold uppercase tracking-[0.08em] text-[#3A4754] active:scale-[0.97]">{syncing ? '•••' : '⟳'}</button>
+            <button onClick={doSync} className="h-11 rounded-full border border-[#0D1B2A]/20 bg-[#f2e8d8] px-4 text-xs font-semibold uppercase tracking-[0.14em] text-[#0D1B2A]/80">{syncing ? 'Syncing' : 'Sync'}</button>
           </div>
         </header>
 
-        <main className="flex-1 space-y-4 px-4 pb-24 pt-3">
-          <section className="space-y-2.5" aria-label="Operational memory rail">
-            <p className="px-1 text-[10px] uppercase tracking-[0.16em] text-[#6C7884]">Operational Memory</p>
-            <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <main className="flex-1 space-y-5 px-4 pb-24 pt-4">
+          <section aria-label="Operational memory rail" className="space-y-3">
+            <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#0D1B2A]/70">Operational Memory Rail</h2>
+            <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
               {MEMORY_RAIL.map((item) => (
-                <article key={item.id} className="min-w-[88px] snap-start active:scale-[0.985]">
-                  <div className={`relative mx-auto h-[74px] w-[74px] rounded-full p-[2.5px] ${item.tone === 'gold' ? 'bg-[#C4973A]' : item.tone === 'active' ? 'bg-[#3E6B5A]' : 'bg-[#8A8175]'}`}>
-                    <div className="relative h-full w-full rounded-full border border-[rgba(13,27,42,0.08)]" style={{ background: item.image }}>
-                      {item.unresolved ? <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border border-[#EAE0D2] bg-[#B84C3D] px-1 text-[9px] font-semibold text-[#F8F2E8]">{item.unresolved}</span> : null}
-                      {item.id === 'pearl-drop' ? <span className="absolute inset-x-0 bottom-1 text-center text-[11px] font-semibold text-[#F8F2E8]">＋</span> : null}
+                <article
+                  key={item.id}
+                  className={`min-w-[164px] snap-start overflow-hidden rounded-[22px] border shadow-[0_8px_22px_rgba(13,27,42,0.12)] transition-transform duration-200 active:scale-[0.985] ${item.tone === 'gold' ? 'border-[#C4973A]/55 bg-[#fbf5e8]' : 'border-[#0D1B2A]/12 bg-[#f4ecdf]'}`}
+                >
+                  <div className="h-24 w-full" style={{ background: item.image }} />
+                  <div className="space-y-1.5 p-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold leading-tight">{item.label}</p>
+                      {item.id === 'pearl-drop' && <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#C4973A] text-sm font-bold">+</span>}
                     </div>
+                    <p className="text-xs text-[#0D1B2A]/65">{item.helper}</p>
                   </div>
-                  <p className="mt-1.5 line-clamp-1 text-center text-[11px] font-medium leading-tight text-[#0D1B2A]">{item.label}</p>
-                  <p className="mt-0.5 line-clamp-1 text-center text-[10px] leading-tight text-[#6C7884]">{item.helper}</p>
                 </article>
               ))}
             </div>
           </section>
 
-          <section className="rounded-[20px] border border-[rgba(13,27,42,0.08)] bg-[#F8F2E8] p-3.5 shadow-[0_8px_20px_rgba(13,27,42,0.06)]">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em]">Pearl Drop</h3>
-                <p className="mt-0.5 text-xs text-[#6C7884]">Preserve this before the thread slips.</p>
-              </div>
-              <button onClick={capturePearl} className="min-h-9 rounded-full bg-[#0D1B2A] px-3.5 text-xs font-semibold text-[#F8F2E8] active:scale-[0.98]">Drop</button>
+          <section className="rounded-[24px] border border-[#C4973A]/45 bg-[#fbf5e8] p-4 shadow-[0_8px_24px_rgba(13,27,42,0.08)]">
+            <h3 className="text-[12px] font-semibold uppercase tracking-[0.17em]">Pearl Drop</h3>
+            <p className="mt-1 text-sm text-[#0D1B2A]/70">Catch the moment before continuity fragments.</p>
+            <textarea value={pearlText} onChange={(e) => setPearlText(e.target.value)} placeholder="Capture continuity instantly..." className="mt-3 min-h-[92px] w-full rounded-2xl border border-[#0D1B2A]/18 bg-[#fffdf8] p-3 text-sm outline-none ring-[#C4973A] focus:ring-2" />
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <p className="text-xs text-[#0D1B2A]/62">{pearlLoading ? 'Refreshing continuity…' : `${pearlItems.length} drops in runtime memory`}</p>
+              <button onClick={capturePearl} className="min-h-11 rounded-full bg-[#0D1B2A] px-4 py-2 text-sm font-semibold text-[#EAE0D2]">Drop Pearl</button>
             </div>
-            <textarea autoFocus value={pearlText} onChange={(e) => setPearlText(e.target.value)} placeholder="Capture continuity instantly..." className="mt-2.5 min-h-[78px] w-full rounded-2xl border border-[rgba(13,27,42,0.08)] bg-[#FBF7F0] p-3 text-sm text-[#3A4754] outline-none ring-[#C4973A]/45 focus:ring-2" />
-            <p className="mt-2 text-[10px] text-[#6C7884]">{pearlLoading ? 'Refreshing continuity…' : `${pearlItems.length} drops in runtime memory`}</p>
-            {latestPearls.length > 0 && <div className="mt-2 space-y-1.5">{latestPearls.map((item) => <p key={item.id} className="rounded-xl border border-[rgba(13,27,42,0.08)] bg-[#FBF7F0] px-2.5 py-2 text-[11px] text-[#3A4754]">{item.content}</p>)}</div>}
+            {latestPearls.length > 0 && <div className="mt-3 space-y-2">{latestPearls.map((item) => <p key={item.id} className="rounded-xl border border-[#0D1B2A]/10 bg-[#fffdfa] px-3 py-2 text-xs text-[#0D1B2A]/75">{item.content}</p>)}</div>}
           </section>
 
-          <section className="space-y-2.5" aria-label="Continuity feed">
-            <p className="px-1 text-[10px] uppercase tracking-[0.16em] text-[#6C7884]">Continuity Feed</p>
+          <section aria-label="Continuity feed" className="space-y-3">
+            <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#0D1B2A]/70">Continuity Feed</h2>
             {FEED_CARDS.map((card) => (
-              <article key={card.id} className="overflow-hidden rounded-[22px] border border-[rgba(13,27,42,0.08)] bg-[#FBF7F0] shadow-[0_9px_22px_rgba(13,27,42,0.06)] transition duration-200 active:scale-[0.992]">
-                <div className="relative h-48 w-full" style={{ background: card.image }}>
-                  <span className="absolute left-3 top-3 rounded-full bg-[#F8F2E8]/94 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#3A4754]">{card.stateLabel}</span>
-                  <span className="absolute bottom-3 right-3 rounded-full border border-[#D8B46A]/45 bg-[#F8F2E8] px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-[#3A4754]">{card.unresolvedCount} unresolved</span>
+              <article key={card.id} className="overflow-hidden rounded-[24px] border border-[#0D1B2A]/14 bg-[#f7f0e4] shadow-[0_10px_28px_rgba(13,27,42,0.12)] transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0">
+                <div className="relative h-44 w-full" style={{ background: card.image }}>
+                  <span className="absolute left-3 top-3 rounded-full bg-[#0D1B2A]/72 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#EAE0D2]">{card.stateLabel}</span>
+                  <span className="absolute bottom-3 right-3 rounded-full bg-[#f4e3bd] px-2.5 py-1 text-[11px] font-semibold text-[#0D1B2A]">{card.unresolvedCount} unresolved</span>
                 </div>
-                <div className="space-y-2.5 p-3.5">
-                  <div className="flex items-start justify-between gap-2.5">
+                <div className="space-y-3 p-4">
+                  <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-[24px] font-semibold leading-[1.04] tracking-[-0.02em]">{card.entity}</p>
-                      <p className="mt-1 text-[13px] text-[#3A4754]">{card.status}</p>
+                      <p className="text-[21px] font-semibold leading-tight tracking-tight">{card.entity}</p>
+                      <p className="mt-1 text-sm text-[#0D1B2A]/75">{card.status}</p>
                     </div>
-                    <p className="pt-1 text-[10px] uppercase tracking-[0.1em] text-[#6C7884]">{card.timestamp}</p>
+                    <p className="pt-1 text-xs text-[#0D1B2A]/58">{card.timestamp}</p>
                   </div>
-                  <p className="text-[13px] leading-[1.45] text-[#3A4754]">{card.continuitySummary}</p>
+                  <p className="text-sm leading-relaxed text-[#0D1B2A]/86">{card.continuitySummary}</p>
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-[#0D1B2A]/55">{card.metadata}</p>
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] uppercase tracking-[0.11em] text-[#6C7884]">{card.metadata}</p>
-                    <div className="flex -space-x-1.5">{card.participants.map((participant) => <span key={participant} className="flex h-6 w-6 items-center justify-center rounded-full border border-[#F8F2E8] bg-[#3A4754] text-[9px] font-semibold text-[#F8F2E8]">{participant}</span>)}</div>
+                    <div className="flex -space-x-2">{card.participants.map((participant) => <span key={participant} className="flex h-8 w-8 items-center justify-center rounded-full border border-[#EAE0D2] bg-[#0D1B2A] text-[10px] font-semibold text-[#EAE0D2]">{participant}</span>)}</div>
+                    <button className="min-h-11 rounded-full border border-[#0D1B2A]/25 bg-[#f8f2e8] px-4 text-sm font-medium">Open Thread</button>
                   </div>
                 </div>
               </article>
             ))}
           </section>
         </main>
-
-        <nav className="fixed bottom-0 left-1/2 z-30 flex w-full max-w-[393px] -translate-x-1/2 border-t border-[rgba(13,27,42,0.08)] bg-[#EAE0D2]/96 px-2.5 py-2 backdrop-blur">
-          {['⌂', '⌕', '＋', '◌', '◍'].map((icon, index) => (
-            <button key={icon} className={`flex min-h-11 flex-1 items-center justify-center rounded-xl text-[#3A4754] ${index === 2 ? 'mx-0.5 border border-[#C4973A]/40 bg-[#F8F2E8] text-[#0D1B2A]' : 'active:bg-[#F8F2E8]/80'}`}>
-              <span className="text-lg leading-none">{icon}</span>
-            </button>
-          ))}
-        </nav>
       </div>
     </div>
   )
