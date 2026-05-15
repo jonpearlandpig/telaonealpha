@@ -11,6 +11,12 @@ import { buildArtifactGraph } from '@/lib/artifacts/artifactGraph'
 import { loadArtifacts, togglePinArtifact, type ArtifactRecord } from '@/lib/artifacts/artifactStore'
 import { loadEntities } from '@/lib/entities/entityStore'
 import type { EntityRecord } from '@/lib/entities/entityEngine'
+import { retrieveOperationalContinuity } from '@/lib/runtime/continuityRetrieval'
+import { applyContinuityLifecycle, createContinuitySnapshot, loadContinuitySnapshots, persistContinuitySnapshot, restoreContinuitySnapshot, type ContinuitySnapshot } from '@/lib/runtime/continuitySnapshots'
+import { restoreOnSessionOpen } from '@/lib/runtime/sessionOpen'
+import { ValidationPanel } from './runtime/ValidationPanel'
+import { loadValidationLogs, summarizeValidationLogs } from '@/lib/runtime/validationLogs'
+import { runContinuityStressTest } from '@/lib/runtime/stressTests'
 
 type PearlItem = {
   id: string
@@ -140,6 +146,9 @@ export function ContinuityPanel({ data, pearlItems, onCapturePearl, onRefreshPea
   const [artifacts, setArtifacts] = useState<ArtifactRecord[]>(() => loadArtifacts())
   const [entities, setEntities] = useState<EntityRecord[]>(() => loadEntities())
   const [focusedEntityId, setFocusedEntityId] = useState<string | undefined>(undefined)
+  const [snapshots, setSnapshots] = useState<ContinuitySnapshot[]>(() => loadContinuitySnapshots())
+  const sessionState = useMemo(() => restoreOnSessionOpen('chat-main'), [artifacts, entities])
+  const validationLogs = useMemo(() => loadValidationLogs(), [artifacts, entities])
 
 
   useEffect(() => {
@@ -170,6 +179,35 @@ export function ContinuityPanel({ data, pearlItems, onCapturePearl, onRefreshPea
   }, [acts, artifacts])
 
   const graph = useMemo(() => buildArtifactGraph(seededArtifacts), [seededArtifacts])
+  const continuityContext = retrieveOperationalContinuity({
+    prompt: 'continuity panel',
+    currentThreadId: 'chat-main',
+    artifacts: seededArtifacts,
+    entities,
+  })
+
+  useEffect(() => {
+    const create = () => {
+      const continuity = retrieveOperationalContinuity({
+        prompt: 'continuity panel',
+        currentThreadId: 'chat-main',
+        artifacts: seededArtifacts,
+        entities,
+      })
+      const snapshot = createContinuitySnapshot({
+        threadId: 'chat-main',
+        artifacts,
+        entities,
+        continuity,
+      })
+      setSnapshots(persistContinuitySnapshot(snapshot))
+    }
+    create()
+    const timer = window.setInterval(create, 60000)
+    return () => window.clearInterval(timer)
+  }, [artifacts, entities, seededArtifacts])
+
+  const stress = useMemo(() => runContinuityStressTest(seededArtifacts, entities), [seededArtifacts, entities])
 
   return (
     <div className="continuity-grid">
@@ -250,6 +288,110 @@ export function ContinuityPanel({ data, pearlItems, onCapturePearl, onRefreshPea
           <SectionLabel>Artifact Library</SectionLabel>
           <ArtifactLibrary artifacts={seededArtifacts} onTogglePin={(id) => setArtifacts(togglePinArtifact(id))} onContinue={(id) => window.dispatchEvent(new CustomEvent('tela-artifact-continue', { detail: { artifactId: id } }))} />
           <EntityPanel entities={entities} onFocus={setFocusedEntityId} />
+        </div>
+        <div style={{ marginTop: 24 }}>
+          <SectionLabel>Related Context</SectionLabel>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {continuityContext.relatedArtifacts.slice(0, 3).map((artifact) => (
+              <div key={artifact.id} className="tela-card" style={{ padding: '10px 12px' }}>
+                <div style={{ fontSize: 13, color: '#EAE0D2' }}>{artifact.fileName || artifact.title}</div>
+                <div style={{ fontSize: 11, color: 'rgba(234,224,210,0.5)' }}>{artifact.threadId} · {new Date(artifact.createdAt).toLocaleDateString()}</div>
+                <div style={{ marginTop: 4, fontSize: 11, color: '#C4973A' }}>
+                  Why now: {sessionState.attention.find((a) => a.id === artifact.id)?.whyNow ?? 'continuity relevance'}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ marginTop: 24 }}>
+          <SectionLabel>Operational Digest</SectionLabel>
+          <div className="tela-card" style={{ padding: '12px 14px' }}>
+            <div style={{ fontSize: 12, color: '#EAE0D2', marginBottom: 6 }}>{sessionState.digest.whatChanged}</div>
+            <div style={{ fontSize: 11, color: 'rgba(234,224,210,0.7)', marginBottom: 4 }}>{sessionState.digest.unresolved}</div>
+            <div style={{ fontSize: 11, color: 'rgba(234,224,210,0.7)', marginBottom: 4 }}>{sessionState.digest.needsAttention}</div>
+            <div style={{ fontSize: 11, color: 'rgba(234,224,210,0.7)', marginBottom: 4 }}>{sessionState.digest.resurfacing}</div>
+            <div style={{ fontSize: 11, color: '#C4973A' }}>{sessionState.digest.activeContinuity}</div>
+          </div>
+        </div>
+        <ValidationPanel
+          hydrationStatus="ready"
+          restorationSource={sessionState.snapshot ? 'snapshot restore' : 'runtime restore'}
+          snapshot={sessionState.snapshot}
+          state={sessionState.state}
+          attention={sessionState.attention}
+          logs={validationLogs}
+          momentumScore={sessionState.state.continuityIntensity}
+        />
+        <div style={{ marginTop: 10, fontSize: 10, color: 'rgba(234,224,210,0.5)' }}>
+          {summarizeValidationLogs(validationLogs)}
+        </div>
+        <div style={{ marginTop: 6, fontSize: 10, color: 'rgba(234,224,210,0.5)' }}>
+          Stress: {stress.artifactCount} artifacts · unresolved {stress.unresolvedCount} · lineage {stress.lineageDepth}
+        </div>
+        <div style={{ marginTop: 24 }}>
+          <SectionLabel>Active Threads</SectionLabel>
+          {continuityContext.activeThreads.slice(0, 4).map((thread) => (
+            <div key={thread.id} style={{ paddingBottom: 8, borderBottom: '1px solid rgba(234,224,210,0.06)', marginBottom: 8 }}>
+              <div style={{ fontSize: 12, color: '#EAE0D2' }}>{thread.id}</div>
+              <div style={{ fontSize: 10, color: 'rgba(234,224,210,0.45)' }}>{thread.artifactCount} artifacts · {thread.unresolvedCount} unresolved</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 24 }}>
+          <SectionLabel>Recent Lineage</SectionLabel>
+          {continuityContext.recentLineage.slice(0, 4).map((artifact) => (
+            <div key={`${artifact.id}-lineage`} style={{ fontSize: 12, color: 'rgba(234,224,210,0.82)', marginBottom: 6 }}>
+              {artifact.lineageId || 'lineage-missing'} → {artifact.fileName || artifact.title}
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 24 }}>
+          <SectionLabel>Unresolved Continuity</SectionLabel>
+          {continuityContext.unresolvedContinuity.length === 0 ? (
+            <p style={{ fontSize: 12, color: 'rgba(234,224,210,0.35)' }}>No unresolved continuity detected.</p>
+          ) : continuityContext.unresolvedContinuity.slice(0, 4).map((artifact) => (
+            <div key={`${artifact.id}-unresolved`} style={{ fontSize: 12, color: '#C4973A', marginBottom: 6 }}>
+              {artifact.fileName || artifact.title}
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 24 }}>
+          <SectionLabel>Recent Snapshots</SectionLabel>
+          {snapshots.slice(0, 4).map((snapshot) => (
+            <div key={snapshot.id} className="tela-card" style={{ padding: '10px 12px', marginBottom: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 12, color: '#EAE0D2' }}>{new Date(snapshot.createdAt).toLocaleString()}</span>
+                <button
+                  onClick={() => {
+                    const restored = restoreContinuitySnapshot(snapshot.id)
+                    if (!restored) return
+                    window.dispatchEvent(new CustomEvent('tela-continuity-restored', { detail: { snapshotId: restored.id } }))
+                  }}
+                  style={{ border: '1px solid rgba(196,151,58,0.4)', color: '#C4973A', background: 'transparent', borderRadius: 999, padding: '4px 10px', fontSize: 10 }}
+                >
+                  Restore Continuity
+                </button>
+              </div>
+              <div style={{ fontSize: 10, color: 'rgba(234,224,210,0.5)', marginTop: 4 }}>
+                Active {snapshot.activeArtifacts.length} · Entities {snapshot.relatedEntities.length} · Score {Math.round(applyContinuityLifecycle(snapshot))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 24 }}>
+          <SectionLabel>Active Operational State</SectionLabel>
+          <div style={{ fontSize: 12, color: 'rgba(234,224,210,0.82)', lineHeight: 1.6 }}>
+            Threads: {continuityContext.activeThreads.length} · Unresolved: {continuityContext.unresolvedContinuity.length} · Entities: {continuityContext.relatedEntities.length}
+          </div>
+        </div>
+        <div style={{ marginTop: 24 }}>
+          <SectionLabel>Continuity Timeline</SectionLabel>
+          {snapshots.slice(0, 5).map((snapshot) => (
+            <div key={`${snapshot.id}-timeline`} style={{ paddingBottom: 8, borderBottom: '1px solid rgba(234,224,210,0.06)', marginBottom: 8 }}>
+              <div style={{ fontSize: 11, color: '#C4973A' }}>{new Date(snapshot.createdAt).toLocaleTimeString()}</div>
+              <div style={{ fontSize: 12, color: '#EAE0D2' }}>{snapshot.threadRefs[0] || 'thread'}</div>
+            </div>
+          ))}
         </div>
 
         <SectionLabel>This Week</SectionLabel>
