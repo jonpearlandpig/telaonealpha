@@ -62,64 +62,6 @@ function inferFormat(lang?: string, content?: string): ArtifactFormat {
   return 'txt'
 }
 
-function stripOuterFences(input: string): string {
-  return input
-    .replace(/^\s*```(?:html|tsx|jsx|react|md|markdown|json|yaml|yml|txt|text)?\s*\n/i, '')
-    .replace(/\n```\s*$/i, '')
-    .trim()
-}
-
-function extractHtmlPayload(input: string): string {
-  const text = stripOuterFences(input)
-  const doctypeIdx = text.search(/<!doctype html>/i)
-  const htmlIdx = text.search(/<html[\s>]/i)
-  const start = doctypeIdx >= 0 ? doctypeIdx : htmlIdx
-  if (start < 0) return text
-  const sliced = text.slice(start)
-  const endHtml = sliced.match(/<\/html>/i)
-  if (!endHtml || endHtml.index == null) return sliced.trim()
-  return sliced.slice(0, endHtml.index + endHtml[0].length).trim()
-}
-
-function extractCodePayload(input: string): string {
-  const text = stripOuterFences(input)
-  const firstFence = text.indexOf('```')
-  return firstFence >= 0 ? text.slice(0, firstFence).trim() : text
-}
-
-function sanitizePayload(format: ArtifactFormat, payload: string): string {
-  if (!payload) return payload
-  if (format === 'html') return extractHtmlPayload(payload)
-  if (format === 'tsx' || format === 'jsx' || format === 'txt' || format === 'yaml') return extractCodePayload(payload)
-  if (format === 'json') {
-    const text = stripOuterFences(payload)
-    const start = text.search(/[\[{]/)
-    const endObj = text.lastIndexOf('}')
-    const endArr = text.lastIndexOf(']')
-    const end = Math.max(endObj, endArr)
-    if (start >= 0 && end > start) return text.slice(start, end + 1).trim()
-    return text
-  }
-  return stripOuterFences(payload)
-}
-
-function looksLikeConversationalProse(text: string): boolean {
-  return /^(here('|’)s|i can('|’)t|i cannot|below is|this is|i've|i have|let me|note:)/i.test(text.trim())
-}
-
-function artifactConfidence(format: ArtifactFormat, payload: string, hadFence: boolean): number {
-  const text = payload.trim()
-  if (!text) return 0
-  if (hadFence) return 0.95
-  if (format === 'html' && /<html|<!doctype html|<body|<div/i.test(text)) return 0.9
-  if (format === 'json' && (/^\s*[\[{]/.test(text))) return 0.85
-  if ((format === 'tsx' || format === 'jsx') && /export|function|return\s*\(|<\w+/.test(text)) return 0.82
-  if ((format === 'markdown') && (/^\s*#|\n##\s/m.test(text))) return 0.8
-  if ((format === 'yaml') && (/^\s*[\w-]+:\s+/m.test(text))) return 0.78
-  if (looksLikeConversationalProse(text)) return 0.2
-  return 0.45
-}
-
 function defaultName(format: ArtifactFormat, prompt: string, index: number): string {
   const root = slugify(prompt.split(/[.\n]/)[0] || 'artifact')
   if (format === 'html') return 'landing-page'
@@ -129,10 +71,7 @@ function defaultName(format: ArtifactFormat, prompt: string, index: number): str
   return `${root || 'runtime-artifact'}-${index + 1}`
 }
 
-function materializeArtifact(ctx: ArtifactInputContext, format: ArtifactFormat, payload: string, createdAt: string, groupId: string, index: number, hadFence: boolean): ArtifactRecord | null {
-  const cleanPayload = sanitizePayload(format, payload)
-  const confidence = artifactConfidence(format, cleanPayload, hadFence)
-  if (confidence < 0.72) return null
+function materializeArtifact(ctx: ArtifactInputContext, format: ArtifactFormat, payload: string, createdAt: string, groupId: string, index: number): ArtifactRecord {
   const meta = FORMAT_META[format]
   const lineageId = ctx.parentArtifactId ?? `${ctx.threadId}-root`
   const fileName = `${defaultName(format, ctx.sourcePrompt, index)}.${meta.extension}`
@@ -145,10 +84,10 @@ function materializeArtifact(ctx: ArtifactInputContext, format: ArtifactFormat, 
     sessionId: format,
     prompt: ctx.sourcePrompt,
     structure: `format=${format}; parent=${ctx.parentArtifactId ?? 'none'}; group=${groupId}; file=${fileName}`,
-    code: format === 'tsx' || format === 'jsx' || format === 'txt' || format === 'yaml' ? cleanPayload : undefined,
-    html: format === 'html' ? cleanPayload : undefined,
-    markdown: format === 'markdown' ? cleanPayload : undefined,
-    text: format === 'json' ? cleanPayload : format === 'txt' ? cleanPayload : undefined,
+    code: format === 'tsx' || format === 'jsx' || format === 'txt' || format === 'yaml' ? payload : undefined,
+    html: format === 'html' ? payload : undefined,
+    markdown: format === 'markdown' ? payload : undefined,
+    text: format === 'json' ? payload : format === 'txt' ? payload : undefined,
     mimeType: meta.mimeType,
     fileName,
     entities: [],
@@ -165,12 +104,12 @@ export function extractArtifactsFromAssistant(ctx: ArtifactInputContext): Artifa
   const createdAt = new Date().toISOString()
   const blocks = extractFencedBlocks(ctx.assistantText)
   const groupId = deterministicArtifactId({ title: `group-${ctx.sourcePrompt.slice(0, 40)}`, threadId: ctx.threadId, sessionId: 'group', createdAt })
-  const payloads = blocks.length ? blocks.map((b) => ({ ...b, hadFence: true })) : [{ content: ctx.assistantText, hadFence: false }]
+  const payloads = blocks.length ? blocks : [{ content: ctx.assistantText }]
 
   return payloads.map((block, index) => {
     const format = inferFormat(block.lang, block.content)
-    return materializeArtifact(ctx, format, block.content, createdAt, groupId, index, block.hadFence)
-  }).filter(Boolean) as ArtifactRecord[]
+    return materializeArtifact(ctx, format, block.content, createdAt, groupId, index)
+  })
 }
 
 export function extractArtifactFromAssistant(ctx: ArtifactInputContext): ArtifactRecord {
