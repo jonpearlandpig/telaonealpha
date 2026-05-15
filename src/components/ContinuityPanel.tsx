@@ -13,7 +13,6 @@ import { loadEntities } from '@/lib/entities/entityStore'
 import type { EntityRecord } from '@/lib/entities/entityEngine'
 import { retrieveOperationalContinuity } from '@/lib/runtime/continuityRetrieval'
 import { applyContinuityLifecycle, createContinuitySnapshot, loadContinuitySnapshots, persistContinuitySnapshot, restoreContinuitySnapshot, type ContinuitySnapshot } from '@/lib/runtime/continuitySnapshots'
-import { restoreOnSessionOpen } from '@/lib/runtime/sessionOpen'
 
 type PearlItem = {
   id: string
@@ -144,7 +143,6 @@ export function ContinuityPanel({ data, pearlItems, onCapturePearl, onRefreshPea
   const [entities, setEntities] = useState<EntityRecord[]>(() => loadEntities())
   const [focusedEntityId, setFocusedEntityId] = useState<string | undefined>(undefined)
   const [snapshots, setSnapshots] = useState<ContinuitySnapshot[]>(() => loadContinuitySnapshots())
-  const [sessionState] = useState(() => restoreOnSessionOpen('chat-main'))
 
 
   useEffect(() => {
@@ -290,21 +288,8 @@ export function ContinuityPanel({ data, pearlItems, onCapturePearl, onRefreshPea
               <div key={artifact.id} className="tela-card" style={{ padding: '10px 12px' }}>
                 <div style={{ fontSize: 13, color: '#EAE0D2' }}>{artifact.fileName || artifact.title}</div>
                 <div style={{ fontSize: 11, color: 'rgba(234,224,210,0.5)' }}>{artifact.threadId} · {new Date(artifact.createdAt).toLocaleDateString()}</div>
-                <div style={{ marginTop: 4, fontSize: 11, color: '#C4973A' }}>
-                  Why now: {sessionState.attention.find((a) => a.id === artifact.id)?.whyNow ?? 'continuity relevance'}
-                </div>
               </div>
             ))}
-          </div>
-        </div>
-        <div style={{ marginTop: 24 }}>
-          <SectionLabel>Operational Digest</SectionLabel>
-          <div className="tela-card" style={{ padding: '12px 14px' }}>
-            <div style={{ fontSize: 12, color: '#EAE0D2', marginBottom: 6 }}>{sessionState.digest.whatChanged}</div>
-            <div style={{ fontSize: 11, color: 'rgba(234,224,210,0.7)', marginBottom: 4 }}>{sessionState.digest.unresolved}</div>
-            <div style={{ fontSize: 11, color: 'rgba(234,224,210,0.7)', marginBottom: 4 }}>{sessionState.digest.needsAttention}</div>
-            <div style={{ fontSize: 11, color: 'rgba(234,224,210,0.7)', marginBottom: 4 }}>{sessionState.digest.resurfacing}</div>
-            <div style={{ fontSize: 11, color: '#C4973A' }}>{sessionState.digest.activeContinuity}</div>
           </div>
         </div>
         <div style={{ marginTop: 24 }}>
