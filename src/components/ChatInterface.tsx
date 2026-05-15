@@ -170,7 +170,7 @@ export function ChatInterface({ wikiContext }: Props) {
       const custom = event as CustomEvent<{ artifactId: string }>
       const id = custom.detail?.artifactId
       if (!id) return
-      onContinueFromArtifact(id, setInput, textareaRef, continueFromRef)
+      onContinueFromArtifact(id)
     }
     window.addEventListener('tela-artifact-continue', handler as EventListener)
     return () => window.removeEventListener('tela-artifact-continue', handler as EventListener)
@@ -409,7 +409,7 @@ export function ChatInterface({ wikiContext }: Props) {
                           <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 8 }}>{artifact.fileName}</div>
                           <ArtifactRenderer artifact={artifact} mode={artifact.mimeType === 'text/html' ? 'open' : 'preview'} />
                           <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                            <button onClick={() => onContinueFromArtifact(artifact.id, setInput, textareaRef, continueFromRef)} style={{ border: '1px solid rgba(196,151,58,0.4)', background: 'rgba(196,151,58,0.1)', color: '#EAE0D2', borderRadius: 999, padding: '8px 12px' }}>Continue</button>
+                            <button onClick={() => onContinueFromArtifact(artifact.id)} style={{ border: '1px solid rgba(196,151,58,0.4)', background: 'rgba(196,151,58,0.1)', color: '#EAE0D2', borderRadius: 999, padding: '8px 12px' }}>Continue</button>
                             <a href={URL.createObjectURL(new Blob([artifact.html ?? artifact.markdown ?? artifact.code ?? artifact.text ?? ''], { type: artifact.mimeType || 'text/plain' }))} download={artifact.fileName || `${artifact.id}.txt`} style={{ border: '1px solid rgba(234,224,210,0.24)', color: '#EAE0D2', borderRadius: 999, padding: '8px 12px', textDecoration: 'none' }}>Download</a>
                             <button onClick={() => window.dispatchEvent(new CustomEvent('tela-artifact-continue', { detail: { artifactId: artifact.id } }))} style={{ border: '1px solid rgba(234,224,210,0.24)', background: 'transparent', color: '#EAE0D2', borderRadius: 999, padding: '8px 12px' }}>Open</button>
                             <details>
