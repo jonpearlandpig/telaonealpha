@@ -58,7 +58,7 @@ export function TopNav({ lastSynced, onSync, syncing, activeView, onViewChange }
       zIndex: 50,
       padding: '0 24px',
     }}>
-      <div style={{ maxWidth: 1400, margin: '0 auto', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ maxWidth: 1400, margin: '0 auto', minHeight: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         {/* Wordmark */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
           <span style={{
@@ -85,7 +85,9 @@ export function TopNav({ lastSynced, onSync, syncing, activeView, onViewChange }
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    padding: '6px 14px',
+                    minHeight: 44,
+                    minWidth: 44,
+                    padding: '10px 14px',
                     fontSize: 12,
                     fontFamily: "'DM Sans', sans-serif",
                     fontWeight: isActive ? 500 : 300,
@@ -121,7 +123,9 @@ export function TopNav({ lastSynced, onSync, syncing, activeView, onViewChange }
               border: '1px solid rgba(196,151,58,0.3)',
               color: syncing ? 'rgba(196,151,58,0.4)' : '#C4973A',
               cursor: syncing ? 'default' : 'pointer',
-              padding: '5px 14px',
+              minHeight: 44,
+              minWidth: 44,
+              padding: '10px 14px',
               fontSize: 11,
               fontFamily: "'DM Sans', sans-serif",
               fontWeight: 400,
