@@ -7,7 +7,6 @@ export type RetrievalTrace = {
   confidence: number
   canonicalOverrides: string[]
   unresolvedInfluence: number
-  editorialReasoning: string[]
 }
 
 export function createTrace(input: Partial<RetrievalTrace>): RetrievalTrace {
@@ -20,6 +19,5 @@ export function createTrace(input: Partial<RetrievalTrace>): RetrievalTrace {
     confidence: input.confidence ?? 0,
     canonicalOverrides: input.canonicalOverrides ?? [],
     unresolvedInfluence: input.unresolvedInfluence ?? 0,
-    editorialReasoning: input.editorialReasoning ?? [],
   }
 }
