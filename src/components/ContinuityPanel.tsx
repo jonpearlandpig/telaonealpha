@@ -13,10 +13,6 @@ import { loadEntities } from '@/lib/entities/entityStore'
 import type { EntityRecord } from '@/lib/entities/entityEngine'
 import { retrieveOperationalContinuity } from '@/lib/runtime/continuityRetrieval'
 import { applyContinuityLifecycle, createContinuitySnapshot, loadContinuitySnapshots, persistContinuitySnapshot, restoreContinuitySnapshot, type ContinuitySnapshot } from '@/lib/runtime/continuitySnapshots'
-import { restoreOnSessionOpen } from '@/lib/runtime/sessionOpen'
-import { ValidationPanel } from './runtime/ValidationPanel'
-import { loadValidationLogs, summarizeValidationLogs } from '@/lib/runtime/validationLogs'
-import { runContinuityStressTest } from '@/lib/runtime/stressTests'
 
 type PearlItem = {
   id: string
@@ -147,8 +143,6 @@ export function ContinuityPanel({ data, pearlItems, onCapturePearl, onRefreshPea
   const [entities, setEntities] = useState<EntityRecord[]>(() => loadEntities())
   const [focusedEntityId, setFocusedEntityId] = useState<string | undefined>(undefined)
   const [snapshots, setSnapshots] = useState<ContinuitySnapshot[]>(() => loadContinuitySnapshots())
-  const sessionState = useMemo(() => restoreOnSessionOpen('chat-main'), [artifacts, entities])
-  const validationLogs = useMemo(() => loadValidationLogs(), [artifacts, entities])
 
 
   useEffect(() => {
@@ -206,8 +200,6 @@ export function ContinuityPanel({ data, pearlItems, onCapturePearl, onRefreshPea
     const timer = window.setInterval(create, 60000)
     return () => window.clearInterval(timer)
   }, [artifacts, entities, seededArtifacts])
-
-  const stress = useMemo(() => runContinuityStressTest(seededArtifacts, entities), [seededArtifacts, entities])
 
   return (
     <div className="continuity-grid">
@@ -296,37 +288,9 @@ export function ContinuityPanel({ data, pearlItems, onCapturePearl, onRefreshPea
               <div key={artifact.id} className="tela-card" style={{ padding: '10px 12px' }}>
                 <div style={{ fontSize: 13, color: '#EAE0D2' }}>{artifact.fileName || artifact.title}</div>
                 <div style={{ fontSize: 11, color: 'rgba(234,224,210,0.5)' }}>{artifact.threadId} · {new Date(artifact.createdAt).toLocaleDateString()}</div>
-                <div style={{ marginTop: 4, fontSize: 11, color: '#C4973A' }}>
-                  Why now: {sessionState.attention.find((a) => a.id === artifact.id)?.whyNow ?? 'continuity relevance'}
-                </div>
               </div>
             ))}
           </div>
-        </div>
-        <div style={{ marginTop: 24 }}>
-          <SectionLabel>Operational Digest</SectionLabel>
-          <div className="tela-card" style={{ padding: '12px 14px' }}>
-            <div style={{ fontSize: 12, color: '#EAE0D2', marginBottom: 6 }}>{sessionState.digest.whatChanged}</div>
-            <div style={{ fontSize: 11, color: 'rgba(234,224,210,0.7)', marginBottom: 4 }}>{sessionState.digest.unresolved}</div>
-            <div style={{ fontSize: 11, color: 'rgba(234,224,210,0.7)', marginBottom: 4 }}>{sessionState.digest.needsAttention}</div>
-            <div style={{ fontSize: 11, color: 'rgba(234,224,210,0.7)', marginBottom: 4 }}>{sessionState.digest.resurfacing}</div>
-            <div style={{ fontSize: 11, color: '#C4973A' }}>{sessionState.digest.activeContinuity}</div>
-          </div>
-        </div>
-        <ValidationPanel
-          hydrationStatus="ready"
-          restorationSource={sessionState.snapshot ? 'snapshot restore' : 'runtime restore'}
-          snapshot={sessionState.snapshot}
-          state={sessionState.state}
-          attention={sessionState.attention}
-          logs={validationLogs}
-          momentumScore={sessionState.state.continuityIntensity}
-        />
-        <div style={{ marginTop: 10, fontSize: 10, color: 'rgba(234,224,210,0.5)' }}>
-          {summarizeValidationLogs(validationLogs)}
-        </div>
-        <div style={{ marginTop: 6, fontSize: 10, color: 'rgba(234,224,210,0.5)' }}>
-          Stress: {stress.artifactCount} artifacts · unresolved {stress.unresolvedCount} · lineage {stress.lineageDepth}
         </div>
         <div style={{ marginTop: 24 }}>
           <SectionLabel>Active Threads</SectionLabel>
