@@ -96,6 +96,7 @@ function materializeArtifact(ctx: ArtifactInputContext, format: ArtifactFormat, 
     artifactGroupId: groupId,
     createdAt,
     pinned: false,
+    classification: 'runtime_artifact',
   }
 }
 

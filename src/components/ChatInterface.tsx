@@ -174,7 +174,7 @@ export function ChatInterface({ wikiContext }: Props) {
     }
     window.addEventListener('tela-artifact-continue', handler as EventListener)
     return () => window.removeEventListener('tela-artifact-continue', handler as EventListener)
-  }, [])
+  }, [onContinueFromArtifact])
 
 
   async function sendMessage() {
@@ -282,6 +282,14 @@ export function ChatInterface({ wikiContext }: Props) {
           assistantText: accumulated,
           parentArtifactId: continueFromRef.current,
         })
+        if (artifacts.length === 0) {
+          setMessages((prev) => {
+            const updated = [...prev]
+            updated[updated.length - 1] = { role: 'assistant', content: conversationalPreview(accumulated) || accumulated.trim() }
+            return updated
+          })
+          return
+        }
         for (const artifact of artifacts) {
           upsertArtifact(artifact)
           const entities = extractEntities(accumulated, artifact)
