@@ -17,21 +17,26 @@ function markdownToHtml(markdown: string): string {
     .replace(/\n\n/g, '</p><p>')
 }
 
-export function ArtifactRenderer({ artifact }: { artifact: ArtifactRecord }) {
+export function ArtifactRenderer({ artifact, mode = 'preview' }: { artifact: ArtifactRecord; mode?: 'preview' | 'open' | 'source' }) {
   const markdownDoc = useMemo(() => {
     if (!artifact.markdown) return null
     const body = markdownToHtml(esc(artifact.markdown))
     return `<!doctype html><html><body style="font-family:system-ui;padding:16px;color:#eae0d2;background:#081321"><p>${body}</p></body></html>`
   }, [artifact.markdown])
 
+  if (mode === 'source') {
+    const source = artifact.html ?? artifact.markdown ?? artifact.code ?? artifact.text ?? artifact.structure ?? 'No source available.'
+    return <pre style={{ minHeight: 160, border: '1px solid rgba(196,151,58,0.22)', borderRadius: 10, padding: 14, color: '#C4973A', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>{source}</pre>
+  }
+
   if (artifact.previewUrl) {
-    return <iframe title={artifact.title} src={artifact.previewUrl} style={{ width: '100%', height: 240, border: 0, borderRadius: 10, background: '#081321' }} />
+    return <iframe title={artifact.title} src={artifact.previewUrl} style={{ width: '100%', height: mode === 'open' ? 420 : 260, border: 0, borderRadius: 10, background: '#081321' }} />
   }
   if (artifact.html) {
-    return <iframe title={artifact.title} srcDoc={artifact.html} style={{ width: '100%', height: 240, border: 0, borderRadius: 10, background: '#081321' }} sandbox="allow-scripts" />
+    return <iframe title={artifact.title} srcDoc={artifact.html} style={{ width: '100%', height: mode === 'open' ? 420 : 260, border: 0, borderRadius: 10, background: '#081321' }} sandbox="allow-scripts" />
   }
   if (markdownDoc) {
-    return <iframe title={artifact.title} srcDoc={markdownDoc} style={{ width: '100%', height: 240, border: 0, borderRadius: 10, background: '#081321' }} sandbox="allow-same-origin" />
+    return <iframe title={artifact.title} srcDoc={markdownDoc} style={{ width: '100%', height: mode === 'open' ? 420 : 260, border: 0, borderRadius: 10, background: '#081321' }} sandbox="allow-same-origin" />
   }
   if (artifact.mimeType === 'application/json' && artifact.text) {
     let formatted = artifact.text
