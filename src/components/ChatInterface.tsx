@@ -142,6 +142,24 @@ export function ChatInterface({ wikiContext }: Props) {
   const abortRef = useRef<AbortController | null>(null)
   const continueFromRef = useRef<string | undefined>(undefined)
 
+  const onContinueFromArtifact = (artifactId: string) => {
+    const artifact = findArtifactById(artifactId)
+    if (!artifact) return
+    const continuity = retrieveOperationalContinuity({
+      prompt: `continue ${artifact.title}`,
+      currentThreadId: artifact.threadId,
+      currentLineageId: artifact.lineageId,
+      currentEntityIds: artifact.entities,
+      artifacts: loadArtifacts(),
+      entities: loadEntities(),
+    })
+    const restored = restoreContinuitySnapshot()
+    const contextLine = `Context: ${continuity.relatedEntities.slice(0, 3).map((e) => e.name).join(', ')} | unresolved ${continuity.unresolvedContinuity.length} | snapshot ${restored?.id ?? 'none'}`
+    continueFromRef.current = artifact.id
+    setInput(`Continue from artifact: ${artifact.title}\n${contextLine}`)
+    textareaRef.current?.focus()
+  }
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
