@@ -20,12 +20,7 @@ export async function queryPgVector(params: {
   matchCount?: number
   threadId?: string
 }): Promise<VectorMatch[]> {
-  let cfg: { url: string; serviceRoleKey: string }
-  try {
-    cfg = getSupabaseConfig()
-  } catch {
-    return []
-  }
+  const cfg = getSupabaseConfig()
   const body = {
     query_embedding: params.embedding,
     match_count: params.matchCount ?? 24,
@@ -38,7 +33,7 @@ export async function queryPgVector(params: {
     body: JSON.stringify(body),
     cache: 'no-store',
   })
-  if (!res.ok) return []
+  if (!res.ok) throw new Error(`vector query failed ${res.status}`)
   return await res.json() as VectorMatch[]
 }
 

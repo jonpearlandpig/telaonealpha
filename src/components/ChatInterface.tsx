@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback, KeyboardEvent } from 'react'
+import { useState, useRef, useEffect, KeyboardEvent, type MutableRefObject, type RefObject } from 'react'
 import { extractArtifactsFromAssistant } from '@/lib/artifacts/runtime'
 import { findArtifactById, loadArtifacts, upsertArtifact, type ArtifactRecord } from '@/lib/artifacts/artifactStore'
 import { extractEntities } from '@/lib/entities/entityEngine'
@@ -123,11 +123,13 @@ function conversationalPreview(text: string): string {
     .trim()
 }
 
-function buildArtifactFirstMessage(fileNames: string[]): string {
-  if (fileNames.length <= 1) {
-    return `Generated 1 runtime artifact:\n${fileNames[0] || 'artifact'}`
-  }
-  return `Generated ${fileNames.length} runtime artifacts:\n${fileNames.map((name) => `- ${name}`).join('\n')}`
+function buildArtifactFirstMessage(raw: string, fileNames: string[]): string {
+  const cleaned = stripFencedBlocks(raw)
+  const header = `Generated ${fileNames.length} runtime artifact${fileNames.length > 1 ? 's' : ''}: ${fileNames.join(', ')}`
+  const summary = cleaned.split(/\n+/).map((line) => line.trim()).filter(Boolean).slice(0, 2).join(' ')
+  return summary
+    ? `${header}\n\n${summary}`
+    : `${header}\n\nPreview, open, download, continue, or view source from the artifact cards.`
 }
 
 export function ChatInterface({ wikiContext }: Props) {
@@ -140,9 +142,7 @@ export function ChatInterface({ wikiContext }: Props) {
   const abortRef = useRef<AbortController | null>(null)
   const continueFromRef = useRef<string | undefined>(undefined)
 
-  type ContinuePayload = { artifactId: string }
-
-  const onContinueFromArtifact = useCallback(({ artifactId }: ContinuePayload) => {
+  const onContinueFromArtifact = (artifactId: string) => {
     const artifact = findArtifactById(artifactId)
     if (!artifact) return
     const continuity = retrieveOperationalContinuity({
@@ -158,7 +158,7 @@ export function ChatInterface({ wikiContext }: Props) {
     continueFromRef.current = artifact.id
     setInput(`Continue from artifact: ${artifact.title}\n${contextLine}`)
     textareaRef.current?.focus()
-  }, [])
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -170,7 +170,7 @@ export function ChatInterface({ wikiContext }: Props) {
       const custom = event as CustomEvent<{ artifactId: string }>
       const id = custom.detail?.artifactId
       if (!id) return
-      onContinueFromArtifact({ artifactId: id })
+      onContinueFromArtifact(id, setInput, textareaRef, continueFromRef)
     }
     window.addEventListener('tela-artifact-continue', handler as EventListener)
     return () => window.removeEventListener('tela-artifact-continue', handler as EventListener)
@@ -296,13 +296,12 @@ export function ChatInterface({ wikiContext }: Props) {
           upsertEntities(entities)
         }
         continueFromRef.current = artifacts[artifacts.length - 1]?.id
-        const artifactMessage = buildArtifactFirstMessage(artifacts.map((artifact) => artifact.fileName || artifact.id))
+        const artifactMessage = buildArtifactFirstMessage(accumulated, artifacts.map((artifact) => artifact.fileName || artifact.id))
         setMessages((prev) => {
           const updated = [...prev]
-          updated[updated.length - 1] = { role: 'assistant', content: artifactMessage, artifactIds: artifacts.map((artifact) => artifact.id) }
+          updated[updated.length - 1] = { role: 'assistant', content: artifactMessage }
           return updated
         })
-        setMessageArtifacts((prev) => ({ ...prev, [nextMessages.length]: artifacts }))
         window.dispatchEvent(new Event('tela-artifacts-updated'))
       }
     } catch (err: unknown) {
@@ -410,7 +409,7 @@ export function ChatInterface({ wikiContext }: Props) {
                           <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 8 }}>{artifact.fileName}</div>
                           <ArtifactRenderer artifact={artifact} mode={artifact.mimeType === 'text/html' ? 'open' : 'preview'} />
                           <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                            <button onClick={() => onContinueFromArtifact({ artifactId: artifact.id })} style={{ border: '1px solid rgba(196,151,58,0.4)', background: 'rgba(196,151,58,0.1)', color: '#EAE0D2', borderRadius: 999, padding: '8px 12px' }}>Continue</button>
+                            <button onClick={() => onContinueFromArtifact(artifact.id, setInput, textareaRef, continueFromRef)} style={{ border: '1px solid rgba(196,151,58,0.4)', background: 'rgba(196,151,58,0.1)', color: '#EAE0D2', borderRadius: 999, padding: '8px 12px' }}>Continue</button>
                             <a href={URL.createObjectURL(new Blob([artifact.html ?? artifact.markdown ?? artifact.code ?? artifact.text ?? ''], { type: artifact.mimeType || 'text/plain' }))} download={artifact.fileName || `${artifact.id}.txt`} style={{ border: '1px solid rgba(234,224,210,0.24)', color: '#EAE0D2', borderRadius: 999, padding: '8px 12px', textDecoration: 'none' }}>Download</a>
                             <button onClick={() => window.dispatchEvent(new CustomEvent('tela-artifact-continue', { detail: { artifactId: artifact.id } }))} style={{ border: '1px solid rgba(234,224,210,0.24)', background: 'transparent', color: '#EAE0D2', borderRadius: 999, padding: '8px 12px' }}>Open</button>
                             <details>
