@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { Client } from "@notionhq/client";
 
 const notion = new Client({
-  auth: process.env.NOTION_TOKEN,
+ auth: process.env.NOTION_API_KEY,
 });
 
 const DATABASE_ID = process.env.NOTION_DATABASE_ID!;
