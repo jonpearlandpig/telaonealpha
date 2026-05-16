@@ -7,14 +7,39 @@ const notion = new Client({
 
 export async function GET() {
   try {
-    const response = await notion.databases.query({
-      database_id: process.env.NOTION_DATABASE_ID!,
+    const response = await notion.dataSources.query({
+      data_source_id: process.env.NOTION_DATABASE_ID!,
     })
+
+    const formatted = response.results.map((page: any) => ({
+      id: page.id,
+
+      title:
+        page.properties?.Name?.title?.[0]?.plain_text ||
+        "Untitled",
+
+      status:
+        page.properties?.Status?.select?.name || null,
+
+      priority:
+        page.properties?.Priority?.select?.name || null,
+
+      summary:
+        page.properties?.Summary?.rich_text?.[0]?.plain_text || "",
+
+      owner:
+        page.properties?.Owner?.rich_text?.[0]?.plain_text || "",
+
+      updated:
+        page.last_edited_time,
+    }))
 
     return NextResponse.json({
       success: true,
-      results: response.results,
+      count: formatted.length,
+      results: formatted,
     })
+
   } catch (error) {
     console.error("NOTION ERROR:", error)
 
