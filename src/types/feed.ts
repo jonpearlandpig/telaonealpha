@@ -1,4 +1,5 @@
-export type ContinuityType = 'Update' | 'Decision' | 'Venue Memory' | 'Staffing Alert' | 'Touring Note' | 'Approval' | 'Risk' | 'Blocker'
+export type ContinuityType = 'Update' | 'Decision' | 'Venue Memory' | 'Staffing Note' | 'Touring Note' | 'Approval' | 'Risk' | 'Unresolved'
+export type DepartmentStatus = 'ACTIVE' | 'BUILDING' | 'EARLY' | 'STANDBY'
 
 export type ContinuityCard = {
   id: string
@@ -7,10 +8,15 @@ export type ContinuityCard = {
   owner: string
   timestamp: string
   unresolved: boolean
+  pinned?: boolean
   headline: string
   summary: string
   image?: string
   acknowledged: number
+  source: string
+  sourceLabel: string
+  tags: string[]
+  relationship?: string
 }
 
 export type OpsDepartment = {
@@ -19,4 +25,5 @@ export type OpsDepartment = {
   unresolvedCount: number
   active: boolean
   latest: string
+  status: DepartmentStatus
 }
