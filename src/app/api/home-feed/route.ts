@@ -2,36 +2,21 @@ import { NextResponse } from "next/server";
 import { Client } from "@notionhq/client";
 
 const notion = new Client({
- auth: process.env.NOTION_API_KEY,
+  auth: "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",
 });
 
-const DATABASE_ID = process.env.NOTION_DATABASE_ID!;
+const DATABASE_ID = "7d1de18bef324b098fde35d4c481a532";
 
 export async function GET() {
   try {
-   const response = await notion.databases.query({
-  database_id: DATABASE_ID,
-  page_size: 10,
-});
-
-    const feed = response.results.map((page: any, index: number) => {
-      const props = page.properties || {};
-
-      const title =
-        props.Name?.title?.[0]?.plain_text ||
-        props.Title?.title?.[0]?.plain_text ||
-        `Untitled ${index + 1}`;
-
-      return {
-        id: page.id,
-        title,
-      };
+    const response = await notion.databases.query({
+      database_id: DATABASE_ID,
+      page_size: 10,
     });
 
     return NextResponse.json({
       status: "ok",
-      source: "Notion",
-      feed,
+      results: response.results,
     });
   } catch (error: any) {
     return NextResponse.json({
