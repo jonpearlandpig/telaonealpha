@@ -3,6 +3,7 @@
 :root {
   --bg: #F8F6F2;
   --surface: #FFFFFF;
+  --bg-soft: #F2EFE8;
   --text-primary: #141414;
   --text-secondary: #5E5E5E;
   --text-tertiary: #9A9A9A;
@@ -17,3 +18,6 @@
 body { margin: 0; font-family: var(--font-geist-sans), -apple-system, sans-serif; background: var(--bg); }
 button { transition: all 180ms ease-out; }
 button:active { transform: translateY(1px); }
+
+
+main { -webkit-overflow-scrolling: touch; }
