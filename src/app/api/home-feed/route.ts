@@ -2,15 +2,15 @@ import { NextResponse } from "next/server";
 import { Client } from "@notionhq/client";
 
 const notion = new Client({
-  auth: "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",
+  auth: process.env.NOTION_API_KEY,
 });
 
-const DATABASE_ID = "7d1de18bef324b098fde35d4c481a532";
+const DATABASE_ID = process.env.NOTION_DATABASE_ID!;
 
 export async function GET() {
   try {
-    const response = await notion.databases.query({
-      database_id: DATABASE_ID,
+    const response = await notion.dataSources.query({
+      data_source_id: DATABASE_ID,
       page_size: 10,
     });
 
@@ -19,6 +19,8 @@ export async function GET() {
       results: response.results,
     });
   } catch (error: any) {
+    console.error(error);
+
     return NextResponse.json({
       status: "error",
       message: error.message,
