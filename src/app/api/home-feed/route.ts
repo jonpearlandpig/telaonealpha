@@ -9,10 +9,10 @@ const DATABASE_ID = process.env.NOTION_DATABASE_ID!;
 
 export async function GET() {
   try {
-   const response = await notion.dataSources.query({
-      data_source_id: DATABASE_ID,
-      page_size: 10,
-    });
+   const response = await notion.databases.query({
+  database_id: DATABASE_ID,
+  page_size: 10,
+});
 
     const feed = response.results.map((page: any, index: number) => {
       const props = page.properties || {};
