@@ -1,4 +1,4 @@
-export type ContinuityType = 'Update' | 'Decision' | 'Venue Memory' | 'Staffing Alert' | 'Touring Note' | 'Approval' | 'Risk' | 'Blocker'
+export type ContinuityType = 'Update' | 'Decision' | 'Venue Memory' | 'Staffing Note' | 'Touring Note' | 'Approval' | 'Risk' | 'Unresolved'
 
 export type ContinuityCard = {
   id: string
@@ -7,10 +7,12 @@ export type ContinuityCard = {
   owner: string
   timestamp: string
   unresolved: boolean
+  pinned?: boolean
   headline: string
   summary: string
   image?: string
   acknowledged: number
+  source: string
 }
 
 export type OpsDepartment = {
