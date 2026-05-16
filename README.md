@@ -176,3 +176,37 @@ TELAOne aims to become:
 
 The models are not the product.  
 Continuity is the product.
+
+## ShowTELA Live Notion Home Screen
+
+The Home Screen now uses the Notion API as the live continuity source.
+
+### Required environment variables
+
+Copy `.env.example` to `.env.local` and fill all values:
+
+- `NOTION_API_KEY`
+- `NOTION_DB_OPERATIONAL_UPDATES`
+- `NOTION_DB_WEEKLY_OPS`
+- `NOTION_DB_TOURING_MEMORY`
+- `NOTION_DB_DECISIONS`
+- `NOTION_DB_STAFFING`
+- `NOTION_DB_CONTACTS`
+- `NOTION_DB_ALIGNMENT_DOCS`
+- `NOTION_DB_VENUE_NOTES`
+- `NOTION_DB_RISK_TRACKING`
+
+`Operational Updates` powers the live continuity feed using this mapping:
+- `Type` -> continuity object type
+- `Department` -> Active Ops rail
+- `Owner` -> card owner
+- `Summary` -> operational body copy
+- `Unresolved` -> gold operational state
+- `Pinned` -> priority continuity object
+
+### Vercel deployment
+
+1. Add the same environment variables in Vercel Project Settings.
+2. Deploy this branch (do not deploy `main` directly).
+3. The API route `/api/showtela/feed` runs in Node runtime and is tuned in `vercel.json`.
+4. Home Screen uses server-side fetch with revalidation for mobile-first performance and smooth scrolling.
