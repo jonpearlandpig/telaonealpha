@@ -1,4 +1,4 @@
-# TELAOne Alpha
+production lineage reset # TELAOne Alpha
 
 TELAOne is a continuity-first operational cognition runtime designed to help humans create, remember, decide, and execute across persistent operational memory.
 
