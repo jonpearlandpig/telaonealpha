@@ -144,7 +144,7 @@ export async function fetchShowTelaFeed(): Promise<ShowTelaFeed> {
   const results = await Promise.all(entries.map(async ([source, env]) => {
     const data = await notion.request<{ results: Array<PageObjectResponse | { object: string }> }>({
       path: `/databases/${getEnv(env)}/query`,
-      method: 'POST',
+      method: 'post',
       body: {
         page_size: source === 'operationalUpdates' ? 40 : 12,
         sorts: [{ timestamp: 'last_edited_time', direction: 'descending' }],
