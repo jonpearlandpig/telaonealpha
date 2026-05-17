@@ -1,4 +1,5 @@
 import type { NormalizeFn } from './viewModels';
+import type { OperationalContinuityObject } from './types';
 
 const feedImages = [
   'https://images.unsplash.com/photo-1503095396549-807759245b35?q=80&w=900&auto=format&fit=crop',
@@ -19,6 +20,50 @@ export const normalizeCrusadeData: NormalizeFn = ({ feed }) => {
   const unresolvedCount = feed.filter((i) => !i.status || i.status.toLowerCase() !== 'resolved').length;
   const overdueCount = feed.filter((i) => (i.priority || '').toLowerCase().includes('high')).length;
   const blockedCount = feed.filter((i) => (i.summary || '').toLowerCase().includes('blocked')).length;
+
+  const ageHours = (updated?: string) => Math.max(0, Math.floor((Date.now() - new Date(updated || Date.now()).getTime()) / (1000 * 60 * 60)))
+  const priorityWeight = (priority?: string | null) => {
+    const p = (priority || '').toLowerCase()
+    if (p.includes('high')) return 3
+    if (p.includes('medium')) return 2
+    return 1
+  }
+
+  const normalizePerson = (item: (typeof feed)[number]): OperationalContinuityObject => ({
+    id: `person-${item.id}`,
+    type: 'person' as const,
+    title: item.owner || 'Operator',
+    status: item.status || 'active',
+    timestamp: item.updated,
+    priority: item.priority || 'medium',
+    owner: item.owner || 'Ops Lead',
+    unresolvedCount: !item.status || item.status.toLowerCase() !== 'resolved' ? 1 : 0,
+    linkedPeople: [item.owner || 'Ops Lead'],
+    sourcePage: 'People & Relationship Data Layer',
+    emotionalWeight: (item.summary || '').toLowerCase().includes('blocked') || (item.summary || '').toLowerCase().includes('delay') ? 0.92 : (item.priority || '').toLowerCase().includes('high') ? 0.85 : 0.5,
+    continuitySummary: item.summary || 'Operational relationship continuity update.',
+    operationalImportance: 4 + priorityWeight(item.priority) + ((item.summary || '').toLowerCase().includes('approval') ? 2 : 0) + ((item.summary || '').toLowerCase().includes('staff') ? 2 : 0) + ((item.summary || '').toLowerCase().includes('finance') ? 2 : 0) + ((item.summary || '').toLowerCase().includes('venue') ? 2 : 0) + ((item.summary || '').toLowerCase().includes('transport') || (item.summary || '').toLowerCase().includes('logistics') ? 2 : 0),
+    recencyScore: Math.max(1, 12 - Math.floor(ageHours(item.updated) / 4)),
+    unresolvedImpact: (!item.status || item.status.toLowerCase() !== 'resolved' ? 5 : 1) + ((item.summary || '').toLowerCase().includes('blocked') ? 3 : 0) + ((item.summary || '').toLowerCase().includes('waiting') ? 2 : 0),
+  })
+  const normalizeRisk = (item: (typeof feed)[number]): OperationalContinuityObject => ({ ...normalizePerson(item), id: `risk-${item.id}`, type: 'risk_signal' as const, sourcePage: 'Risk Register', title: `${item.title} risk`, status: item.status || 'elevated' })
+  const normalizeContinuityEvent = (item: (typeof feed)[number]): OperationalContinuityObject => ({ ...normalizePerson(item), id: `continuity-${item.id}`, type: 'continuity_event' as const, sourcePage: 'Weekly Ops System', title: item.title })
+  const normalizeTouringAssumption = (item: (typeof feed)[number]): OperationalContinuityObject => ({ ...normalizePerson(item), id: `assumption-${item.id}`, type: 'touring_assumption' as const, sourcePage: 'Touring Assumptions Tracker', title: `${item.title} assumption` })
+  const normalizeCommunicationEvent = (item: (typeof feed)[number]): OperationalContinuityObject => ({ ...normalizePerson(item), id: `comm-${item.id}`, type: 'communication_event' as const, sourcePage: 'Communication Rhythm', title: `${item.owner || 'Ops'} communication` })
+
+  const continuityObjects = feed.flatMap((item) => [
+    normalizePerson(item),
+    normalizeRisk(item),
+    normalizeContinuityEvent(item),
+    normalizeTouringAssumption(item),
+    normalizeCommunicationEvent(item),
+    { ...normalizePerson(item), id: `op-${item.id}`, type: 'operation' as const, sourcePage: 'CRUSADE OPS HQ', title: item.title },
+    { ...normalizePerson(item), id: `unresolved-${item.id}`, type: 'unresolved' as const, sourcePage: 'First 30 Day Activation Tracker', title: `${item.title} unresolved` },
+  ])
+
+  const weightedFeed = continuityObjects
+    .filter((o) => o.type === 'continuity_event' || o.type === 'risk_signal' || o.type === 'communication_event' || o.type === 'touring_assumption')
+    .sort((a, b) => (b.operationalImportance * 2 + b.emotionalWeight * 10 + b.recencyScore + b.unresolvedImpact * 2) - (a.operationalImportance * 2 + a.emotionalWeight * 10 + a.recencyScore + a.unresolvedImpact * 2))
 
   return {
     activeOps: [
@@ -42,15 +87,16 @@ export const normalizeCrusadeData: NormalizeFn = ({ feed }) => {
       { id: 'security', name: 'Security', label: 'Security', latest: 'Movement active', unresolvedCount: 1, image: 'https://images.unsplash.com/photo-1529078155058-5d716f45d604?q=80&w=300&auto=format&fit=crop' },
     ],
     unresolvedPressure: { unresolvedCount, overdueCount, blockedCount, pendingApprovals: Math.max(1, Math.floor(unresolvedCount / 2)) },
-    feed: feed.map((item, i) => ({
+    feed: weightedFeed.map((item, i) => ({
       id: item.id,
-      timestamp: toTimestamp(item.updated),
+      timestamp: toTimestamp(item.timestamp),
       title: item.title,
-      summary: item.summary || 'Operational continuity update received.',
-      owner: item.owner || 'Ops Lead',
+      summary: item.continuitySummary,
+      owner: item.owner,
       image: feedImages[i % feedImages.length],
       avatar: feedImages[(i + 1) % feedImages.length],
-      unresolved: !item.status || item.status.toLowerCase() !== 'resolved',
+      unresolved: item.unresolvedImpact >= 6,
     })),
+    continuityObjects,
   };
 };
