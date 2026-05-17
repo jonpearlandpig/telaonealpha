@@ -12,11 +12,11 @@ export function ShowTelaShell({ vm, onCardAction, onPearlDrop }: { vm: ShowTelaV
   return (
     <main className='min-h-screen bg-[#F7F4EF] pb-32 text-[#111111]'>
       <ShowTelaHeader />
-      <ActiveOpsRail items={vm.activeOps} />
-      <FluencyPartnersRail items={vm.fluencyPartners} />
+      <ActiveOpsRail people={vm.activeOps.map((i) => ({ id: i.id, name: i.name, role: i.latest, unresolvedCount: i.unresolvedCount, updatesCount: 0 }))} />
+      <FluencyPartnersRail people={vm.fluencyPartners.map((i) => ({ id: i.id, name: i.name, role: i.latest, unresolvedCount: i.unresolvedCount }))} />
       <CrusadeOperationsRail items={vm.crusadeOperations} />
       <UnresolvedPressureCard pressure={vm.unresolvedPressure} />
-      <ContinuityFeed items={vm.feed} onCardAction={onCardAction} />
+      <ContinuityFeed feed={vm.feed.map((i) => ({ id: i.id, headline: i.title, body: i.summary, timestamp: i.timestamp, owner: { id: i.owner, name: i.owner } }))} />
       <BottomDock onPearlDrop={onPearlDrop} />
     </main>
   );
