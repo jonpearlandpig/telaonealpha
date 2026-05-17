@@ -1,4 +1,4 @@
-import { FeedActionBar, type ActionType } from './FeedActionBar';
+import { FeedActionBar } from './FeedActionBar';
 import { OperationalImage } from './OperationalImage';
 import { StatusPill } from './StatusPill';
 import type { FeedItem, VisualPreset } from './types';
@@ -17,7 +17,7 @@ function toTimestamp(iso?: string) {
   return `${weekday} ${time} ${month}/${day}/${year}`;
 }
 
-export function ContinuityCard({ item, visual, onAction }: { item: FeedItem; visual: VisualPreset; onAction: (item: FeedItem, action: ActionType) => void }) {
+export function ContinuityCard({ item, visual }: { item: FeedItem; visual: VisualPreset }) {
   const unresolved = !item.status || item.status.toLowerCase() !== 'resolved';
 
   return (
@@ -34,7 +34,7 @@ export function ContinuityCard({ item, visual, onAction }: { item: FeedItem; vis
         </div>
         <div className="flex items-center gap-2">
           <StatusPill unresolved={unresolved} />
-          <button onClick={() => onAction(item, 'open-thread')} className="text-[#9A948B]">•••</button>
+          <button className="text-[#9A948B]">•••</button>
         </div>
       </div>
 
@@ -47,7 +47,7 @@ export function ContinuityCard({ item, visual, onAction }: { item: FeedItem; vis
         <OperationalImage src={visual.image} alt={visual.category} className="h-[124px] w-[124px] rounded-[18px] object-cover contrast-110" />
       </div>
 
-      <FeedActionBar onAction={(action) => onAction(item, action)} />
+      <FeedActionBar />
     </article>
   );
 }
