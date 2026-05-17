@@ -1,6 +1,6 @@
-import { OperationalImage } from './OperationalImage';
-import type { FluencyPartner } from './types';
+import type { PersonEntity } from '@/lib/showtela/types'
+import { OperationalImage } from './OperationalImage'
 
-export function FluencyPartnersRail({ items }: { items: FluencyPartner[] }) {
-  return <section className='px-4 pt-3'><h2 className='mb-2 text-[12px] text-[#9A948B]'>Fluency Partners</h2><div className='flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>{items.map((item)=><article key={item.id} className='flex min-w-[132px] items-center gap-2 rounded-full border border-black/5 bg-white px-2 py-2 shadow-[0_6px_18px_rgba(17,17,17,0.04)]'><OperationalImage src={item.image} alt={item.label} className='h-8 w-8 rounded-full object-cover'/><div><p className='text-[12px] leading-4'>{item.label}</p><p className='text-[10px] text-[#9A948B]'>{item.unresolvedCount} unresolved</p></div></article>)}</div></section>
+export function FluencyPartnersRail({ people }: { people: PersonEntity[] }) {
+  return <section className='px-7 pt-5'><h2 className='text-[12px] uppercase tracking-[0.24em] text-[#8B847B]'>Fluency Partners</h2><div className='mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [overscroll-behavior-x:contain] [&::-webkit-scrollbar]:hidden'>{people.map((p) => <article key={p.id} className='w-[72px] shrink-0 snap-start text-center'><button className='transition-transform duration-200 active:scale-95'><div className='mx-auto h-[58px] w-[58px] rounded-full border border-[#C89B2F]/35 p-[2px]'><OperationalImage src={p.avatar ?? 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?q=80&w=300&auto=format&fit=crop'} alt={p.name} className='h-full w-full rounded-full object-cover opacity-95' /></div></button><p className='mt-2 text-[11px] text-[#5D5A56]'>{p.name}</p></article>)}</div></section>
 }
