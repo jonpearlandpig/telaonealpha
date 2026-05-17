@@ -1,5 +1,5 @@
 import type { ContinuityEvent } from '@/lib/showtela/types'
 
-export function ContinuityCard({ item }: { item: ContinuityEvent }) {
-  return <article className='rounded-2xl bg-white p-4 shadow-sm'><h3 className='text-sm font-semibold'>{item.headline}</h3><p className='mt-1 text-sm text-[#5D5A56]'>{item.body}</p><p className='mt-2 text-xs'>{item.owner?.name ?? 'Unknown'} • {item.timestamp ?? ''}</p></article>
+export function ContinuityCard({ item, onSelect }: { item: ContinuityEvent; onSelect?: (item: ContinuityEvent) => void }) {
+  return <button onClick={() => onSelect?.(item)} className='w-full rounded-[1.35rem] border border-[#E8DCC4]/85 bg-[linear-gradient(152deg,#FFFDF7_0%,#F6EBDD_100%)] p-4 text-left shadow-[0_18px_34px_rgba(24,19,13,0.11)] transition duration-200 active:scale-[0.995] active:opacity-90'><h3 className='text-[15px] font-semibold leading-tight text-[#18150F]'>{item.headline}</h3><p className='mt-2 text-sm leading-relaxed text-[#5E5142]'>{item.body}</p><p className='mt-3 text-[11px] font-medium uppercase tracking-[0.14em] text-[#8A7049]'>{item.owner?.name ?? 'Unknown'} • {item.timestamp ?? ''}</p></button>
 }
