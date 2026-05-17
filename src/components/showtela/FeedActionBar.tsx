@@ -5,6 +5,8 @@ const actions = [
   ["⌁", "Pin"],
 ] as const;
 
+export type ActionType = "acknowledge" | "note" | "assign" | "pin";
+
 export function FeedActionBar() {
   return (
     <div className="flex items-center justify-between border-t border-black/5 pt-3 text-[#6E6A63]">

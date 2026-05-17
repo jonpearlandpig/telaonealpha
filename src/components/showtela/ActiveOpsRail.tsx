@@ -1,6 +1,6 @@
-import { OperationalImage } from './OperationalImage';
-import type { ActiveOp } from './types';
+import type { PersonEntity } from '@/lib/showtela/types'
 
-export function ActiveOpsRail({ items }: { items: ActiveOp[] }) {
-  return <section className='px-4 pt-4'><h2 className='mb-2 text-[12px] text-[#9A948B]'>Active Ops</h2><div className='flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch] [overscroll-behavior-x:contain] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>{items.map((item)=><article key={item.id} className='w-[76px] shrink-0 snap-start text-center'><button className='relative h-[72px] w-[72px] rounded-full border-[3px] border-[#C89B2F] p-[2px] shadow-[0_6px_18px_rgba(17,17,17,0.04)] active:scale-[0.96]'><OperationalImage src={item.image} alt={item.name} className='h-full w-full rounded-full object-cover'/><span className='absolute -right-1 top-0 grid h-5 min-w-5 place-items-center rounded-full bg-[#C89B2F] px-1 text-[10px] font-semibold text-white'>{item.unresolvedCount}</span></button><p className='mt-1 text-[12px] font-medium leading-4'>{item.name}</p><p className='text-[10px] leading-3 text-[#9A948B]'>{item.latest}</p></article>)}</div></section>
+export function ActiveOpsRail(props: { people: PersonEntity[] } | { items: Array<{ id: string; name: string; latest?: string; unresolvedCount: number; image: string }> }) {
+  const people = 'people' in props ? props.people : props.items.map((i) => ({ id: i.id, name: i.name, role: i.latest, unresolvedCount: i.unresolvedCount, updatesCount: 0 }))
+  return <section className='px-5 pb-4'><h2 className='text-sm font-medium'>Active Ops</h2><div className='mt-3 flex gap-3 overflow-x-auto'>{people.map((p) => <button key={p.id} className='min-w-24 rounded-2xl bg-white p-3 text-left shadow-sm'><div className='text-sm font-medium'>{p.name}</div><div className='text-xs text-[#5D5A56]'>{p.role ?? 'Operator'}</div><div className='text-xs'>{p.unresolvedCount ?? 0} unresolved • {p.updatesCount ?? 0} updates</div></button>)}</div></section>
 }
