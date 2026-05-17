@@ -1,14 +1,44 @@
-import { ActiveOpsRail } from './ActiveOpsRail';
-import { BottomDock } from './BottomDock';
-import { ContinuityFeed } from './ContinuityFeed';
-import { CrusadeOperationsRail } from './CrusadeOperationsRail';
-import { FluencyPartnersRail } from './FluencyPartnersRail';
-import { ShowTelaHeader } from './ShowTelaHeader';
-import { UnresolvedPressureCard } from './UnresolvedPressureCard';
-import type { ShowTelaViewModel } from './types';
-import type { ActionType } from './FeedActionBar';
+'use client'
+
+import { useMemo, useState } from 'react'
+import { ActiveOpsRail } from './ActiveOpsRail'
+import { BottomDock } from './BottomDock'
+import { ContinuityFeed } from './ContinuityFeed'
+import { ContinuitySheet } from './ContinuitySheet'
+import { CrusadeOperationsRail } from './CrusadeOperationsRail'
+import { FluencyPartnersRail } from './FluencyPartnersRail'
+import { ShowTelaHeader } from './ShowTelaHeader'
+import { UnresolvedPressureCard } from './UnresolvedPressureCard'
+import type { ShowTelaViewModel } from './types'
+import type { ContinuityEvent } from '@/lib/showtela/types'
+import type { ActionType } from './FeedActionBar'
 
 export function ShowTelaShell({ vm, onCardAction, onPearlDrop }: { vm: ShowTelaViewModel; onCardAction: (itemId: string, action: ActionType) => void; onPearlDrop: () => void }) {
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [sheetTitle, setSheetTitle] = useState('Continuity')
+  const [feed, setFeed] = useState<ContinuityEvent[]>(vm.feed.map((i) => ({ id: i.id, headline: i.title, body: i.summary, timestamp: i.timestamp, owner: { id: i.owner, name: i.owner }, isNew: i.unresolved })))
+
+  const unresolved = useMemo(() => vm.unresolvedPressure.unresolvedCount, [vm.unresolvedPressure.unresolvedCount])
+
+  const openSheet = (title: string) => {
+    setSheetTitle(title)
+    setSheetOpen(true)
+  }
+
+  const handlePearlDrop = () => {
+    onPearlDrop()
+    const now = new Date()
+    const event: ContinuityEvent = {
+      id: `local-${now.getTime()}`,
+      headline: 'New continuity note captured',
+      body: 'Pearl Drop inserted into operational stream.',
+      timestamp: now.toISOString(),
+      owner: { id: 'jon', name: 'Jon' },
+      isNew: true,
+    }
+    setFeed((prev) => [event, ...prev])
+  }
+
   return (
     <main className='relative mx-auto min-h-screen w-full max-w-[430px] bg-[#F7F4EF] pb-32 text-[#111111]'>
       <span className='pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-10%,rgba(200,155,47,0.14),transparent_55%)]' />
@@ -20,5 +50,5 @@ export function ShowTelaShell({ vm, onCardAction, onPearlDrop }: { vm: ShowTelaV
       <ContinuityFeed feed={vm.feed.map((i) => ({ id: i.id, headline: i.title, body: i.summary, timestamp: i.timestamp, owner: { id: i.owner, name: i.owner } }))} />
       <BottomDock onPearlDrop={onPearlDrop} />
     </main>
-  );
+  )
 }
