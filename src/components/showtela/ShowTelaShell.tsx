@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { ActiveOpsRail } from './ActiveOpsRail'
 import { BottomDock } from './BottomDock'
 import { ContinuityFeed } from './ContinuityFeed'
-import { ContinuitySheet } from './ContinuitySheet'
 import { CrusadeOperationsRail } from './CrusadeOperationsRail'
 import { FluencyPartnersRail } from './FluencyPartnersRail'
 import { ShowTelaHeader } from './ShowTelaHeader'
@@ -15,7 +14,6 @@ import type { ContinuityEvent } from '@/lib/showtela/types'
 export function ShowTelaShell({ vm, onPearlDrop }: { vm: ShowTelaViewModel; onPearlDrop: () => void }) {
   const [feed, setFeed] = useState<ContinuityEvent[]>(vm.feed.map((i) => ({ id: i.id, headline: i.title, body: i.summary, timestamp: i.timestamp, owner: { id: i.owner, name: i.owner }, isNew: i.unresolved })))
   const [sheetPerson, setSheetPerson] = useState<string | null>(null)
-
 
   const handlePearlDrop = () => {
     onPearlDrop()
@@ -39,7 +37,6 @@ export function ShowTelaShell({ vm, onPearlDrop }: { vm: ShowTelaViewModel; onPe
       <FluencyPartnersRail people={vm.fluencyPartners.map((i) => ({ id: i.id, name: i.name, role: i.latest, unresolvedCount: i.unresolvedCount }))} />
       <CrusadeOperationsRail items={vm.crusadeOperations} />
       <UnresolvedPressureCard pressure={vm.unresolvedPressure} />
-      {sheetPerson ? <section className='px-7 pt-3'><ContinuitySheet personName={sheetPerson} events={feed} unresolved={vm.continuityObjects.filter((o) => o.type === 'unresolved').map((o) => ({ id: o.id, title: o.title, severity: o.priority as 'low' | 'medium' | 'high', blocking: o.unresolvedImpact > 6, aging: Math.max(1, Math.floor((10 - o.recencyScore) * 2)), operation: o.sourcePage }))} operations={vm.crusadeOperations.map((o) => ({ id: o.id, title: o.label, unresolvedCount: o.unresolvedCount, latestMovement: o.latest }))} /></section> : null}
       <ContinuityFeed feed={feed} />
       <BottomDock onPearlDrop={handlePearlDrop} />
     </main>
