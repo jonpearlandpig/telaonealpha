@@ -1,0 +1,5 @@
+import type { UnresolvedPressure } from './types';
+
+export function UnresolvedPressureCard({ pressure }: { pressure: UnresolvedPressure }) {
+  return <section className='px-4 pt-4'><article className='rounded-[24px] border border-[#D88432]/30 bg-[#FFF8EE] p-4 shadow-[0_6px_18px_rgba(17,17,17,0.04)]'><p className='text-[11px] uppercase tracking-[0.08em] text-[#D88432]'>Unresolved Pressure</p><div className='mt-2 grid grid-cols-4 gap-2 text-center'><div><p className='text-[20px] font-semibold'>{pressure.unresolvedCount}</p><p className='text-[10px] text-[#9A948B]'>Open</p></div><div><p className='text-[20px] font-semibold'>{pressure.overdueCount}</p><p className='text-[10px] text-[#9A948B]'>Overdue</p></div><div><p className='text-[20px] font-semibold'>{pressure.blockedCount}</p><p className='text-[10px] text-[#9A948B]'>Blocked</p></div><div><p className='text-[20px] font-semibold'>{pressure.pendingApprovals}</p><p className='text-[10px] text-[#9A948B]'>Approvals</p></div></div></article></section>
+}
