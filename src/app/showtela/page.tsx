@@ -1,30 +1,26 @@
-import { ShowTelaShell } from '@/components/showtela/ShowTelaShell'
-import { normalizeCrusadeData } from '@/components/showtela/normalizeCrusadeData'
+import { ActiveOpsRail } from '@/components/showtela/ActiveOpsRail'
+import { BottomNav } from '@/components/showtela/BottomNav'
+import { ContinuityFeed } from '@/components/showtela/ContinuityFeed'
+import { FluencyPartnersRail } from '@/components/showtela/FluencyPartnersRail'
+import { OperationsRow } from '@/components/showtela/OperationsRow'
+import { PressureCard } from '@/components/showtela/PressureCard'
+import { RuntimeHeader } from '@/components/showtela/RuntimeHeader'
 import { getShowTelaHome } from '@/lib/showtela/hydration'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ShowTelaHome() {
-  console.log('SHOWTELA PAGE RENDERED')
   const data = await getShowTelaHome()
-  const vm = normalizeCrusadeData({
-    feed: data.continuityFeed.map((event) => ({
-      id: event.id,
-      title: event.headline,
-      status: event.pressure === 'high' ? 'unresolved' : 'resolved',
-      priority: event.pressure ?? null,
-      summary: event.body ?? '',
-      owner: event.owner?.name ?? 'Ops Lead',
-      updated: event.timestamp ?? new Date().toISOString(),
-    })),
-  })
-  const env = process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? 'unknown'
-  console.log('[ShowTELA]', `env=${env}`, `feed=${vm.feed.length}`, `activeOps=${vm.activeOps.length}`, `pressure=${vm.unresolvedPressure.unresolvedCount}`)
 
   return (
-    <>
-      <div className='fixed left-2 top-2 z-[100] rounded bg-red-600 px-2 py-1 text-xs font-semibold text-white'>SHOWTELA PAGE ACTIVE</div>
-      <ShowTelaShell vm={vm} onCardAction={() => undefined} onPearlDrop={() => undefined} env={env} commit={process.env.VERCEL_GIT_COMMIT_SHA ?? 'local'} buildTimestamp={new Date().toISOString()} />
-    </>
+    <main className='mx-auto min-h-screen max-w-md bg-[#F7F4EF]'>
+      <RuntimeHeader />
+      <ActiveOpsRail people={data.activeOps} />
+      <FluencyPartnersRail people={data.fluencyPartners} />
+      <OperationsRow operations={data.operations} />
+      <PressureCard total={data.pressureSummary.total} high={data.pressureSummary.high} medium={data.pressureSummary.medium} />
+      <ContinuityFeed feed={data.continuityFeed} />
+      <BottomNav />
+    </main>
   )
 }

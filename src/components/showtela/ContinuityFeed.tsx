@@ -1,5 +1,11 @@
 import type { ContinuityEvent } from '@/lib/showtela/types'
 import { ContinuityCard } from './ContinuityCard'
-export function ContinuityFeed({ feed }: { feed: ContinuityEvent[] }) {
-  return <section className='px-7 pb-32 pt-5'><div className='mb-1 text-[10px] font-semibold text-green-600'>CONTINUITY FEED V2</div><h2 className='pb-3 text-[12px] uppercase tracking-[0.24em] text-[#8B847B]'>Continuity Feed</h2><div className='space-y-3'>{feed.map((item) => <ContinuityCard key={item.id} item={item} />)}</div></section>
+import type { ActionType } from './FeedActionBar'
+import type { ContinuityFeedItem } from './types'
+
+type Props = { feed: ContinuityEvent[] } | { items: ContinuityFeedItem[]; onCardAction: (itemId: string, action: ActionType) => void }
+
+export function ContinuityFeed(props: Props) {
+  const feed = 'feed' in props ? props.feed : props.items.map((item) => ({ id: item.id, headline: item.title, body: item.summary, timestamp: item.timestamp, owner: { id: item.owner, name: item.owner } }))
+  return <section className='px-5 pb-28'><h2 className='pb-3 text-sm font-medium'>Continuity Feed</h2><div className='space-y-3'>{feed.map((item) => <ContinuityCard key={item.id} item={item} />)}</div></section>
 }
