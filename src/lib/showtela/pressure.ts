@@ -11,7 +11,3 @@ export function calculatePressure(unresolved: UnresolvedObject[]): { score: numb
   const level: PressureLevel = score >= 12 ? 'high' : score >= 6 ? 'medium' : 'low'
   return { score, level }
 }
-
-export function calculateOperationalPressure(unresolved: UnresolvedObject[]): { score: number; level: PressureLevel } {
-  return calculatePressure(unresolved)
-}
