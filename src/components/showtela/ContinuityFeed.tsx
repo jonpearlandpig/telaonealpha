@@ -8,5 +8,5 @@ type Props = ({ feed: ContinuityEvent[]; onSelect?: (item: ContinuityEvent) => v
 export function ContinuityFeed(props: Props) {
   const onSelect = 'onSelect' in props ? props.onSelect : undefined
   const feed = 'feed' in props ? props.feed : props.items.map((item) => ({ id: item.id, headline: item.title, body: item.summary, timestamp: item.timestamp, owner: { id: item.owner, name: item.owner } }))
-  return <section className='px-5 pb-32'><h2 className='pb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#84663A]'>Continuity Feed</h2><div className='space-y-3'>{feed.map((item) => <ContinuityCard key={item.id} item={item} onSelect={onSelect} />)}</div></section>
+  return <section className='px-5 pb-32'><h2 className='pb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#84663A]'>Continuity Feed</h2><div className='space-y-3'>{feed.map((item) => <ContinuityCard key={item.id} item={item} />)}</div></section>
 }
