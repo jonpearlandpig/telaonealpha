@@ -21,14 +21,6 @@ export const normalizeCrusadeData: NormalizeFn = ({ feed }) => {
   const overdueCount = feed.filter((i) => (i.priority || '').toLowerCase().includes('high')).length;
   const blockedCount = feed.filter((i) => (i.summary || '').toLowerCase().includes('blocked')).length;
 
-  const ageHours = (updated?: string) => Math.max(0, Math.floor((Date.now() - new Date(updated || Date.now()).getTime()) / (1000 * 60 * 60)))
-  const priorityWeight = (priority?: string | null) => {
-    const p = (priority || '').toLowerCase()
-    if (p.includes('high')) return 3
-    if (p.includes('medium')) return 2
-    return 1
-  }
-
   const normalizePerson = (item: (typeof feed)[number]): OperationalContinuityObject => ({
     id: `person-${item.id}`,
     type: 'person' as const,
@@ -40,11 +32,11 @@ export const normalizeCrusadeData: NormalizeFn = ({ feed }) => {
     unresolvedCount: !item.status || item.status.toLowerCase() !== 'resolved' ? 1 : 0,
     linkedPeople: [item.owner || 'Ops Lead'],
     sourcePage: 'People & Relationship Data Layer',
-    emotionalWeight: (item.summary || '').toLowerCase().includes('blocked') || (item.summary || '').toLowerCase().includes('delay') ? 0.92 : (item.priority || '').toLowerCase().includes('high') ? 0.85 : 0.5,
+    emotionalWeight: (item.priority || '').toLowerCase().includes('high') ? 0.85 : 0.5,
     continuitySummary: item.summary || 'Operational relationship continuity update.',
-    operationalImportance: 4 + priorityWeight(item.priority) + ((item.summary || '').toLowerCase().includes('approval') ? 2 : 0) + ((item.summary || '').toLowerCase().includes('staff') ? 2 : 0) + ((item.summary || '').toLowerCase().includes('finance') ? 2 : 0) + ((item.summary || '').toLowerCase().includes('venue') ? 2 : 0) + ((item.summary || '').toLowerCase().includes('transport') || (item.summary || '').toLowerCase().includes('logistics') ? 2 : 0),
-    recencyScore: Math.max(1, 12 - Math.floor(ageHours(item.updated) / 4)),
-    unresolvedImpact: (!item.status || item.status.toLowerCase() !== 'resolved' ? 5 : 1) + ((item.summary || '').toLowerCase().includes('blocked') ? 3 : 0) + ((item.summary || '').toLowerCase().includes('waiting') ? 2 : 0),
+    operationalImportance: (item.priority || '').toLowerCase().includes('high') ? 9 : 6,
+    recencyScore: Math.max(1, 10 - Math.floor((Date.now() - new Date(item.updated || Date.now()).getTime()) / (1000 * 60 * 60 * 6))),
+    unresolvedImpact: !item.status || item.status.toLowerCase() !== 'resolved' ? 8 : 3,
   })
   const normalizeRisk = (item: (typeof feed)[number]): OperationalContinuityObject => ({ ...normalizePerson(item), id: `risk-${item.id}`, type: 'risk_signal' as const, sourcePage: 'Risk Register', title: `${item.title} risk`, status: item.status || 'elevated' })
   const normalizeContinuityEvent = (item: (typeof feed)[number]): OperationalContinuityObject => ({ ...normalizePerson(item), id: `continuity-${item.id}`, type: 'continuity_event' as const, sourcePage: 'Weekly Ops System', title: item.title })
@@ -63,7 +55,7 @@ export const normalizeCrusadeData: NormalizeFn = ({ feed }) => {
 
   const weightedFeed = continuityObjects
     .filter((o) => o.type === 'continuity_event' || o.type === 'risk_signal' || o.type === 'communication_event' || o.type === 'touring_assumption')
-    .sort((a, b) => (b.operationalImportance * 2 + b.emotionalWeight * 10 + b.recencyScore + b.unresolvedImpact * 2) - (a.operationalImportance * 2 + a.emotionalWeight * 10 + a.recencyScore + a.unresolvedImpact * 2))
+    .sort((a, b) => (b.operationalImportance + b.emotionalWeight * 10 + b.recencyScore + b.unresolvedImpact) - (a.operationalImportance + a.emotionalWeight * 10 + a.recencyScore + a.unresolvedImpact))
 
   return {
     activeOps: [
