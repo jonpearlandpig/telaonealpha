@@ -1,19 +1,24 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #F8F6F2;
+  --bg: #F6F3ED;
   --surface: #FFFFFF;
-  --text-primary: #141414;
-  --text-secondary: #5E5E5E;
-  --text-tertiary: #9A9A9A;
-  --gold: #D8A928;
-  --border: #ECE8DF;
-  --shadow-soft: 0 6px 22px rgba(20,20,20,0.08);
-  --shadow-floating: 0 10px 24px rgba(20,20,20,0.14);
-  --font-canela: 'Canela', 'Iowan Old Style', Georgia, serif;
+  --text-primary: #0D1B2A;
+  --text-secondary: rgba(13, 27, 42, 0.58);
+  --text-tertiary: rgba(13, 27, 42, 0.42);
+  --gold: #C4973A;
+  --border: rgba(13, 27, 42, 0.06);
+  --shadow-soft: 0 8px 30px rgba(13, 27, 42, 0.04);
+  --shadow-floating: 0 12px 34px rgba(13, 27, 42, 0.1);
+  --font-canela: 'Canela', 'Playfair Display', 'Iowan Old Style', Georgia, serif;
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; font-family: var(--font-geist-sans), -apple-system, sans-serif; background: var(--bg); }
+body {
+  margin: 0;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+}
 button { transition: all 180ms ease-out; }
 button:active { transform: translateY(1px); }

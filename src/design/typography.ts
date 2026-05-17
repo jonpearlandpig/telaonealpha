@@ -1,9 +1,7 @@
 export const typography = {
-  fontSans: "var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-  fontEditorial: "'Canela', 'Iowan Old Style', Georgia, serif",
-  sizes: {
-    label: '12px',
-    body: '15px',
-    title: '24px',
-  },
+  fontSans: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+  fontEditorial: "'Canela', 'Playfair Display', 'Iowan Old Style', Georgia, serif",
+  trackTight: '-0.015em',
+  trackNormal: '0em',
+  trackWide: '0.03em',
 } as const

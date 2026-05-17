@@ -1,0 +1,6 @@
+import { FeedActionBar, type ActionType } from './FeedActionBar';
+import { OperationalImage } from './OperationalImage';
+
+export function ContinuityCard({ item, onAction }: { item: { id: string; timestamp: string; title: string; summary: string; owner: string; image: string; avatar: string; unresolved: boolean }; onAction: (action: ActionType) => void }) {
+  return <article className='rounded-[28px] border border-black/5 bg-white p-4 shadow-[0_6px_18px_rgba(17,17,17,0.04)]'><div className='grid grid-cols-[112px_1fr_44px] gap-3'><OperationalImage src={item.image} alt={item.title} className='h-[112px] w-[112px] rounded-[18px] object-cover'/><div><p className='text-[12px] text-[#9A948B]'>{item.timestamp}</p><h3 className='mt-1 text-[17px] font-semibold leading-[22px] tracking-[-0.4px]'>{item.title}</h3><p className='mt-1 line-clamp-2 text-[13px] leading-5 text-[#6E6A63]'>{item.summary}</p></div><div className='flex flex-col items-end justify-between'><OperationalImage src={item.avatar} alt={item.owner} className='h-8 w-8 rounded-full object-cover'/><button onClick={() => onAction('open-thread')} className='text-[#9A948B]'>↗</button></div></div><div className='pt-3'><FeedActionBar onAction={onAction} /></div></article>
+}
