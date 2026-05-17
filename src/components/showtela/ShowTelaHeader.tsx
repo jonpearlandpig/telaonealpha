@@ -1,17 +1,15 @@
 export function ShowTelaHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b border-black/5 bg-white/70 px-5 pb-3 pt-6 shadow-[0_2px_8px_rgba(17,17,17,0.02)] backdrop-blur-lg">
-      <div className="flex min-h-[56px] items-end justify-between">
+    <header className="px-7 pb-5 pt-[62px]">
+      <div className="flex items-start justify-between gap-6">
         <div>
-          <h1 className="text-[32px] font-semibold leading-none tracking-[-0.4px]">ShowTELA</h1>
-          <p className="mt-1 text-[12px] leading-4 text-[#9A948B]">Crusade Operational Continuity</p>
+          <p className="text-[11px] uppercase tracking-[0.24em] text-[#C89B2F]">Crusade Runtime</p>
+          <h1 className="mt-[10px] text-[38px] font-semibold leading-[42px] tracking-[-1.2px] text-[#111111]">ShowTELA</h1>
+          <p className="mt-2 text-[18px] leading-7 text-[#6E6A63]">Operational continuity, live.</p>
         </div>
-        <div className="flex gap-2">
-          {["🔔", "⌕", "✉"].map((icon) => (
-            <button key={icon} className="h-11 w-11 rounded-full border border-black/5 bg-white/70 text-[15px] text-[#6E6A63] backdrop-blur-lg active:scale-[0.97]">
-              {icon}
-            </button>
-          ))}
+        <div className="rounded-2xl border border-black/5 bg-white/70 px-3 py-2 text-right shadow-[0_6px_18px_rgba(17,17,17,0.04)] backdrop-blur-md">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-[#8B847B]">Status</p>
+          <p className="text-[13px] font-medium text-[#111111]">72°F • Hershey</p>
         </div>
       </div>
     </header>
