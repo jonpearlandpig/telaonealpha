@@ -46,10 +46,31 @@ export type ContinuityFeedItem = {
   unresolved: boolean;
 };
 
+export type ContinuityDomain = 'person' | 'operation' | 'unresolved' | 'continuity_event' | 'touring_assumption' | 'risk_signal' | 'communication_event';
+
+export type OperationalContinuityObject = {
+  id: string;
+  type: ContinuityDomain;
+  title: string;
+  status: string;
+  timestamp: string;
+  priority: string;
+  owner: string;
+  unresolvedCount: number;
+  linkedPeople: string[];
+  sourcePage: string;
+  emotionalWeight: number;
+  continuitySummary: string;
+  operationalImportance: number;
+  recencyScore: number;
+  unresolvedImpact: number;
+};
+
 export type ShowTelaViewModel = {
   activeOps: ContinuityEntity[];
   fluencyPartners: ContinuityEntity[];
   crusadeOperations: OperationEntity[];
   unresolvedPressure: UnresolvedPressure;
   feed: ContinuityFeedItem[];
+  continuityObjects: OperationalContinuityObject[];
 };
