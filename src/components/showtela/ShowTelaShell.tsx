@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { ActiveOpsRail } from './ActiveOpsRail'
 import { BottomDock } from './BottomDock'
 import { ContinuityFeed } from './ContinuityFeed'
@@ -11,19 +11,11 @@ import { ShowTelaHeader } from './ShowTelaHeader'
 import { UnresolvedPressureCard } from './UnresolvedPressureCard'
 import type { ShowTelaViewModel } from './types'
 import type { ContinuityEvent } from '@/lib/showtela/types'
-import type { ActionType } from './FeedActionBar'
 
-export function ShowTelaShell({ vm, onCardAction, onPearlDrop }: { vm: ShowTelaViewModel; onCardAction: (itemId: string, action: ActionType) => void; onPearlDrop: () => void }) {
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const [sheetTitle, setSheetTitle] = useState('Continuity')
+export function ShowTelaShell({ vm, onPearlDrop }: { vm: ShowTelaViewModel; onPearlDrop: () => void }) {
   const [feed, setFeed] = useState<ContinuityEvent[]>(vm.feed.map((i) => ({ id: i.id, headline: i.title, body: i.summary, timestamp: i.timestamp, owner: { id: i.owner, name: i.owner }, isNew: i.unresolved })))
+  const [sheetPerson, setSheetPerson] = useState<string | null>(null)
 
-  const unresolved = useMemo(() => vm.unresolvedPressure.unresolvedCount, [vm.unresolvedPressure.unresolvedCount])
-
-  const openSheet = (title: string) => {
-    setSheetTitle(title)
-    setSheetOpen(true)
-  }
 
   const handlePearlDrop = () => {
     onPearlDrop()
@@ -43,12 +35,13 @@ export function ShowTelaShell({ vm, onCardAction, onPearlDrop }: { vm: ShowTelaV
     <main className='relative mx-auto min-h-screen w-full max-w-[430px] bg-[#F7F4EF] pb-32 text-[#111111]'>
       <span className='pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-10%,rgba(200,155,47,0.14),transparent_55%)]' />
       <ShowTelaHeader />
-      <ActiveOpsRail people={vm.activeOps.map((i) => ({ id: i.id, name: i.name, role: i.latest, unresolvedCount: i.unresolvedCount, updatesCount: 0 }))} />
+      <div onClick={() => setSheetPerson(vm.activeOps[0]?.name ?? 'Operator')}><ActiveOpsRail people={vm.activeOps.map((i) => ({ id: i.id, name: i.name, role: `${i.latest} • ${i.unresolvedCount ?? 0} unresolved`, unresolvedCount: i.unresolvedCount, updatesCount: 0 }))} /></div>
       <FluencyPartnersRail people={vm.fluencyPartners.map((i) => ({ id: i.id, name: i.name, role: i.latest, unresolvedCount: i.unresolvedCount }))} />
       <CrusadeOperationsRail items={vm.crusadeOperations} />
       <UnresolvedPressureCard pressure={vm.unresolvedPressure} />
-      <ContinuityFeed feed={vm.feed.map((i) => ({ id: i.id, headline: i.title, body: i.summary, timestamp: i.timestamp, owner: { id: i.owner, name: i.owner } }))} />
-      <BottomDock onPearlDrop={onPearlDrop} />
+      {sheetPerson ? <section className='px-7 pt-3'><ContinuitySheet personName={sheetPerson} events={feed} unresolved={vm.continuityObjects.filter((o) => o.type === 'unresolved').map((o) => ({ id: o.id, title: o.title, severity: o.priority as 'low' | 'medium' | 'high', blocking: o.unresolvedImpact > 6, aging: Math.max(1, Math.floor((10 - o.recencyScore) * 2)), operation: o.sourcePage }))} operations={vm.crusadeOperations.map((o) => ({ id: o.id, title: o.label, unresolvedCount: o.unresolvedCount, latestMovement: o.latest }))} /></section> : null}
+      <ContinuityFeed feed={feed} />
+      <BottomDock onPearlDrop={handlePearlDrop} />
     </main>
   )
 }
