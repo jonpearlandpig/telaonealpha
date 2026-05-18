@@ -1,5 +1,36 @@
-import type { UnresolvedPressure } from './types';
+import type { UnresolvedPressure } from './types'
 
 export function UnresolvedPressureCard({ pressure }: { pressure: UnresolvedPressure }) {
-  return <section className='px-7 pt-5'><article className='relative overflow-hidden rounded-[24px] border border-[#C89B2F]/30 bg-[#1B1713] p-5 text-[#F6EEDB] shadow-[0_22px_44px_rgba(200,155,47,0.16)]'><span className='absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[#C89B2F]/25 blur-2xl'/><span className='absolute -left-8 bottom-0 h-28 w-28 rounded-full bg-[#C89B2F]/15 blur-xl'/><p className='relative text-[11px] uppercase tracking-[0.24em] text-[#D7BE84]'>Unresolved Pressure</p><div className='relative mt-3 grid grid-cols-4 gap-2 text-center'><div><p className='text-[20px] font-semibold'>{pressure.unresolvedCount}</p><p className='text-[10px] text-[#B8A88A]'>Open</p></div><div><p className='text-[20px] font-semibold'>{pressure.overdueCount}</p><p className='text-[10px] text-[#B8A88A]'>Overdue</p></div><div><p className='text-[20px] font-semibold'>{pressure.blockedCount}</p><p className='text-[10px] text-[#B8A88A]'>Blocked</p></div><div><p className='text-[20px] font-semibold'>{pressure.pendingApprovals}</p><p className='text-[10px] text-[#B8A88A]'>Approvals</p></div></div><button className='relative mt-4 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] backdrop-blur'>Review continuity</button></article></section>
+  const total = pressure.unresolvedCount
+  if (total === 0) return null
+  const high = pressure.overdueCount
+  const medium = pressure.blockedCount + pressure.pendingApprovals
+
+  return (
+    <section className="px-5 pb-4">
+      <article className="relative overflow-hidden rounded-[20px] bg-[#1B1713] px-5 py-4 shadow-[0_12px_32px_rgba(200,155,47,0.14)]">
+        <span className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-[#C89B2F]/20 blur-2xl" />
+        <span className="pointer-events-none absolute -left-6 bottom-0 h-20 w-20 rounded-full bg-[#C89B2F]/12 blur-xl" />
+        <div className="relative flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#C89B2F]/40 bg-[#C89B2F]/15">
+              <span className="text-[16px]">⚡</span>
+            </div>
+            <div>
+              <p className="text-[14px] font-semibold text-[#F6EEDB]">{total} item{total !== 1 ? 's' : ''} need attention</p>
+              <p className="text-[11px] text-[#B8A88A]">
+                {high > 0 ? `${high} high` : ''}
+                {high > 0 && medium > 0 ? ' · ' : ''}
+                {medium > 0 ? `${medium} medium pressure` : ''}
+                {high === 0 && medium === 0 ? 'Review continuity' : ''}
+              </p>
+            </div>
+          </div>
+          <button className="flex items-center gap-1 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-medium text-[#F6EEDB] backdrop-blur">
+            Open ›
+          </button>
+        </div>
+      </article>
+    </section>
+  )
 }
