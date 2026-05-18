@@ -32,6 +32,29 @@ export type ContinuityEvent = {
   pressure?: PressureLevel
   threadId?: string
   isNew?: boolean
+  waitingOn?: string
+  blockedBy?: string
+  approvalOwner?: string
+  lastContactAt?: string
+  trustLevel?: 'low' | 'medium' | 'high'
+  operationalRisk?: PressureLevel
+  unresolvedDependencies?: string[]
+  linkedEntities?: string[]
+  linkedThreads?: string[]
+  attachments?: MediaMemoryAttachment[]
+}
+
+export type MediaMemoryType = 'image' | 'pdf' | 'stage_plot' | 'screenshot' | 'bus_schedule' | 'venue_packet' | 'contract' | 'voice_memo'
+
+export type MediaMemoryAttachment = {
+  id: string
+  type: MediaMemoryType
+  title: string
+  url?: string
+  previewUrl?: string
+  capturedAt?: string
+  sourceEventId?: string
+  continuityRefId?: string
 }
 
 export type UnresolvedObject = {
@@ -61,4 +84,14 @@ export type ShowTelaHomeData = {
     high: number
     medium: number
   }
+  runtimeTimeline: RuntimeTimelineItem[]
+}
+
+export type RuntimeTimelineItem = {
+  id: string
+  timestamp: string
+  actor: string
+  summary: string
+  continuityObjectId: string
+  pressureDelta: -2 | -1 | 0 | 1 | 2
 }
