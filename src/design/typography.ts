@@ -1,5 +1,5 @@
 export const typography = {
-  fontSans: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+  fontSans: "'DM Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
   fontEditorial: "'Canela', 'Playfair Display', 'Iowan Old Style', Georgia, serif",
   trackTight: '-0.015em',
   trackNormal: '0em',

@@ -1,5 +1,4 @@
-import { getArtifacts, getContinuityEvents, getOperations, getPeople, getUnresolved } from './notion'
-import { mockShowTelaHomeData } from './mockData'
+import { getArtifacts, getContinuityEvents, getOperations, getPeople, getUnresolved, type SourceQueryResult } from './notion'
 import { mapArtifact, mapContinuityEvent, mapOperation, mapPerson, mapUnresolved } from './notionMappers'
 import { calculatePressure } from './pressure'
 import { threadContinuity } from './threadContinuity'
@@ -7,10 +6,39 @@ import type { ShowTelaHomeData } from './types'
 
 const DEFAULT_OPERATIONS = ['Travel', 'Logistics', 'Venues', 'Hospitality', 'Security']
 
+function datasetError(result: SourceQueryResult): string | null {
+  if (!result.error) return null
+  return `${result.source}: ${result.error.code} (${result.error.detail})`
+}
+
 export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
-  const [peopleRaw, operationsRaw, eventsRaw, unresolvedRaw, artifactsRaw] = await Promise.all([getPeople(), getOperations(), getContinuityEvents(), getUnresolved(), getArtifacts()])
-  console.log('[showtela] hydration summary', { peopleLoaded: peopleRaw.length, operationsLoaded: operationsRaw.length, continuityEventsLoaded: eventsRaw.length, unresolvedLoaded: unresolvedRaw.length, artifactsLoaded: artifactsRaw.length })
-  if (!peopleRaw.length && !operationsRaw.length && !eventsRaw.length && !unresolvedRaw.length) return mockShowTelaHomeData
+  const [peopleRes, operationsRes, eventsRes, unresolvedRes, artifactsRes] = await Promise.all([getPeople(), getOperations(), getContinuityEvents(), getUnresolved(), getArtifacts()])
+  const peopleRaw = peopleRes.rows
+  const operationsRaw = operationsRes.rows
+  const eventsRaw = eventsRes.rows
+  const unresolvedRaw = unresolvedRes.rows
+  const artifactsRaw = artifactsRes.rows
+
+  console.log('[showtela] hydration summary', {
+    peopleLoaded: peopleRaw.length,
+    operationsLoaded: operationsRaw.length,
+    continuityEventsLoaded: eventsRaw.length,
+    unresolvedLoaded: unresolvedRaw.length,
+    artifactsLoaded: artifactsRaw.length,
+  })
+
+  const errors = [peopleRes, operationsRes, eventsRes, unresolvedRes, artifactsRes].map(datasetError).filter(Boolean)
+  const sourceStatuses = [peopleRes, operationsRes, eventsRes, unresolvedRes, artifactsRes].map((r) => ({ source: r.source, status: r.error ? 'disconnected' : 'connected', rows: r.rows.length, sourceType: r.sourceType, reason: r.error?.detail }))
+
+  if (!peopleRaw.length && !operationsRaw.length && !eventsRaw.length && !unresolvedRaw.length) {
+    return {
+      activeOps: [], fluencyPartners: [], operations: [], unresolved: [], continuityFeed: [],
+      pressureSummary: { total: 0, high: 0, medium: 0 }, runtimeTimeline: [],
+      dataMode: 'demo' as const,
+      hydrationError: `CST SOURCE FAILURE | token:${Boolean(process.env.NOTION_API_KEY)} | ${errors.join(' | ') || 'all datasets empty'}`,
+      sourceStatuses,
+    }
+  }
 
   const people = peopleRaw.map(mapPerson)
   const personById = new Map(people.map((p) => [p.id, p]))
@@ -19,7 +47,6 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
   const artifacts = artifactsRaw.map(mapArtifact)
 
   const artifactByEvent = new Map(artifacts.filter((a) => a.eventId).map((a) => [a.eventId as string, a]))
-
   const lastSeenTimestamp = process.env.SHOWTELA_LAST_SEEN_TIMESTAMP ? new Date(process.env.SHOWTELA_LAST_SEEN_TIMESTAMP).getTime() : Date.now() - 1000 * 60 * 60 * 24
   const continuityFeed = threadContinuity(eventsRaw
     .map((event) => {
@@ -31,9 +58,7 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
 
   const operationsFilled = [...operations]
   for (const title of DEFAULT_OPERATIONS) {
-    if (!operationsFilled.find((o) => o.title.toLowerCase() === title.toLowerCase())) {
-      operationsFilled.push({ id: title.toLowerCase(), title, status: 'Unknown', unresolvedCount: 0, latestMovement: 'No movement logged' })
-    }
+    if (!operationsFilled.find((o) => o.title.toLowerCase() === title.toLowerCase())) operationsFilled.push({ id: title.toLowerCase(), title, status: 'Unknown', unresolvedCount: 0, latestMovement: 'No movement logged' })
   }
 
   const high = unresolved.filter((u) => u.severity === 'high').length
@@ -56,5 +81,7 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
     continuityFeed,
     pressureSummary: { total: Math.max(unresolved.length, pressure.score), high, medium },
     runtimeTimeline,
+    dataMode: 'live' as const,
+    sourceStatuses,
   }
 }
