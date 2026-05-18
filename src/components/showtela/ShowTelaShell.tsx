@@ -14,11 +14,6 @@ import type { ContinuityEvent } from '@/lib/showtela/types'
 
 export function ShowTelaShell({ vm, onPearlDrop }: { vm: ShowTelaViewModel; onPearlDrop: () => void }) {
   const [feed, setFeed] = useState<ContinuityEvent[]>(vm.feed.map((i) => ({ id: i.id, headline: i.title, body: i.summary, timestamp: i.timestamp, owner: { id: i.owner, name: i.owner }, isNew: i.unresolved, waitingOn: i.waitingOn, blockedBy: i.blockedBy, approvalOwner: i.approvalOwner, lastContactAt: i.lastContactAt, trustLevel: i.trustLevel, operationalRisk: i.operationalRisk, unresolvedDependencies: i.unresolvedDependencies, linkedEntities: i.linkedEntities, linkedThreads: i.linkedThreads, attachments: i.attachments })))
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const [sheetTitle, setSheetTitle] = useState('')
-  const [sheetRole, setSheetRole] = useState('')
-  const [sheetSummary, setSheetSummary] = useState('')
-  const [sheetRhythm, setSheetRhythm] = useState('')
   const [sheetPerson, setSheetPerson] = useState<string | null>(null)
   const [lastViewedAt] = useState<number>(() => (typeof window === 'undefined' ? 0 : Number(window.localStorage.getItem('showtela:lastViewedAt') || '0')))
 
@@ -67,12 +62,12 @@ export function ShowTelaShell({ vm, onPearlDrop }: { vm: ShowTelaViewModel; onPe
       <span className='pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-10%,rgba(200,155,47,0.14),transparent_55%)]' />
       <ShowTelaHeader />
       <section className='px-5 pt-2'><p className='text-[11px] uppercase tracking-[0.16em] text-[#84663A]'>Operational pulse</p><p className='mt-1 text-sm text-[#423A31]'>{changedSinceLastOpen} changes since last open</p><div className='mt-2 space-y-1.5'>{vm.runtimeTimeline.slice(0, 4).map((t) => <div key={t.id} className='rounded-2xl border border-black/10 bg-white/70 px-3 py-2 text-xs'><p className='font-medium text-[#27211A]'>{t.actor} · {t.timestamp}</p><p className='text-[#5E5348]'>{t.summary}</p></div>)}</div></section>
-      <ActiveOpsRail onSelect={(person) => openSheet(person.id, person.name, person.role)} people={vm.activeOps.map((i) => ({ id: i.id, name: i.name, role: `${i.latest} • ${i.unresolvedCount ?? 0} unresolved`, unresolvedCount: i.unresolvedCount, updatesCount: 0 }))} />
+      <div onClick={() => setSheetPerson(vm.activeOps[0]?.name ?? 'Operator')}><ActiveOpsRail people={vm.activeOps.map((i) => ({ id: i.id, name: i.name, role: `${i.latest} • ${i.unresolvedCount ?? 0} unresolved`, unresolvedCount: i.unresolvedCount, updatesCount: 0 }))} /></div>
       <FluencyPartnersRail people={vm.fluencyPartners.map((i) => ({ id: i.id, name: i.name, role: i.latest, unresolvedCount: i.unresolvedCount }))} />
       <CrusadeOperationsRail items={vm.crusadeOperations} />
       <UnresolvedPressureCard pressure={vm.unresolvedPressure} />
       <ContinuityFeed feed={feed} />
-      <ContinuitySheet open={sheetOpen} personName={sheetTitle || sheetPerson || 'Operator'} personRole={sheetRole} summary={sheetSummary} rhythm={sheetRhythm} events={feed.filter((e) => e.owner?.name === sheetPerson)} unresolved={[]} operations={[]} />
+      {sheetPerson ? <div className='px-5 pb-4'><ContinuitySheet personName={sheetPerson} events={feed.filter((e) => e.owner?.name === sheetPerson)} unresolved={[]} operations={[]} /></div> : null}
       <BottomDock onPearlDrop={handlePearlDrop} />
     </main>
   )
