@@ -1,10 +1,5 @@
 import type { PersonEntity } from '@/lib/showtela/types'
 
-const ROLE_LABELS: Record<string, string> = {
-  jon: 'You', juan: 'Creator / Vision Lead',
-  mags: 'Talent Buying', natalie: 'Director of Touring',
-}
-
 export function ActiveOpsRail(
   props: { people: PersonEntity[] } | { items: Array<{ id: string; name: string; latest?: string; unresolvedCount: number; image: string; updatesCount?: number }> }
 ) {
@@ -28,15 +23,14 @@ export function ActiveOpsRail(
           const img = ('avatar' in p && p.avatar) ? p.avatar : undefined
           const unresolved = p.unresolvedCount ?? 0
           const updates = ('updatesCount' in p && p.updatesCount) ? p.updatesCount : 0
-          const role = ROLE_LABELS[p.id] ?? ROLE_LABELS[p.name.toLowerCase().split(' ')[0]] ?? (('role' in p && p.role) ? p.role : '')
+          const role = ('role' in p && p.role) ? p.role : ''
           const hasUnresolved = unresolved > 0
           const hasUpdates = updates > 0
-
           return (
             <button key={p.id} className="flex min-w-[80px] flex-col items-center gap-1.5 p-0">
               <div className="relative">
                 <div
-                  className="h-[68px] w-[68px] overflow-hidden rounded-full border-[2.5px] shadow-[0_0_0_3px_rgba(200,155,47,0.18),0_8px_24px_rgba(0,0,0,0.22)] bg-[#1A1712]"
+                  className="h-[68px] w-[68px] overflow-hidden rounded-full border-[2.5px] bg-[#1A1712] shadow-[0_0_0_3px_rgba(200,155,47,0.18),0_8px_24px_rgba(0,0,0,0.22)]"
                   style={{ borderColor: hasUnresolved ? '#F87171' : '#C89B2F' }}
                 >
                   {img ? (
