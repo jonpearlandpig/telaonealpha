@@ -26,7 +26,7 @@ export const normalizeCrusadeData: NormalizeFn = ({ feed }) => {
     actor: item.owner || 'Operations',
     summary: item.summary || item.title,
     continuityObjectId: item.id,
-    pressureDelta: (((item.priority || '').toLowerCase().includes('high') ? 1 : 0) - (idx > 0 && (feed[idx - 1]?.priority || '').toLowerCase().includes('high') ? 1 : 0)) as -2 | -1 | 0 | 1 | 2,
+    pressureDelta: ((item.priority || '').toLowerCase().includes('high') ? 1 : 0) - (idx > 0 && (feed[idx - 1]?.priority || '').toLowerCase().includes('high') ? 1 : 0),
   }))
 
   const normalizePerson = (item: (typeof feed)[number]): OperationalContinuityObject => ({
