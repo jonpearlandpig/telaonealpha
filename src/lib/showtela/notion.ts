@@ -26,21 +26,38 @@ async function queryDatabase(databaseId: string | undefined): Promise<NotionResu
 }
 
 export async function getPeople() {
-  return queryDatabase(envId(['NOTION_SHOWTELA_PEOPLE_DB_ID', 'NOTION_CRUSADE_PEOPLE_DB_ID']))
+  return queryDatabase(envId([
+    'NOTION_SHOWTELA_PEOPLE_DB_ID',
+    'NOTION_CRUSADE_PEOPLE_DB_ID',
+  ]))
 }
 
 export async function getOperations() {
-  return queryDatabase(envId(['NOTION_SHOWTELA_OPERATIONS_DB_ID', 'NOTION_CRUSADE_OPERATIONS_DB_ID']))
+  return queryDatabase(envId([
+    'NOTION_SHOWTELA_OPERATIONS_DB_ID',
+    'NOTION_CRUSADE_OPERATIONS_DB_ID',
+  ]))
 }
 
 export async function getContinuityEvents() {
-  return queryDatabase(envId(['NOTION_SHOWTELA_CONTINUITY_DB_ID', 'NOTION_CRUSADE_CONTINUITY_DB_ID']))
+  return queryDatabase(envId([
+    'NOTION_SHOWTELA_CONTINUITY_DB_ID',
+    'NOTION_CRUSADE_CONTINUITY_DB_ID',
+    'NOTION_CRUSADE_EVENTS_DB_ID',
+    'NOTION_SHOWTELA_EVENTS_DB_ID',
+  ]))
 }
 
 export async function getUnresolved() {
-  return queryDatabase(envId(['NOTION_SHOWTELA_UNRESOLVED_DB_ID', 'NOTION_CRUSADE_UNRESOLVED_DB_ID']))
+  return queryDatabase(envId([
+    'NOTION_SHOWTELA_UNRESOLVED_DB_ID',
+    'NOTION_CRUSADE_UNRESOLVED_DB_ID',
+  ]))
 }
 
 export async function getArtifacts() {
-  return queryDatabase(envId(['NOTION_SHOWTELA_ARTIFACTS_DB_ID', 'NOTION_CRUSADE_ARTIFACTS_DB_ID']))
+  return queryDatabase(envId([
+    'NOTION_SHOWTELA_ARTIFACTS_DB_ID',
+    'NOTION_CRUSADE_ARTIFACTS_DB_ID',
+  ]))
 }
