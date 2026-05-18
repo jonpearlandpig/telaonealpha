@@ -10,6 +10,7 @@ const numberVal = (v: NotionProperty) => (v as { number?: number } | undefined)?
 const peopleName = (v: NotionProperty) => (v as { people?: Array<{ name?: string }> } | undefined)?.people?.[0]?.name
 const filesUrl = (v: NotionProperty) => (v as { files?: Array<{ file?: { url?: string }; external?: { url?: string } }> } | undefined)?.files?.[0]?.file?.url ?? (v as { files?: Array<{ file?: { url?: string }; external?: { url?: string } }> } | undefined)?.files?.[0]?.external?.url
 const multiSelect = (v: NotionProperty) => (v as { multi_select?: Array<{ name: string }> } | undefined)?.multi_select?.map((t) => t.name) ?? []
+const relationIds = (v: NotionProperty) => (v as { relation?: Array<{ id: string }> } | undefined)?.relation?.map((r) => r.id) ?? []
 
 function prop(record: NotionRecord, ...keys: string[]) {
   for (const key of keys) {
@@ -56,6 +57,15 @@ export function mapContinuityEvent(record: NotionRecord, ownerById: Map<string, 
     owner: (ownerId ? ownerById.get(ownerId) : undefined) ?? (ownerName ? { id: ownerId ?? 'owner', name: ownerName } : undefined),
     pressure: selectName(prop(record, 'Pressure')),
     threadId: richText(prop(record, 'Thread')) || undefined,
+    waitingOn: richText(prop(record, 'Waiting On')) || undefined,
+    blockedBy: richText(prop(record, 'Blocked By')) || undefined,
+    approvalOwner: richText(prop(record, 'Approval Owner')) || undefined,
+    lastContactAt: (prop(record, 'Last Contact At') as { date?: { start?: string } } | undefined)?.date?.start,
+    trustLevel: selectName(prop(record, 'Trust Level')),
+    operationalRisk: selectName(prop(record, 'Operational Risk')),
+    unresolvedDependencies: multiSelect(prop(record, 'Unresolved Dependencies')),
+    linkedEntities: relationIds(prop(record, 'Linked Entities')),
+    linkedThreads: multiSelect(prop(record, 'Linked Threads')),
   }
 }
 
