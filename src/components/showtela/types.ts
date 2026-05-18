@@ -85,5 +85,6 @@ export type ShowTelaViewModel = {
   unresolvedPressure: UnresolvedPressure;
   feed: ContinuityFeedItem[];
   continuityObjects: OperationalContinuityObject[];
-  runtimeTimeline: RuntimeTimelineItem[];
+  runtimeTimeline: Array<{ id: string; timestamp: string; actor: string; summary: string; continuityObjectId: string; pressureDelta: number }>;
 };
+import type { MediaMemoryType } from '@/lib/showtela/types';

@@ -44,31 +44,6 @@ export type ContinuityFeedEvent = {
   attachments?: MediaMemoryAttachment[]
 }
 
-export type ContinuityEventType =
-  | 'approval_granted'
-  | 'venue_delayed'
-  | 'staffing_blocked'
-  | 'transport_changed'
-  | 'contract_uploaded'
-  | 'relationship_updated'
-  | 'unresolved_resolved'
-  | 'continuity_note_added'
-
-export type ContinuityEvent = {
-  id: string
-  timestamp: string
-  type: ContinuityEventType
-  actorId: string
-  targetObjectId: string
-  summary: string
-  pressureDelta: -2 | -1 | 0 | 1 | 2
-  unresolvedImpact: -2 | -1 | 0 | 1 | 2
-  linkedEntities: string[]
-  linkedAttachments: string[]
-  source: 'notion' | 'pearl_drop' | 'runtime' | 'operator'
-  metadata?: Record<string, string | number | boolean | string[]>
-}
-
 export type MediaMemoryType = 'image' | 'pdf' | 'stage_plot' | 'screenshot' | 'bus_schedule' | 'venue_packet' | 'contract' | 'voice_memo'
 
 export type MediaMemoryAttachment = {

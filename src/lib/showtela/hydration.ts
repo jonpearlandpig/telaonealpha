@@ -40,8 +40,14 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
   const high = unresolved.filter((u) => u.severity === 'high').length
   const medium = unresolved.filter((u) => u.severity === 'medium').length
   const pressure = calculatePressure(unresolved)
-  const continuityEvents = toContinuityEvents(continuityFeed, 'notion')
-  const runtimeTimeline = projectTimeline(continuityEvents).slice(0, 20)
+  const runtimeTimeline = continuityFeed.slice(0, 20).map((event, idx) => ({
+    id: `timeline-${event.id}`,
+    timestamp: event.timestamp ?? new Date().toISOString(),
+    actor: event.owner?.name ?? 'Operations',
+    summary: event.headline,
+    continuityObjectId: event.threadId ?? event.id,
+    pressureDelta: (event.pressure === 'high' ? 2 : event.pressure === 'medium' ? 1 : 0) - (idx > 0 && continuityFeed[idx - 1]?.pressure === 'high' ? 1 : 0) as -2 | -1 | 0 | 1 | 2,
+  }))
 
   return {
     activeOps: people.filter((p) => p.active).slice(0, 12),

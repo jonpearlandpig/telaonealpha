@@ -1,7 +1,6 @@
 import type { ContinuityFeedEvent, OperationEntity, UnresolvedObject } from '@/lib/showtela/types'
 
-export function ContinuitySheet({ open, personName, personRole, summary, rhythm, events, unresolved, operations }: { open: boolean; personName: string; personRole?: string; summary?: string; rhythm?: string; events: ContinuityFeedEvent[]; unresolved: UnresolvedObject[]; operations: OperationEntity[] }) {
-  if (!open) return null
+export function ContinuitySheet({ personName, events, unresolved, operations }: { personName: string; events: ContinuityEvent[]; unresolved: UnresolvedObject[]; operations: OperationEntity[] }) {
   const attachments = events.flatMap((event) => event.attachments ?? [])
   return (
     <section className='fixed inset-x-0 bottom-0 z-50 rounded-t-3xl border border-[#E5DED2] bg-white p-4 shadow-[0_-20px_40px_rgba(0,0,0,0.2)]'>
