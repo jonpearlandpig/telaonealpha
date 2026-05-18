@@ -7,10 +7,10 @@ const richText = (v: NotionProperty) => ((v as { title?: Array<{ plain_text?: st
 const selectName = (v: NotionProperty) => (v as { select?: { name?: 'low' | 'medium' | 'high' } } | undefined)?.select?.name
 const checkbox = (v: NotionProperty) => (v as { checkbox?: boolean } | undefined)?.checkbox
 const numberVal = (v: NotionProperty) => (v as { number?: number } | undefined)?.number
-const peopleName = (v: NotionProperty) => (v as { people?: Array<{ name?: string }> } | undefined)?.people?.[0]?.name
 const filesUrl = (v: NotionProperty) => (v as { files?: Array<{ file?: { url?: string }; external?: { url?: string } }> } | undefined)?.files?.[0]?.file?.url ?? (v as { files?: Array<{ file?: { url?: string }; external?: { url?: string } }> } | undefined)?.files?.[0]?.external?.url
 const multiSelect = (v: NotionProperty) => (v as { multi_select?: Array<{ name: string }> } | undefined)?.multi_select?.map((t) => t.name) ?? []
 const relationIds = (v: NotionProperty) => (v as { relation?: Array<{ id: string }> } | undefined)?.relation?.map((r) => r.id) ?? []
+const dateStart = (v: NotionProperty) => (v as { date?: { start?: string } } | undefined)?.date?.start
 
 function prop(record: NotionRecord, ...keys: string[]) {
   for (const key of keys) {
@@ -23,7 +23,7 @@ export function mapPerson(record: NotionRecord): PersonEntity {
   return {
     id: record.id,
     name: richText(prop(record, 'Name')) || 'Unknown',
-    role: selectName(prop(record, 'Role')),
+    role: richText(prop(record, 'Role')) || undefined,
     avatar: filesUrl(prop(record, 'Avatar')),
     active: checkbox(prop(record, 'Active')),
     unresolvedCount: numberVal(prop(record, 'Unresolved')) ?? 0,
@@ -46,21 +46,21 @@ export function mapOperation(record: NotionRecord): OperationEntity {
 
 export function mapContinuityEvent(record: NotionRecord, ownerById: Map<string, PersonEntity>): ContinuityEvent {
   const ownerId = (prop(record, 'Owner') as { relation?: Array<{ id: string }> } | undefined)?.relation?.[0]?.id
-  const ownerName = peopleName(prop(record, 'Owner'))
+  const ownerRichText = richText(prop(record, 'Owner'))
   return {
     id: record.id,
-    headline: richText(prop(record, 'Headline', 'Name')),
-    body: richText(prop(record, 'Body', 'Summary')),
-    timestamp: (prop(record, 'Timestamp') as { date?: { start?: string } } | undefined)?.date?.start ?? record.last_edited_time,
+    headline: richText(prop(record, 'Name', 'Headline', 'Title')),
+    body: richText(prop(record, 'Summary', 'Body', 'Description')),
+    timestamp: dateStart(prop(record, 'Updated', 'Timestamp', 'Date')) ?? record.last_edited_time,
     image: filesUrl(prop(record, 'Image')),
     tags: multiSelect(prop(record, 'Tags')),
-    owner: (ownerId ? ownerById.get(ownerId) : undefined) ?? (ownerName ? { id: ownerId ?? 'owner', name: ownerName } : undefined),
+    owner: (ownerId ? ownerById.get(ownerId) : undefined) ?? (ownerRichText ? { id: ownerRichText, name: ownerRichText } : undefined),
     pressure: selectName(prop(record, 'Pressure')),
     threadId: richText(prop(record, 'Thread')) || undefined,
     waitingOn: richText(prop(record, 'Waiting On')) || undefined,
     blockedBy: richText(prop(record, 'Blocked By')) || undefined,
     approvalOwner: richText(prop(record, 'Approval Owner')) || undefined,
-    lastContactAt: (prop(record, 'Last Contact At') as { date?: { start?: string } } | undefined)?.date?.start,
+    lastContactAt: dateStart(prop(record, 'Last Contact At')),
     trustLevel: selectName(prop(record, 'Trust Level')),
     operationalRisk: selectName(prop(record, 'Operational Risk')),
     unresolvedDependencies: multiSelect(prop(record, 'Unresolved Dependencies')),
