@@ -1,3 +1,5 @@
+import type { MediaMemoryType, RuntimeTimelineItem } from '@/lib/showtela/types';
+
 export type FeedItem = {
   id: string;
   title: string;
@@ -44,6 +46,16 @@ export type ContinuityFeedItem = {
   image: string;
   avatar: string;
   unresolved: boolean;
+  waitingOn?: string;
+  blockedBy?: string;
+  approvalOwner?: string;
+  lastContactAt?: string;
+  trustLevel?: 'low' | 'medium' | 'high';
+  operationalRisk?: 'low' | 'medium' | 'high';
+  unresolvedDependencies?: string[];
+  linkedEntities?: string[];
+  linkedThreads?: string[];
+  attachments?: Array<{ id: string; type: MediaMemoryType; title: string; previewUrl?: string }>;
 };
 
 export type ContinuityDomain = 'person' | 'operation' | 'unresolved' | 'continuity_event' | 'touring_assumption' | 'risk_signal' | 'communication_event';
@@ -73,4 +85,5 @@ export type ShowTelaViewModel = {
   unresolvedPressure: UnresolvedPressure;
   feed: ContinuityFeedItem[];
   continuityObjects: OperationalContinuityObject[];
+  runtimeTimeline: RuntimeTimelineItem[];
 };

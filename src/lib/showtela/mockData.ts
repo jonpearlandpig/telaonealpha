@@ -1,4 +1,5 @@
 import type { ShowTelaHomeData } from './types'
+import { toContinuityEvents } from './eventSourcing'
 
 export const mockShowTelaHomeData: ShowTelaHomeData = {
   activeOps: [
@@ -25,5 +26,12 @@ export const mockShowTelaHomeData: ShowTelaHomeData = {
     { id: 'e1', headline: 'Stage plot updated for Hershey', body: 'Juan uploaded v7 with LX trim changes.', timestamp: new Date().toISOString(), tags: ['HERSHEY ARENA', 'PRODUCTION'], pressure: 'medium', image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=900&auto=format&fit=crop', owner: { id: 'juan', name: 'Juan' }, threadId: 'hershey-stageplot' },
     { id: 'e2', headline: 'Venue requested revised trim notation', body: 'Mags added venue note to thread.', timestamp: new Date(Date.now()-1000*60*45).toISOString(), tags: ['VENUE', 'PRODUCTION'], pressure: 'high', image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=900&auto=format&fit=crop', owner: { id: 'mags', name: 'Mags' }, threadId: 'hershey-stageplot' },
   ],
+  continuityEvents: [],
   pressureSummary: { total: 2, high: 1, medium: 1 },
+  runtimeTimeline: [
+    { id: 't1', timestamp: new Date().toISOString(), actor: 'Juan', summary: 'Stage plot uploaded', continuityObjectId: 'hershey-stageplot', pressureDelta: 1 },
+    { id: 't2', timestamp: new Date(Date.now()-1000*60*45).toISOString(), actor: 'Mags', summary: 'Venue trim request added', continuityObjectId: 'hershey-stageplot', pressureDelta: 1 },
+  ],
 }
+
+mockShowTelaHomeData.continuityEvents = toContinuityEvents(mockShowTelaHomeData.continuityFeed, 'runtime')

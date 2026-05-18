@@ -1,9 +1,9 @@
-import type { ContinuityEvent } from '@/lib/showtela/types'
+import type { ContinuityFeedEvent } from '@/lib/showtela/types'
 import { ContinuityCard } from './ContinuityCard'
 import type { ActionType } from './FeedActionBar'
 import type { ContinuityFeedItem } from './types'
 
-type Props = { feed: ContinuityEvent[] } | { items: ContinuityFeedItem[]; onCardAction: (itemId: string, action: ActionType) => void }
+type Props = { feed: ContinuityFeedEvent[] } | { items: ContinuityFeedItem[]; onCardAction: (itemId: string, action: ActionType) => void }
 
 export function ContinuityFeed(props: Props) {
   const feed = 'feed' in props ? props.feed : props.items.map((item) => ({ id: item.id, headline: item.title, body: item.summary, timestamp: item.timestamp, owner: { id: item.owner, name: item.owner } }))

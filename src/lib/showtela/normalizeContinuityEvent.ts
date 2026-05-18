@@ -1,3 +1,3 @@
-import { mapContinuityEvent } from './notionMappers'
+import { mapContinuityFeedEvent } from './notionMappers'
 
-export const normalizeContinuityEvent = mapContinuityEvent
+export const normalizeContinuityEvent = mapContinuityFeedEvent

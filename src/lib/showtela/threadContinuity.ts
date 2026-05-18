@@ -1,19 +1,19 @@
-import type { ContinuityEvent } from './types'
+import type { ContinuityFeedEvent } from './types'
 
-function threadKey(event: ContinuityEvent) {
+function threadKey(event: ContinuityFeedEvent) {
   const fromTag = event.tags?.[0]
   const fromOwner = event.owner?.id
   return event.threadId || fromTag || fromOwner || event.id
 }
 
-export function threadContinuity(events: ContinuityEvent[]): ContinuityEvent[] {
-  const grouped = new Map<string, ContinuityEvent[]>()
+export function threadContinuity(events: ContinuityFeedEvent[]): ContinuityFeedEvent[] {
+  const grouped = new Map<string, ContinuityFeedEvent[]>()
   for (const event of events) {
     const key = threadKey(event)
     grouped.set(key, [...(grouped.get(key) ?? []), event])
   }
 
-  const merged: ContinuityEvent[] = []
+  const merged: ContinuityFeedEvent[] = []
   for (const [key, cluster] of grouped) {
     const sorted = [...cluster].sort((a, b) => new Date(b.timestamp ?? 0).getTime() - new Date(a.timestamp ?? 0).getTime())
     const top = sorted[0]

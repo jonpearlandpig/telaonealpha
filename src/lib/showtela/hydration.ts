@@ -1,6 +1,7 @@
 import { getArtifacts, getContinuityEvents, getOperations, getPeople, getUnresolved } from './notion'
 import { mockShowTelaHomeData } from './mockData'
-import { mapArtifact, mapContinuityEvent, mapOperation, mapPerson, mapUnresolved } from './notionMappers'
+import { mapArtifact, mapContinuityFeedEvent, mapOperation, mapPerson, mapUnresolved } from './notionMappers'
+import { projectTimeline, toContinuityEvents } from './eventSourcing'
 import { calculatePressure } from './pressure'
 import { threadContinuity } from './threadContinuity'
 import type { ShowTelaHomeData } from './types'
@@ -23,7 +24,7 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
   const lastSeenTimestamp = process.env.SHOWTELA_LAST_SEEN_TIMESTAMP ? new Date(process.env.SHOWTELA_LAST_SEEN_TIMESTAMP).getTime() : Date.now() - 1000 * 60 * 60 * 24
   const continuityFeed = threadContinuity(eventsRaw
     .map((event) => {
-      const mapped = mapContinuityEvent(event, personById)
+      const mapped = mapContinuityFeedEvent(event, personById)
       const artifact = artifactByEvent.get(mapped.id)
       return { ...mapped, image: mapped.image ?? artifact?.image, isNew: new Date(mapped.timestamp ?? 0).getTime() > lastSeenTimestamp }
     })
@@ -39,6 +40,8 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
   const high = unresolved.filter((u) => u.severity === 'high').length
   const medium = unresolved.filter((u) => u.severity === 'medium').length
   const pressure = calculatePressure(unresolved)
+  const continuityEvents = toContinuityEvents(continuityFeed, 'notion')
+  const runtimeTimeline = projectTimeline(continuityEvents).slice(0, 20)
 
   return {
     activeOps: people.filter((p) => p.active).slice(0, 12),
@@ -46,6 +49,8 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
     operations: operationsFilled,
     unresolved,
     continuityFeed,
+    continuityEvents,
     pressureSummary: { total: Math.max(unresolved.length, pressure.score), high, medium },
+    runtimeTimeline,
   }
 }

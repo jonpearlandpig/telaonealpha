@@ -20,6 +20,14 @@ export const normalizeCrusadeData: NormalizeFn = ({ feed }) => {
   const unresolvedCount = feed.filter((i) => !i.status || i.status.toLowerCase() !== 'resolved').length;
   const overdueCount = feed.filter((i) => (i.priority || '').toLowerCase().includes('high')).length;
   const blockedCount = feed.filter((i) => (i.summary || '').toLowerCase().includes('blocked')).length;
+  const runtimeTimeline = feed.slice(0, 15).map((item, idx) => ({
+    id: `timeline-${item.id}`,
+    timestamp: toTimestamp(item.updated),
+    actor: item.owner || 'Operations',
+    summary: item.summary || item.title,
+    continuityObjectId: item.id,
+    pressureDelta: (((item.priority || '').toLowerCase().includes('high') ? 1 : 0) - (idx > 0 && (feed[idx - 1]?.priority || '').toLowerCase().includes('high') ? 1 : 0)) as -2 | -1 | 0 | 1 | 2,
+  }))
 
   const normalizePerson = (item: (typeof feed)[number]): OperationalContinuityObject => ({
     id: `person-${item.id}`,
@@ -88,7 +96,13 @@ export const normalizeCrusadeData: NormalizeFn = ({ feed }) => {
       image: feedImages[i % feedImages.length],
       avatar: feedImages[(i + 1) % feedImages.length],
       unresolved: item.unresolvedImpact >= 6,
+      lastContactAt: item.timestamp,
+      unresolvedDependencies: item.unresolvedImpact >= 6 ? ['approval pending'] : [],
+      linkedEntities: item.linkedPeople,
+      linkedThreads: [item.id.replace('continuity-', '')],
+      attachments: i % 2 === 0 ? [{ id: `att-${item.id}`, type: 'stage_plot', title: `${item.title} packet`, previewUrl: feedImages[i % feedImages.length] }] : [],
     })),
     continuityObjects,
+    runtimeTimeline,
   };
 };
