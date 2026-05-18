@@ -26,4 +26,8 @@ export const mockShowTelaHomeData: ShowTelaHomeData = {
     { id: 'e2', headline: 'Venue requested revised trim notation', body: 'Mags added venue note to thread.', timestamp: new Date(Date.now()-1000*60*45).toISOString(), tags: ['VENUE', 'PRODUCTION'], pressure: 'high', image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=900&auto=format&fit=crop', owner: { id: 'mags', name: 'Mags' }, threadId: 'hershey-stageplot' },
   ],
   pressureSummary: { total: 2, high: 1, medium: 1 },
+  runtimeTimeline: [
+    { id: 't1', timestamp: new Date().toISOString(), actor: 'Juan', summary: 'Stage plot uploaded', continuityObjectId: 'hershey-stageplot', pressureDelta: 1 },
+    { id: 't2', timestamp: new Date(Date.now()-1000*60*45).toISOString(), actor: 'Mags', summary: 'Venue trim request added', continuityObjectId: 'hershey-stageplot', pressureDelta: 1 },
+  ],
 }
