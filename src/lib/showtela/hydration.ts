@@ -10,7 +10,7 @@ const DEFAULT_OPERATIONS = ['Travel', 'Logistics', 'Venues', 'Hospitality', 'Sec
 export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
   const [peopleRaw, operationsRaw, eventsRaw, unresolvedRaw, artifactsRaw] = await Promise.all([getPeople(), getOperations(), getContinuityEvents(), getUnresolved(), getArtifacts()])
   console.log('[showtela] hydration summary', { peopleLoaded: peopleRaw.length, operationsLoaded: operationsRaw.length, continuityEventsLoaded: eventsRaw.length, unresolvedLoaded: unresolvedRaw.length, artifactsLoaded: artifactsRaw.length })
-  if (!peopleRaw.length && !operationsRaw.length && !eventsRaw.length && !unresolvedRaw.length) return mockShowTelaHomeData
+  if (!peopleRaw.length && !operationsRaw.length && !eventsRaw.length && !unresolvedRaw.length) return { ...mockShowTelaHomeData, dataMode: 'demo' as const }
 
   const people = peopleRaw.map(mapPerson)
   const personById = new Map(people.map((p) => [p.id, p]))
@@ -56,5 +56,6 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
     continuityFeed,
     pressureSummary: { total: Math.max(unresolved.length, pressure.score), high, medium },
     runtimeTimeline,
+    dataMode: 'live' as const,
   }
 }

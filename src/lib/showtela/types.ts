@@ -85,6 +85,7 @@ export type ShowTelaHomeData = {
     medium: number
   }
   runtimeTimeline: RuntimeTimelineItem[]
+  dataMode?: 'live' | 'demo'
 }
 
 export type RuntimeTimelineItem = {
