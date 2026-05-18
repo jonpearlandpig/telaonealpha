@@ -44,6 +44,16 @@ export type ContinuityFeedItem = {
   image: string;
   avatar: string;
   unresolved: boolean;
+  waitingOn?: string;
+  blockedBy?: string;
+  approvalOwner?: string;
+  lastContactAt?: string;
+  trustLevel?: 'low' | 'medium' | 'high';
+  operationalRisk?: 'low' | 'medium' | 'high';
+  unresolvedDependencies?: string[];
+  linkedEntities?: string[];
+  linkedThreads?: string[];
+  attachments?: Array<{ id: string; type: MediaMemoryType; title: string; previewUrl?: string }>;
 };
 
 export type ContinuityDomain = 'person' | 'operation' | 'unresolved' | 'continuity_event' | 'touring_assumption' | 'risk_signal' | 'communication_event';
@@ -73,4 +83,6 @@ export type ShowTelaViewModel = {
   unresolvedPressure: UnresolvedPressure;
   feed: ContinuityFeedItem[];
   continuityObjects: OperationalContinuityObject[];
+  runtimeTimeline: Array<{ id: string; timestamp: string; actor: string; summary: string; continuityObjectId: string; pressureDelta: number }>;
 };
+import type { MediaMemoryType } from '@/lib/showtela/types';
