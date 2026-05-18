@@ -86,8 +86,6 @@ export type ShowTelaHomeData = {
   }
   runtimeTimeline: RuntimeTimelineItem[]
   dataMode?: 'live' | 'demo'
-  hydrationError?: string
-  sourceStatuses?: Array<{ source: string; status: string; rows: number; sourceType?: string; reason?: string }>
 }
 
 export type RuntimeTimelineItem = {

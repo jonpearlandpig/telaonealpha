@@ -21,8 +21,6 @@ export default async function ShowTelaHome() {
         <div>env {environment}</div>
         <div>built {buildTimestamp}</div>
       </div>
-      {data.dataMode === 'demo' && data.hydrationError ? <div className='mx-4 mt-4 rounded-xl border border-red-300/60 bg-red-100/70 px-3 py-2 text-[11px] text-red-900'>{data.hydrationError}</div> : null}
-      {(environment !== 'production') ? <section className='mx-4 mt-3 rounded-xl border border-[#C7AA73]/50 bg-[#13110D]/85 px-3 py-2 text-[11px] text-[#F3E2BD]'><div className='mb-1 font-semibold tracking-[0.08em]'>CST SOURCE STATUS</div>{(data.sourceStatuses ?? []).map((s) => <div key={s.source}>{s.source}: {s.status} | rows:{s.rows} | type:{s.sourceType ?? 'unknown'}{s.reason ? ` | ${s.reason}` : ''}</div>)}</section> : null}
       <ShowTelaRuntime vm={vm} isDemoMode={data.dataMode === 'demo'} />
     </main>
   )
