@@ -7,9 +7,10 @@ const STATUS_COLOR: Record<string, string> = {
 export function FluencyPartnersRail(
   props: { people: PersonEntity[] } | { items: Array<{ id: string; label?: string; name?: string; unresolvedCount: number; image: string }> }
 ) {
-  const people = 'people' in props ? props.people : props.items.map((i) => ({ id: i.id, name: i.label ?? i.name ?? 'Partner', unresolvedCount: i.unresolvedCount, role: 'Partner', avatar: i.image }))
-  const totalActive = people.length
-  const overflow = totalActive > 6 ? totalActive - 6 : 0
+  const people = 'people' in props ? props.people
+    : props.items.map((i) => ({ id: i.id, name: i.label ?? i.name ?? 'Partner', unresolvedCount: i.unresolvedCount, role: 'Partner', avatar: i.image }))
+
+  const overflow = people.length > 6 ? people.length - 6 : 0
   const visible = people.slice(0, 6)
 
   return (
@@ -19,7 +20,7 @@ export function FluencyPartnersRail(
           <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5E5348]">Fluency Partners</h2>
           <span className="flex items-center gap-1 rounded-full bg-[#1A1712] px-2 py-0.5">
             <span className="h-1.5 w-1.5 rounded-full bg-[#4ADE80]" />
-            <span className="text-[10px] font-medium text-[#E5DBC8]">{totalActive} active</span>
+            <span className="text-[10px] font-medium text-[#E5DBC8]">{people.length} active</span>
           </span>
         </div>
         <button className="text-[11px] font-medium text-[#C89B2F]">View all ›</button>
@@ -36,14 +37,14 @@ export function FluencyPartnersRail(
                 <div className="h-[56px] w-[56px] overflow-hidden rounded-full border-[2px] border-[#1A1712] bg-[#1A1712] shadow-[0_4px_16px_rgba(0,0,0,0.25)]">
                   {img ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={img} alt={p.name} className="h-full w-full object-cover grayscale-[10%]" />
+                    <img src={img} alt={p.name} className="h-full w-full object-cover" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-base font-semibold text-[#F6DEAF]">{p.name.slice(0, 1)}</div>
                   )}
                 </div>
                 <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#F8F6F2]" style={{ backgroundColor: dotColor }} />
               </div>
-              <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{p.name}</p>
+              <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{p.name.split(' ')[0]}</p>
               <p className="text-center text-[10px] leading-tight text-[#6E6A63]">{role}</p>
             </button>
           )
