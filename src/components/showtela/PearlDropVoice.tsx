@@ -7,7 +7,7 @@ export function PearlDropVoice({ onClose }: { onClose: () => void }) {
   const [state, setState] = useState<State>('idle')
   const [transcript, setTranscript] = useState('')
   const [message, setMessage] = useState('')
-  const recognitionRef = useRef<InstanceType<typeof window.SpeechRecognition> | null>(null)
+  const recognitionRef = useRef<unknown>(null)
 
   const startListening = () => {
     const SpeechRecognition = window.SpeechRecognition ?? window.webkitSpeechRecognition
