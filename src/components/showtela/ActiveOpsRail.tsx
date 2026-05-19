@@ -21,27 +21,34 @@ export function ActiveOpsRail(
         </div>
         <button className="text-[11px] font-medium text-[#C89B2F]">View all</button>
       </div>
-      <div className="flex gap-4 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex gap-5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {people.map((p) => {
           const img = ('avatar' in p && p.avatar) ? p.avatar : undefined
           const unresolved = p.unresolvedCount ?? 0
           const role = ('role' in p && p.role) ? p.role : ''
           const hasUnresolved = unresolved > 0
+
           return (
-            <button key={p.id} className="flex min-w-[80px] flex-col items-center gap-1.5 p-0" onClick={() => onPersonTap?.(p.name, role)}>
+            <button key={p.id} className="flex w-[72px] flex-shrink-0 flex-col items-center gap-1.5 p-0" onClick={() => onPersonTap?.(p.name, role)}>
               <div className="relative">
-                <div className="h-[68px] w-[68px] overflow-hidden rounded-full border-[2.5px] bg-[#1A1712] shadow-[0_0_0_3px_rgba(200,155,47,0.18),0_8px_24px_rgba(0,0,0,0.22)]" style={{ borderColor: hasUnresolved ? '#F87171' : '#C89B2F' }}>
-                  {img ? <img src={img} alt={p.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-xl font-semibold text-[#F8E1B0]">{p.name.slice(0, 1)}</div>}
+                <div
+                  className="h-[64px] w-[64px] overflow-hidden rounded-full border-[2.5px] bg-[#1A1712] shadow-[0_0_0_3px_rgba(200,155,47,0.18),0_6px_20px_rgba(0,0,0,0.20)]"
+                  style={{ borderColor: hasUnresolved ? '#F87171' : '#C89B2F' }}
+                >
+                  {img
+                    ? <img src={img} alt={p.name} className="h-full w-full object-cover" />
+                    : <div className="flex h-full w-full items-center justify-center text-xl font-semibold text-[#F8E1B0]">{p.name.slice(0, 1)}</div>
+                  }
                 </div>
                 <span className="absolute bottom-0.5 right-0.5 h-3 w-3 rounded-full border-2 border-[#F8F6F2] bg-[#4ADE80]" />
               </div>
-              <p className="text-center text-[13px] font-semibold leading-tight text-[#141210]">{p.name.split(' ')[0]}</p>
+              <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{p.name.split(' ')[0]}</p>
               <p className="text-center text-[10px] leading-tight text-[#6E6A63]">{role}</p>
             </button>
           )
         })}
-        <button className="flex min-w-[80px] flex-col items-center gap-1.5 p-0">
-          <div className="flex h-[68px] w-[68px] items-center justify-center rounded-full border-[2px] border-dashed border-[#D4C9B4]">
+        <button className="flex w-[72px] flex-shrink-0 flex-col items-center gap-1.5 p-0">
+          <div className="flex h-[64px] w-[64px] items-center justify-center rounded-full border-[2px] border-dashed border-[#D4C9B4]">
             <span className="text-[24px] font-thin text-[#8B847B]">+</span>
           </div>
           <p className="text-[12px] font-medium text-[#8B847B]">Add</p>
