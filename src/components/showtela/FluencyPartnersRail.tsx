@@ -30,7 +30,8 @@ export function FluencyPartnersRail(
         {visible.map((p) => {
           const img = ('avatar' in p && p.avatar) ? p.avatar : undefined
           const pressure = ('pressure' in p && p.pressure) ? p.pressure as string : 'low'
-          const role = ('role' in p && p.role) ? p.role : 'Partner'
+          const role = ('role' in p && p.role) ? p.role : ('latest' in p && (p as {latest?: string}).latest) ? (p as {latest?: string}).latest! : 'Partner'
+
           return (
             <button key={p.id} className="flex min-w-[72px] flex-col items-center gap-1 p-0" onClick={() => onPersonTap?.(p.name, role)}>
               <div className="relative">
