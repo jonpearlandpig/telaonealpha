@@ -10,14 +10,16 @@ export default async function ShowTelaHome() {
   const vm: ShowTelaViewModel = {
     activeOps: data.activeOps.map((p) => ({
       id: p.id,
-      name: p.name,
+      name: p.name === 'TBD' ? '' : p.name,
+,
       image: p.avatar ?? '',
       latest: p.role ?? '',
       unresolvedCount: p.unresolvedCount ?? 0,
     })),
     fluencyPartners: data.fluencyPartners.map((p) => ({
       id: p.id,
-      name: p.name,
+      name: p.name === 'TBD' ? '' : p.name,
+
       image: p.avatar ?? '',
       latest: p.role ?? '',
       unresolvedCount: p.unresolvedCount ?? 0,
