@@ -20,22 +20,12 @@ async function askClaude(transcript: string): Promise<Record<string, string>> {
       max_tokens: 500,
       messages: [{
         role: 'user',
-        content: `Parse this voice note from a touring production operator and extract structured data.
+        content: `Parse this voice note from a touring production operator. Extract ALL information you can find.
 
 Voice note: "${transcript}"
 
-Respond with ONLY valid JSON in one of these formats:
-
-If it mentions a person or contact:
-{"type":"person","name":"Full Name","role":"their role or job title","phone":"phone if mentioned","email":"email if mentioned","notes":"any other context"}
-
-If it mentions something unresolved, blocked, or needs attention:
-{"type":"unresolved","title":"short descriptive title under 80 chars","severity":"high or medium or low","operation":"Travel or Logistics or Venues or Hospitality or Security","owner":"person name if mentioned","notes":"full details"}
-
-If it is a general update or announcement:
-{"type":"feed","headline":"short headline under 80 chars","summary":"full details","owner":"speaker name if mentioned"}
-
-Respond with JSON only. No explanation.`
+Respond with ONLY valid JSON:
+{"type":"Person or Unresolved or Feed or Note","title":"short title under 80 chars","name":"full name if person mentioned","role":"job title or role","phone":"phone number","email":"email address","severity":"high or medium or low","notes":"any remaining context or details"}`
       }]
     })
   })
@@ -44,73 +34,53 @@ Respond with JSON only. No explanation.`
   try {
     return JSON.parse(text.replace(/```json|```/g, '').trim())
   } catch {
-    return { type: 'feed', headline: transcript.slice(0, 80), summary: transcript }
+    return { type: 'Note', title: transcript.slice(0, 80) }
   }
-}
-
-async function notionCreate(databaseId: string, properties: Record<string, unknown>) {
-  const res = await fetch('https://api.notion.com/v1/pages', {
-    method: 'POST',
-    headers: notionHeaders(),
-    body: JSON.stringify({ parent: { database_id: databaseId }, properties }),
-  })
-  const data = await res.json()
-  if (!res.ok) console.error('Notion error:', JSON.stringify(data))
-  return res.ok
 }
 
 export async function POST(req: NextRequest) {
-  const { transcript } = await req.json() as { transcript: string }
+  const { transcript, taggedPerson, submittedBy } = await req.json() as {
+    transcript: string
+    taggedPerson?: string
+    submittedBy?: string
+  }
   if (!transcript?.trim()) return NextResponse.json({ error: 'No transcript' }, { status: 400 })
 
   const parsed = await askClaude(transcript)
-  const type = parsed.type
+  const inboxDb = process.env.NOTION_TELA_INBOX_DB_ID ?? '004750ec83914561b1d20b669dd00a3f'
 
-  try {
-    if (type === 'person') {
-      const notes = [`📞 ${parsed.phone ?? ''}`, `✉ ${parsed.email ?? ''}`, parsed.notes ?? ''].filter(Boolean).join(' ')
-      const ok = await notionCreate(process.env.NOTION_CRUSADE_PEOPLE_DB_ID!, {
-        Name: { title: [{ text: { content: parsed.name ?? 'Unknown' } }] },
-        Role: { rich_text: [{ text: { content: parsed.role ?? '' } }] },
-        Notes: { rich_text: [{ text: { content: notes } }] },
-        Active: { checkbox: false },
-        Partner: { checkbox: true },
-        Pressure: { select: { name: 'low' } },
-        Unresolved: { number: 0 },
-        Updates: { number: 0 },
-      })
-      if (!ok) return NextResponse.json({ error: 'Failed to write to Notion' }, { status: 500 })
-      return NextResponse.json({ success: true, type: 'person', message: `${parsed.name ?? 'Contact'} added to People registry` })
-    }
-
-    if (type === 'unresolved') {
-      const ok = await notionCreate(process.env.NOTION_CRUSADE_UNRESOLVED_DB_ID!, {
+  const res = await fetch('https://api.notion.com/v1/pages', {
+    method: 'POST',
+    headers: notionHeaders(),
+    body: JSON.stringify({
+      parent: { database_id: inboxDb },
+      properties: {
         Title: { title: [{ text: { content: parsed.title ?? transcript.slice(0, 80) } }] },
+        Transcript: { rich_text: [{ text: { content: transcript } }] },
+        Type: { select: { name: parsed.type ?? 'Note' } },
+        Status: { select: { name: 'Raw' } },
+        Source: { select: { name: 'Voice' } },
         Severity: { select: { name: parsed.severity ?? 'medium' } },
-        Operation: { rich_text: [{ text: { content: parsed.operation ?? '' } }] },
-        Owner: { rich_text: [{ text: { content: parsed.owner ?? '' } }] },
+        'Tagged Person': { rich_text: [{ text: { content: taggedPerson ?? '' } }] },
+        'Extracted Name': { rich_text: [{ text: { content: parsed.name ?? '' } }] },
+        'Extracted Role': { rich_text: [{ text: { content: parsed.role ?? '' } }] },
+        'Extracted Phone': { rich_text: [{ text: { content: parsed.phone ?? '' } }] },
+        'Extracted Email': { rich_text: [{ text: { content: parsed.email ?? '' } }] },
         Notes: { rich_text: [{ text: { content: parsed.notes ?? '' } }] },
-        Blocking: { checkbox: false },
-        Aging: { number: 0 },
-        Status: { select: { name: 'Open' } },
-      })
-      if (!ok) return NextResponse.json({ error: 'Failed to write to Notion' }, { status: 500 })
-      return NextResponse.json({ success: true, type: 'unresolved', message: `Unresolved added: ${parsed.title ?? transcript.slice(0, 40)}` })
-    }
-
-    // Default: feed
-    const ok = await notionCreate(process.env.NOTION_CRUSADE_EVENTS_DB_ID!, {
-      Name: { title: [{ text: { content: parsed.headline ?? transcript.slice(0, 80) } }] },
-      Summary: { rich_text: [{ text: { content: parsed.summary ?? transcript } }] },
-      Owner: { rich_text: [{ text: { content: parsed.owner ?? 'Jon Hartman' } }] },
-      Status: { select: { name: 'Active' } },
-      Priority: { select: { name: 'Medium' } },
+        'Submitted By': { rich_text: [{ text: { content: submittedBy ?? 'Jon Hartman' } }] },
+      }
     })
-    if (!ok) return NextResponse.json({ error: 'Failed to write to Notion' }, { status: 500 })
-    return NextResponse.json({ success: true, type: 'feed', message: `Feed updated: ${parsed.headline ?? transcript.slice(0, 40)}` })
+  })
 
-  } catch (e) {
-    console.error('Pearl Drop error:', e)
-    return NextResponse.json({ error: String(e) }, { status: 500 })
+  const data = await res.json()
+  if (!res.ok) {
+    console.error('Notion inbox error:', JSON.stringify(data))
+    return NextResponse.json({ error: 'Failed to write to TELA Inbox' }, { status: 500 })
   }
+
+  return NextResponse.json({
+    success: true,
+    message: `Captured in TELA Inbox — ${parsed.type ?? 'Note'}: ${parsed.title ?? transcript.slice(0, 40)}`,
+    type: parsed.type,
+  })
 }

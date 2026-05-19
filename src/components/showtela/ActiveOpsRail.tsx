@@ -1,3 +1,4 @@
+'use client'
 import type { PersonEntity } from '@/lib/showtela/types'
 
 function facePhoto(url: string): string {
@@ -10,10 +11,11 @@ function facePhoto(url: string): string {
 
 export function ActiveOpsRail(
   props:
-    | { people: PersonEntity[]; onPersonTap?: (name: string, role?: string) => void }
-    | { items: Array<{ id: string; name: string; latest?: string; unresolvedCount: number; image: string; updatesCount?: number }>; onPersonTap?: (name: string, role?: string) => void }
+    | { people: PersonEntity[]; onPersonTap?: (name: string, role?: string) => void; onPearlDrop?: (personName: string) => void }
+    | { items: Array<{ id: string; name: string; latest?: string; unresolvedCount: number; image: string; updatesCount?: number }>; onPersonTap?: (name: string, role?: string) => void; onPearlDrop?: (personName: string) => void }
 ) {
   const onPersonTap = props.onPersonTap
+  const onPearlDrop = props.onPearlDrop
   const people = 'people' in props ? props.people
     : props.items.map((i) => ({ id: i.id, name: i.name, role: i.latest, unresolvedCount: i.unresolvedCount, updatesCount: i.updatesCount ?? 0, avatar: i.image }))
 
@@ -39,7 +41,6 @@ export function ActiveOpsRail(
           return (
             <button key={p.id} className="flex w-[80px] flex-shrink-0 flex-col items-center gap-1.5 p-0" onClick={() => onPersonTap?.(p.name, role)}>
               <div className="relative">
-                {/* Outer ring — Instagram style */}
                 <div
                   className="flex h-[76px] w-[76px] items-center justify-center rounded-full p-[2.5px]"
                   style={{ background: hasUnresolved ? '#F87171' : 'linear-gradient(135deg, #C89B2F, #F0D080, #C89B2F)' }}
@@ -51,7 +52,14 @@ export function ActiveOpsRail(
                     }
                   </div>
                 </div>
-                <span className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full border-2 border-[#F8F6F2] bg-[#4ADE80]" />
+                <span className="absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full border-2 border-[#F8F6F2] bg-[#4ADE80]" />
+                {/* Pearl Drop + button */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); onPearlDrop?.(p.name) }}
+                  className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#F8F6F2] bg-[#141210] shadow-[0_2px_8px_rgba(0,0,0,0.30)]"
+                >
+                  <span className="text-[14px] font-semibold text-white leading-none">+</span>
+                </button>
               </div>
               <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{p.name.split(' ')[0]}</p>
               <p className="text-center text-[10px] leading-tight text-[#6E6A63]">{role}</p>
