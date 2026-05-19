@@ -1,11 +1,21 @@
 import { ShowTelaRuntime } from '@/components/showtela/ShowTelaRuntime'
 import { getShowTelaHome } from '@/lib/showtela/hydration'
+import { getSession } from '@/lib/auth'
 import type { ShowTelaViewModel } from '@/components/showtela/types'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ShowTelaHome() {
-  const data = await getShowTelaHome()
+  const [data, session] = await Promise.all([
+    getShowTelaHome(),
+    getSession(),
+  ])
+
+  const user = session ? {
+    name: session.name,
+    email: session.email,
+    image: session.image,
+  } : undefined
 
   const vm: ShowTelaViewModel = {
     activeOps: data.activeOps.map((p) => ({
@@ -60,16 +70,9 @@ export default async function ShowTelaHome() {
     runtimeTimeline: data.runtimeTimeline,
   }
 
-  const commitHash = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? 'local'
-  const branch = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF ?? 'main'
-
   return (
     <main className='mx-auto min-h-screen max-w-md bg-[#F8F6F2] pb-28 text-[#13110D]'>
-      <div className='fixed right-4 top-4 z-30 rounded-full border border-[#D7B57A]/50 bg-[#13110D] px-3 py-1 text-[10px] font-semibold tracking-[0.2em] text-[#F4DDAB] shadow-[0_10px_32px_rgba(0,0,0,0.25)]'>CANONICAL PREMIUM SHELL</div>
-      <div className='fixed bottom-20 left-4 z-30 rounded-xl border border-[#C7AA73]/45 bg-[#13110D]/90 px-3 py-2 text-[10px] leading-tight text-[#F3E2BD]'>
-        <div>commit {commitHash}</div><div>branch {branch}</div>
-      </div>
-      <ShowTelaRuntime vm={vm} />
+      <ShowTelaRuntime vm={vm} user={user} />
     </main>
   )
 }
