@@ -30,15 +30,38 @@ export function PearlDropVoice({ onClose }: { onClose: () => void }) {
   const [transcript, setTranscript] = useState('')
   const [message, setMessage] = useState('')
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
+  const transcriptRef = useRef<string>('')
+
+  const submit = async (text: string) => {
+    if (!text.trim()) { setState('idle'); return }
+    setState('processing')
+    try {
+      const res = await fetch('/api/pearl-drop-voice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript: text }),
+      })
+      const data = await res.json() as { message?: string; error?: string }
+      if (data.error) throw new Error(data.error)
+      setState('success')
+      setMessage(data.message ?? 'Saved to Notion')
+      setTimeout(onClose, 2500)
+    } catch {
+      setState('error')
+      setMessage('Failed to save. Try again.')
+    }
+  }
 
   const startListening = () => {
     const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition
     if (!SR) {
       setState('error')
-      setMessage('Voice not supported in this browser. Try Chrome.')
+      setMessage('Voice not supported. Try Chrome.')
       return
     }
 
+    transcriptRef.current = ''
+    setTranscript('')
     const recognition = new SR()
     recognition.continuous = false
     recognition.interimResults = true
@@ -47,12 +70,14 @@ export function PearlDropVoice({ onClose }: { onClose: () => void }) {
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       const t = Array.from(event.results).map((r) => r[0].transcript).join('')
+      transcriptRef.current = t
       setTranscript(t)
     }
 
     recognition.onend = () => {
-      if (transcript.trim()) {
-        submit(transcript)
+      const final = transcriptRef.current
+      if (final.trim()) {
+        submit(final)
       } else {
         setState('idle')
       }
@@ -69,25 +94,6 @@ export function PearlDropVoice({ onClose }: { onClose: () => void }) {
 
   const stopListening = () => {
     recognitionRef.current?.stop()
-  }
-
-  const submit = async (text: string) => {
-    setState('processing')
-    try {
-      const res = await fetch('/api/pearl-drop-voice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transcript: text }),
-      })
-      const data = await res.json() as { message?: string; error?: string }
-      if (data.error) throw new Error(data.error)
-      setState('success')
-      setMessage(data.message ?? 'Saved to Notion')
-      setTimeout(onClose, 2000)
-    } catch {
-      setState('error')
-      setMessage('Failed to save. Try again.')
-    }
   }
 
   return (
