@@ -17,8 +17,16 @@ export default async function ShowTelaHome() {
     image: session.image,
   } : undefined
 
+  const sortedActiveOps = [...data.activeOps].sort((a, b) => {
+    const aIsUser = session && a.name.toLowerCase().includes(session.name.split(' ')[0].toLowerCase())
+    const bIsUser = session && b.name.toLowerCase().includes(session.name.split(' ')[0].toLowerCase())
+    if (aIsUser) return -1
+    if (bIsUser) return 1
+    return (b.unresolvedCount ?? 0) - (a.unresolvedCount ?? 0)
+  })
+
   const vm: ShowTelaViewModel = {
-    activeOps: data.activeOps.map((p) => {
+    activeOps: sortedActiveOps.map((p) => {
       const isCurrentUser = session && (
         p.name.toLowerCase().includes(session.name.split(' ')[0].toLowerCase()) ||
         session.name.toLowerCase().includes(p.name.split(' ')[0].toLowerCase())
