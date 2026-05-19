@@ -22,7 +22,7 @@ type Sheet =
   | { type: 'unresolved' }
   | null
 
-export function ShowTelaShell({ vm, onPearlDrop }: { vm: ShowTelaViewModel; onPearlDrop: () => void }) {
+export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel; onPearlDrop: () => void; user?: { name: string; email: string; image: string } }) {
   const [tab, setTab] = useState<Tab>('home')
   const [feed, setFeed] = useState<ContinuityEvent[]>(
     vm.feed.map((i) => ({
@@ -38,32 +38,21 @@ export function ShowTelaShell({ vm, onPearlDrop }: { vm: ShowTelaViewModel; onPe
     window.localStorage.setItem('showtela:lastViewedAt', String(Date.now()))
   }, [])
 
-  const handlePearlDrop = () => {
-    onPearlDrop()
-    const now = new Date()
-    setFeed((prev) => [{
-      id: `local-${now.getTime()}`, headline: 'New continuity note captured',
-      body: 'Pearl Drop inserted into operational stream.',
-      timestamp: now.toISOString(), owner: { id: 'jon', name: 'Jon' }, isNew: true,
-    }, ...prev])
-  }
-
   const unresolvedItems = vm.unresolved ?? []
 
   return (
     <main className="relative mx-auto min-h-screen w-full max-w-[430px] bg-[#F8F6F2] pb-36 text-[#141210]">
       <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-5%,rgba(200,155,47,0.10),transparent_50%)]" />
 
-      {/* HOME */}
       {tab === 'home' && (
         <>
-          <ShowTelaHeader />
+          <ShowTelaHeader userName={user?.name} userImage={user?.image} />
           <ActiveOpsRail
             items={vm.activeOps.map((i) => ({ id: i.id, name: i.name, latest: i.latest, unresolvedCount: i.unresolvedCount ?? 0, image: i.image, updatesCount: 0 }))}
             onPersonTap={(name, role) => setSheet({ type: 'person', name, role })}
           />
           <FluencyPartnersRail
-            items={vm.fluencyPartners.map((i) => ({ id: i.id, name: i.name, label: i.name, unresolvedCount: i.unresolvedCount ?? 0, image: i.image }))}
+            items={vm.fluencyPartners.map((i) => ({ id: i.id, name: i.name, label: i.name, unresolvedCount: i.unresolvedCount ?? 0, image: i.image, latest: i.latest }))}
             onPersonTap={(name, role) => setSheet({ type: 'person', name, role })}
           />
           <CrusadeOperationsRail
@@ -81,7 +70,6 @@ export function ShowTelaShell({ vm, onPearlDrop }: { vm: ShowTelaViewModel; onPe
         </>
       )}
 
-      {/* PLAY */}
       {tab === 'play' && (
         <div className="px-5 pt-[58px]">
           <h1 className="text-[26px] font-semibold tracking-[-0.5px] text-[#141210]">Show Brief</h1>
@@ -98,7 +86,6 @@ export function ShowTelaShell({ vm, onPearlDrop }: { vm: ShowTelaViewModel; onPe
         </div>
       )}
 
-      {/* MESSAGES */}
       {tab === 'messages' && (
         <div className="px-5 pt-[58px]">
           <h1 className="text-[26px] font-semibold tracking-[-0.5px] text-[#141210]">TELA Talk</h1>
@@ -132,7 +119,6 @@ export function ShowTelaShell({ vm, onPearlDrop }: { vm: ShowTelaViewModel; onPe
         </div>
       )}
 
-      {/* SEARCH */}
       {tab === 'search' && (
         <div className="px-5 pt-[58px]">
           <h1 className="text-[26px] font-semibold tracking-[-0.5px] text-[#141210]">Artifacts</h1>
@@ -151,31 +137,41 @@ export function ShowTelaShell({ vm, onPearlDrop }: { vm: ShowTelaViewModel; onPe
         </div>
       )}
 
-      {/* PROFILE */}
       {tab === 'profile' && (
         <div className="px-5 pt-[58px]">
           <div className="flex flex-col items-center py-8">
             <div className="h-20 w-20 overflow-hidden rounded-full border-[3px] border-[#C89B2F] bg-[#1A1712] shadow-[0_0_0_4px_rgba(200,155,47,0.15)]">
-              <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-[#F8E1B0]">J</div>
+              {user?.image
+                ? <img src={user.image} alt={user.name} className="h-full w-full object-cover" />
+                : <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-[#F8E1B0]">{user?.name?.slice(0,1) ?? 'J'}</div>
+              }
             </div>
-            <h2 className="mt-3 text-[20px] font-semibold text-[#141210]">Jon Hartman</h2>
-            <p className="text-[13px] text-[#8B847B]">Producer / Continuity Architect</p>
+            <h2 className="mt-3 text-[20px] font-semibold text-[#141210]">{user?.name ?? 'Jon Hartman'}</h2>
+            <p className="text-[13px] text-[#8B847B]">{user?.email ?? 'jonathan@pearlandpig.com'}</p>
             <span className="mt-2 rounded-full bg-[#1A1712] px-3 py-1 text-[10px] font-semibold tracking-widest text-[#C89B2F]">PEARL & PIG</span>
           </div>
           <div className="flex flex-col gap-2">
-            {['Notification Settings', 'Data & Privacy', 'Connected Accounts', 'Sign Out'].map((item) => (
+            {['Notification Settings', 'Data & Privacy', 'Connected Accounts'].map((item) => (
               <button key={item} className="flex items-center justify-between rounded-[14px] bg-white px-4 py-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-                <p className="text-[14px] font-medium text-[item === 'Sign Out' ? '#F87171' : '#141210']" style={{ color: item === 'Sign Out' ? '#F87171' : '#141210' }}>{item}</p>
+                <p className="text-[14px] font-medium text-[#141210]">{item}</p>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="#B8A88A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
             ))}
+            <a href="/api/auth/signout" className="flex items-center justify-between rounded-[14px] bg-white px-4 py-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+              <p className="text-[14px] font-medium text-[#F87171]">Sign Out</p>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="#F87171" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </a>
           </div>
         </div>
       )}
 
-      <BottomDock onPearlDrop={handlePearlDrop} activeTab={tab} onTabChange={setTab} />
+      <BottomDock
+        activeTab={tab}
+        onTabChange={setTab}
+        userImage={user?.image}
+        userName={user?.name}
+      />
 
-      {/* Sheets */}
       <PersonSheet open={sheet?.type === 'person'} name={sheet?.type === 'person' ? sheet.name : ''} role={sheet?.type === 'person' ? sheet.role : undefined} onClose={() => setSheet(null)} />
       <FeedSheet open={sheet?.type === 'feed'} item={sheet?.type === 'feed' ? sheet.item : null} onClose={() => setSheet(null)} />
       <OperationSheet open={sheet?.type === 'operation'} name={sheet?.type === 'operation' ? sheet.name : ''} onClose={() => setSheet(null)} />

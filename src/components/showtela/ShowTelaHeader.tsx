@@ -1,8 +1,10 @@
 'use client'
 
-export function ShowTelaHeader() {
+export function ShowTelaHeader({ userName, userImage }: { userName?: string; userImage?: string }) {
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  const firstName = userName?.split(' ')[0] ?? 'Jon'
+
   return (
     <header className="px-5 pb-4 pt-[58px]">
       <div className="mb-4 flex items-center justify-between">
@@ -27,7 +29,7 @@ export function ShowTelaHeader() {
       </div>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.5px] text-[#141210]">{greeting}, Jon.</h1>
+          <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.5px] text-[#141210]">{greeting}, {firstName}.</h1>
           <p className="mt-0.5 text-[15px] text-[#6E6A63]">Here&apos;s what matters today.</p>
         </div>
         <div className="min-w-[130px] rounded-2xl border border-black/8 bg-white/80 px-3 py-2.5 text-right shadow-[0_4px_14px_rgba(17,17,17,0.06)] backdrop-blur-md">
