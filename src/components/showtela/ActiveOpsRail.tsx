@@ -36,7 +36,7 @@ export function ActiveOpsRail(
                   style={{ borderColor: hasUnresolved ? '#F87171' : '#C89B2F' }}
                 >
                   {img
-                    ? <img src={img} alt={p.name} className="h-full w-full object-cover" />
+                    ? <img src={img} alt={p.name} className="h-full w-full object-cover object-top" />
                     : <div className="flex h-full w-full items-center justify-center text-xl font-semibold text-[#F8E1B0]">{p.name.slice(0, 1)}</div>
                   }
                 </div>
