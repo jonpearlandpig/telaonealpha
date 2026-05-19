@@ -2,14 +2,39 @@ import type { PersonEntity } from '@/lib/showtela/types'
 
 const STATUS_COLOR: Record<string, string> = { low: '#4ADE80', medium: '#F59E0B', high: '#F87171' }
 
+function abbreviate(role: string): string {
+  const map: Record<string, string> = {
+    'tour manager': 'TM', 'production manager': 'PM', 'stage manager': 'SM',
+    'costume designer': 'COST', 'costumes': 'COST',
+    'transportation': 'TRANS', 'lighting designer': 'LX', 'lighting': 'LX',
+    'audio': 'A1', 'sound designer': 'A1', 'foh': 'FOH',
+    'marketing': 'MKT', 'ticketing': 'TKT', 'finance': 'FIN',
+    'director of touring': 'DOT', 'director of operations': 'DOO',
+    'technology specialist': 'TECH', 'talent buying specialist': 'TBS',
+    'wardrobe': 'WRD', 'choreographer': 'CHOR', 'music director': 'MD',
+    'set designer': 'SET', 'director': 'DIR', 'creative producer': 'CP',
+  }
+  const lower = role.toLowerCase()
+  for (const [key, abbr] of Object.entries(map)) {
+    if (lower.includes(key)) return abbr
+  }
+  return role.slice(0, 4).toUpperCase()
+}
+
 export function FluencyPartnersRail(
   props:
     | { people: PersonEntity[]; onPersonTap?: (name: string, role?: string) => void }
-    | { items: Array<{ id: string; label?: string; name?: string; unresolvedCount: number; image: string }>; onPersonTap?: (name: string, role?: string) => void }
+    | { items: Array<{ id: string; label?: string; name?: string; unresolvedCount: number; image: string; latest?: string }>; onPersonTap?: (name: string, role?: string) => void }
 ) {
   const onPersonTap = props.onPersonTap
   const people = 'people' in props ? props.people
-    : props.items.map((i) => ({ id: i.id, name: i.label ?? i.name ?? 'Partner', unresolvedCount: i.unresolvedCount, role: 'Partner', avatar: i.image }))
+    : props.items.map((i) => ({
+        id: i.id,
+        name: i.label ?? i.name ?? '',
+        unresolvedCount: i.unresolvedCount,
+        role: i.latest ?? '',
+        avatar: i.image,
+      }))
 
   const overflow = people.length > 6 ? people.length - 6 : 0
   const visible = people.slice(0, 6)
@@ -30,17 +55,23 @@ export function FluencyPartnersRail(
         {visible.map((p) => {
           const img = ('avatar' in p && p.avatar) ? p.avatar : undefined
           const pressure = ('pressure' in p && p.pressure) ? p.pressure as string : 'low'
-          const role = ('role' in p && p.role) ? p.role : ('latest' in p && (p as {latest?: string}).latest) ? (p as {latest?: string}).latest! : 'Partner'
+          const role = ('role' in p && p.role) ? p.role : ''
+          const hasName = !!p.name && p.name !== role
+          const displayName = hasName ? p.name.split(' ')[0] : abbreviate(role)
+          const initial = hasName ? p.name.slice(0, 1) : abbreviate(role).slice(0, 2)
 
           return (
-            <button key={p.id} className="flex min-w-[72px] flex-col items-center gap-1 p-0" onClick={() => onPersonTap?.(p.name, role)}>
+            <button key={p.id} className="flex min-w-[72px] flex-col items-center gap-1 p-0" onClick={() => onPersonTap?.(p.name || role, role)}>
               <div className="relative">
                 <div className="h-[56px] w-[56px] overflow-hidden rounded-full border-[2px] border-[#1A1712] bg-[#1A1712] shadow-[0_4px_16px_rgba(0,0,0,0.25)]">
-                  {img ? <img src={img} alt={p.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-base font-semibold text-[#F6DEAF]">{p.name.slice(0, 1)}</div>}
+                  {img
+                    ? <img src={img} alt={p.name} className="h-full w-full object-cover" />
+                    : <div className="flex h-full w-full items-center justify-center font-semibold text-[#F6DEAF]" style={{ fontSize: hasName ? '18px' : '11px' }}>{initial}</div>
+                  }
                 </div>
                 <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#F8F6F2]" style={{ backgroundColor: STATUS_COLOR[pressure] ?? '#4ADE80' }} />
               </div>
-              <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{p.name.split(' ')[0]}</p>
+              <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{displayName}</p>
               <p className="text-center text-[10px] leading-tight text-[#6E6A63]">{role}</p>
             </button>
           )

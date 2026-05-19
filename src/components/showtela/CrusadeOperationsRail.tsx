@@ -1,7 +1,14 @@
 import type { OperationEntity } from './types'
 
-const OP_ICONS: Record<string, string> = { travel: '✈', logistics: '🚛', venues: '🏛', hospitality: '🍽', security: '🛡' }
-const OP_SUBTITLES: Record<string, string> = { travel: 'Next: 8:30 AM', logistics: 'Trailer ETA 10:15', venues: 'Hershey', hospitality: 'Crew meals', security: 'No alerts' }
+const OP_ICONS: Record<string, string> = {
+  travel: '✈', logistics: '🚛', venues: '🏛', hospitality: '🍽', security: '🛡',
+  marketing: '📣', finance: '💰', legal: '⚖', production: '🎭', touring: '🗺',
+}
+
+const OP_SUBTITLES: Record<string, string> = {
+  travel: 'Next: 8:30 AM', logistics: 'Trailer ETA 10:15',
+  venues: 'Hershey', hospitality: 'Crew meals', security: 'No alerts',
+}
 
 export function CrusadeOperationsRail({ items, onOperationTap }: { items: OperationEntity[]; onOperationTap?: (name: string) => void }) {
   const overflow = items.length > 5 ? items.length - 5 : 0
@@ -15,8 +22,8 @@ export function CrusadeOperationsRail({ items, onOperationTap }: { items: Operat
       </div>
       <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {visible.map((item) => {
-          const key = item.id.toLowerCase()
-          const icon = OP_ICONS[key] ?? '⚙'
+          const key = (item.label ?? item.name ?? item.id).toLowerCase()
+          const icon = Object.entries(OP_ICONS).find(([k]) => key.includes(k))?.[1] ?? '⚙'
           const subtitle = item.latest || OP_SUBTITLES[key] || ''
           const unresolved = item.unresolvedCount ?? 0
           const dotColor = unresolved >= 2 ? '#F87171' : unresolved === 1 ? '#F59E0B' : '#4ADE80'
