@@ -11,6 +11,7 @@ import { PersonSheet } from './sheets/PersonSheet'
 import { FeedSheet } from './sheets/FeedSheet'
 import { OperationSheet } from './sheets/OperationSheet'
 import { UnresolvedSheet } from './sheets/UnresolvedSheet'
+import { PearlDropVoice } from './PearlDropVoice'
 import type { ShowTelaViewModel } from './types'
 import type { ContinuityEvent } from '@/lib/showtela/types'
 
@@ -24,6 +25,7 @@ type Sheet =
 
 export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel; onPearlDrop: () => void; user?: { name: string; email: string; image: string } }) {
   const [tab, setTab] = useState<Tab>('home')
+  const [showVoice, setShowVoice] = useState(false)
   const [feed, setFeed] = useState<ContinuityEvent[]>(
     vm.feed.map((i) => ({
       id: i.id, headline: i.title, body: i.summary,
@@ -39,6 +41,10 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
   }, [])
 
   const unresolvedItems = vm.unresolved ?? []
+
+  const handlePearlDrop = () => {
+    setShowVoice(true)
+  }
 
   return (
     <main className="relative mx-auto min-h-screen w-full max-w-[430px] bg-[#F8F6F2] pb-36 text-[#141210]">
@@ -88,9 +94,23 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
 
       {tab === 'messages' && (
         <div className="px-5 pt-[58px]">
-          <h1 className="text-[26px] font-semibold tracking-[-0.5px] text-[#141210]">TELA Talk</h1>
-          <p className="mt-1 text-[13px] text-[#8B847B]">Messages · Threads · Continuity</p>
-          <div className="mt-6 flex flex-col gap-0 divide-y divide-[#EAE4DA]">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h1 className="text-[26px] font-semibold tracking-[-0.5px] text-[#141210]">TELA Talk</h1>
+              <p className="mt-1 text-[13px] text-[#8B847B]">Messages · Threads · Continuity</p>
+            </div>
+            <button
+              onClick={() => setShowVoice(true)}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#C89B2F] shadow-[0_4px_14px_rgba(200,155,47,0.35)]"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <rect x="9" y="2" width="6" height="12" rx="3" fill="white"/>
+                <path d="M5 10a7 7 0 0014 0" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M12 19v3" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
+          <div className="flex flex-col gap-0 divide-y divide-[#EAE4DA]">
             {vm.activeOps.map((p) => (
               <button key={p.id} onClick={() => setSheet({ type: 'person', name: p.name, role: p.latest })} className="flex items-center gap-3 py-3 text-left">
                 <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-full border-[2px] border-[#C89B2F] bg-[#1A1712]">
@@ -170,7 +190,10 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
         onTabChange={setTab}
         userImage={user?.image}
         userName={user?.name}
+        onPearlDrop={() => setShowVoice(true)}
       />
+
+      {showVoice && <PearlDropVoice onClose={() => setShowVoice(false)} />}
 
       <PersonSheet open={sheet?.type === 'person'} name={sheet?.type === 'person' ? sheet.name : ''} role={sheet?.type === 'person' ? sheet.role : undefined} onClose={() => setSheet(null)} />
       <FeedSheet open={sheet?.type === 'feed'} item={sheet?.type === 'feed' ? sheet.item : null} onClose={() => setSheet(null)} />
