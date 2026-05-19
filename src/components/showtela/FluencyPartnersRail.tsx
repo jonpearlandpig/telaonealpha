@@ -5,14 +5,10 @@ const STATUS_COLOR: Record<string, string> = { low: '#4ADE80', medium: '#F59E0B'
 function abbreviate(role: string): string {
   const map: Record<string, string> = {
     'tour manager': 'TM', 'production manager': 'PM', 'stage manager': 'SM',
-    'costume designer': 'COST', 'costumes': 'COST',
-    'transportation': 'TRANS', 'lighting designer': 'LX', 'lighting': 'LX',
-    'audio': 'A1', 'sound designer': 'A1', 'foh': 'FOH',
-    'marketing': 'MKT', 'ticketing': 'TKT', 'finance': 'FIN',
-    'director of touring': 'DOT', 'director of operations': 'DOO',
-    'technology specialist': 'TECH', 'talent buying specialist': 'TBS',
-    'wardrobe': 'WRD', 'choreographer': 'CHOR', 'music director': 'MD',
-    'set designer': 'SET', 'director': 'DIR', 'creative producer': 'CP',
+    'costume designer': 'COST', 'lighting designer': 'LX', 'sound designer': 'A1',
+    'director of touring': 'DOT', 'talent buying specialist': 'TBS',
+    'choreographer': 'CHOR', 'music director': 'MD', 'set designer': 'SET',
+    'director': 'DIR', 'creative producer': 'CP',
   }
   const lower = role.toLowerCase()
   for (const [key, abbr] of Object.entries(map)) {
@@ -27,7 +23,7 @@ export function FluencyPartnersRail(
     | { items: Array<{ id: string; label?: string; name?: string; unresolvedCount: number; image: string; latest?: string }>; onPersonTap?: (name: string, role?: string) => void }
 ) {
   const onPersonTap = props.onPersonTap
-  const people = 'people' in props ? props.people
+  const allPeople = 'people' in props ? props.people
     : props.items.map((i) => ({
         id: i.id,
         name: i.label ?? i.name ?? '',
@@ -35,6 +31,18 @@ export function FluencyPartnersRail(
         role: i.latest ?? '',
         avatar: i.image,
       }))
+
+  // Only show PM and TM when TBD — filter out all other TBD roles
+  const people = allPeople.filter((p) => {
+    const name = p.name ?? ''
+    const role = ('role' in p && p.role) ? p.role : ''
+    const isTbd = name === '' || name === role
+    if (isTbd) {
+      const roleLower = role.toLowerCase()
+      return roleLower.includes('production manager') || roleLower.includes('tour manager')
+    }
+    return true
+  })
 
   const overflow = people.length > 6 ? people.length - 6 : 0
   const visible = people.slice(0, 6)
@@ -76,6 +84,7 @@ export function FluencyPartnersRail(
             </button>
           )
         })}
+
         {overflow > 0 && (
           <button className="flex w-[48px] flex-shrink-0 flex-col items-center gap-1 p-0">
             <div className="flex h-[32px] w-[32px] items-center justify-center rounded-full border border-dashed border-[#D4C9B4] bg-[#F0EBE1]">
@@ -84,6 +93,14 @@ export function FluencyPartnersRail(
             <p className="text-[9px] font-medium text-[#6E6A63]">More</p>
           </button>
         )}
+
+        {/* Add button always at end */}
+        <button className="flex w-[48px] flex-shrink-0 flex-col items-center gap-1 p-0">
+          <div className="flex h-[32px] w-[32px] items-center justify-center rounded-full border-[1.5px] border-dashed border-[#D4C9B4]">
+            <span className="text-[16px] font-thin text-[#8B847B]">+</span>
+          </div>
+          <p className="text-[9px] font-medium text-[#6E6A63]">Add</p>
+        </button>
       </div>
     </section>
   )
