@@ -22,3 +22,6 @@ body {
 }
 button { transition: all 180ms ease-out; }
 button:active { transform: translateY(1px); }
+
+.shell-bg { background-color: #F8F6F2; }
+.shell-glow { background: radial-gradient(circle at 50% -5%, rgba(200,155,47,0.10), transparent 50%); }

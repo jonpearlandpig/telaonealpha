@@ -49,8 +49,8 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
   }
 
   return (
-    <main className="relative mx-auto min-h-screen w-full max-w-sm bg-[#F8F6F2] pb-36 text-[#141210]">
-      <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-5%,rgba(200,155,47,0.10),transparent_50%)]" />
+    <main className="relative mx-auto min-h-screen w-full max-w-sm shell-bg pb-36 text-[#141210]">
+      <span className="pointer-events-none absolute inset-0 shell-glow" />
 
       {tab === 'home' && (
         <>
@@ -250,8 +250,8 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
   }
 
   return (
-    <main className="relative mx-auto min-h-screen w-full max-w-sm bg-[#F8F6F2] pb-36 text-[#141210]">
-      <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-5%,rgba(200,155,47,0.10),transparent_50%)]" />
+    <main className="relative mx-auto min-h-screen w-full max-w-sm shell-bg pb-36 text-[#141210]">
+      <span className="pointer-events-none absolute inset-0 shell-glow" />
 
       {tab === 'home' && (
         <>
