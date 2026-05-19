@@ -10,22 +10,19 @@ export default async function ShowTelaHome() {
   const vm: ShowTelaViewModel = {
     activeOps: data.activeOps.map((p) => ({
       id: p.id,
-      name: p.name === 'TBD' ? '' : p.name,
-
+      name: p.name === 'TBD' ? (p.role ?? 'TBD') : p.name,
       image: p.avatar ?? '',
       latest: p.role ?? '',
       unresolvedCount: p.unresolvedCount ?? 0,
     })),
     fluencyPartners: data.fluencyPartners.map((p) => ({
-  id: p.id,
-  name: p.name === 'TBD' ? (p.role ?? 'TBD') : p.name,
-  label: p.role ?? '',
-  image: p.avatar ?? '',
-  latest: p.role ?? '',
-  unresolvedCount: p.unresolvedCount ?? 0,
-})),
-
-    
+      id: p.id,
+      name: p.name === 'TBD' ? (p.role ?? 'TBD') : p.name,
+      image: p.avatar ?? '',
+      latest: p.role ?? '',
+      unresolvedCount: p.unresolvedCount ?? 0,
+      label: p.role ?? '',
+    })),
     crusadeOperations: data.operations.map((o) => ({
       id: o.id,
       name: o.title,
@@ -40,6 +37,14 @@ export default async function ShowTelaHome() {
       blockedCount: data.unresolved.filter((u) => u.blocking).length,
       pendingApprovals: data.unresolved.filter((u) => u.severity === 'medium').length,
     },
+    unresolved: data.unresolved.map((u) => ({
+      id: u.id,
+      title: u.title,
+      severity: u.severity,
+      blocking: u.blocking,
+      operation: u.operation,
+      aging: u.aging,
+    })),
     feed: data.continuityFeed.map((e) => ({
       id: e.id,
       timestamp: e.timestamp ?? '',
