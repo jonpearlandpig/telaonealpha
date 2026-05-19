@@ -5,16 +5,24 @@ import type { ShowTelaViewModel } from '@/components/showtela/types'
 
 export const dynamic = 'force-dynamic'
 
+function upgradeGooglePhoto(url: string): string {
+  if (!url) return url
+  // Google photos: replace s96-c with s400-c for larger, better cropped version
+  return url.replace(/=s\d+-c/, '=s400-c').replace(/s96-c/, 's400-c')
+}
+
 export default async function ShowTelaHome() {
   const [data, session] = await Promise.all([
     getShowTelaHome(),
     getSession(),
   ])
 
+  const userImage = session?.image ? upgradeGooglePhoto(session.image) : undefined
+
   const user = session ? {
     name: session.name,
     email: session.email,
-    image: session.image,
+    image: userImage ?? session.image,
   } : undefined
 
   const sortedActiveOps = [...data.activeOps].sort((a, b) => {
@@ -34,7 +42,7 @@ export default async function ShowTelaHome() {
       return {
         id: p.id,
         name: p.name === 'TBD' ? (p.role ?? 'TBD') : p.name,
-        image: isCurrentUser ? session.image : (p.avatar ?? ''),
+        image: isCurrentUser ? (userImage ?? session.image) : (p.avatar ?? ''),
         latest: p.role ?? '',
         unresolvedCount: p.unresolvedCount ?? 0,
       }
