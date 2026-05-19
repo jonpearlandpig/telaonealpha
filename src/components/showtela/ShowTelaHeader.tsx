@@ -27,16 +27,11 @@ export function ShowTelaHeader({ userName, userImage }: { userName?: string; use
           </button>
         </div>
       </div>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.5px] text-[#141210]">{greeting}, {firstName}.</h1>
-          <p className="mt-0.5 text-[15px] text-[#6E6A63]">Here&apos;s what matters today.</p>
-        </div>
-  
-          <p className="text-[10px] font-medium text-[#5E5348]">Show Day · 6</p>
-          <p className="text-[10px] text-[#8B847B]">Sat, May 16</p>
-        </div>
+      <div>
+        <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.5px] text-[#141210]">{greeting}, {firstName}.</h1>
+        <p className="mt-0.5 text-[15px] text-[#6E6A63]">Here&apos;s what matters today.</p>
       </div>
     </header>
   )
 }
+
