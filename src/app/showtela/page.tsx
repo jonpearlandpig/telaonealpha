@@ -2,7 +2,7 @@ import { ShowTelaRuntime } from '@/components/showtela/ShowTelaRuntime'
 import { getShowTelaHome } from '@/lib/showtela/hydration'
 import type { ShowTelaViewModel } from '@/components/showtela/types'
 
-export const dynamic = 'force-dynamic'
+export const dynamic = 'force-dynamic no'
 
 export default async function ShowTelaHome() {
   const data = await getShowTelaHome()
@@ -17,12 +17,14 @@ export default async function ShowTelaHome() {
       unresolvedCount: p.unresolvedCount ?? 0,
     })),
     fluencyPartners: data.fluencyPartners.map((p) => ({
-      id: p.id,
-      name: p.name === 'TBD' ? '' : p.name,
+  id: p.id,
+  name: p.name === 'TBD' ? (p.role ?? 'TBD') : p.name,
+  label: p.role ?? '',
+  image: p.avatar ?? '',
+  latest: p.role ?? '',
+  unresolvedCount: p.unresolvedCount ?? 0,
+})),
 
-      image: p.avatar ?? '',
-      latest: p.role ?? '',
-      unresolvedCount: p.unresolvedCount ?? 0,
     })),
     crusadeOperations: data.operations.map((o) => ({
       id: o.id,
