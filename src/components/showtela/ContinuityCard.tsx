@@ -7,6 +7,9 @@ function formatTime(iso?: string) {
 }
 
 export function ContinuityCard({ item }: { item: ContinuityEvent }) {
+  const FALLBACK_IMAGES = ['https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=900','https://images.unsplash.com/photo-1464375117522-1311dd6a1f0a?w=900','https://images.unsplash.com/photo-1503095396549-807759245b35?w=900','https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=900']
+const itemImage = item.image || FALLBACK_IMAGES[Math.abs(item.id.charCodeAt(0)) % FALLBACK_IMAGES.length]
+
   const ownerName = item.owner?.name ?? ''
   const tags = item.tags ?? []
   return (
