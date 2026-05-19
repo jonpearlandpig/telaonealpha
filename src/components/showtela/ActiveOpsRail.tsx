@@ -1,8 +1,11 @@
 import type { PersonEntity } from '@/lib/showtela/types'
 
 export function ActiveOpsRail(
-  props: { people: PersonEntity[] } | { items: Array<{ id: string; name: string; latest?: string; unresolvedCount: number; image: string; updatesCount?: number }> }
+  props:
+    | { people: PersonEntity[]; onPersonTap?: (name: string, role?: string) => void }
+    | { items: Array<{ id: string; name: string; latest?: string; unresolvedCount: number; image: string; updatesCount?: number }>; onPersonTap?: (name: string, role?: string) => void }
 ) {
+  const onPersonTap = props.onPersonTap
   const people = 'people' in props ? props.people
     : props.items.map((i) => ({ id: i.id, name: i.name, role: i.latest, unresolvedCount: i.unresolvedCount, updatesCount: i.updatesCount ?? 0, avatar: i.image }))
 
@@ -16,7 +19,7 @@ export function ActiveOpsRail(
             <span className="text-[10px] font-medium text-[#E5DBC8]">{people.length} active now</span>
           </span>
         </div>
-        <button className="text-[11px] font-medium text-[#C89B2F]">View all ›</button>
+        <button className="text-[11px] font-medium text-[#C89B2F]">View all</button>
       </div>
       <div className="flex gap-4 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {people.map((p) => {
@@ -27,18 +30,10 @@ export function ActiveOpsRail(
           const hasUnresolved = unresolved > 0
           const hasUpdates = updates > 0
           return (
-            <button key={p.id} className="flex min-w-[80px] flex-col items-center gap-1.5 p-0">
+            <button key={p.id} className="flex min-w-[80px] flex-col items-center gap-1.5 p-0" onClick={() => onPersonTap?.(p.name, role)}>
               <div className="relative">
-                <div
-                  className="h-[68px] w-[68px] overflow-hidden rounded-full border-[2.5px] bg-[#1A1712] shadow-[0_0_0_3px_rgba(200,155,47,0.18),0_8px_24px_rgba(0,0,0,0.22)]"
-                  style={{ borderColor: hasUnresolved ? '#F87171' : '#C89B2F' }}
-                >
-                  {img ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={img} alt={p.name} className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-xl font-semibold text-[#F8E1B0]">{p.name.slice(0, 1)}</div>
-                  )}
+                <div className="h-[68px] w-[68px] overflow-hidden rounded-full border-[2.5px] bg-[#1A1712] shadow-[0_0_0_3px_rgba(200,155,47,0.18),0_8px_24px_rgba(0,0,0,0.22)]" style={{ borderColor: hasUnresolved ? '#F87171' : '#C89B2F' }}>
+                  {img ? <img src={img} alt={p.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-xl font-semibold text-[#F8E1B0]">{p.name.slice(0, 1)}</div>}
                 </div>
                 <span className="absolute bottom-0.5 right-0.5 h-3 w-3 rounded-full border-2 border-[#F8F6F2] bg-[#4ADE80]" />
               </div>
