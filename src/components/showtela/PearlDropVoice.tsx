@@ -3,27 +3,49 @@ import { useState, useRef } from 'react'
 
 type State = 'idle' | 'listening' | 'processing' | 'success' | 'error'
 
+declare global {
+  interface Window {
+    SpeechRecognition: new () => SpeechRecognitionInstance
+    webkitSpeechRecognition: new () => SpeechRecognitionInstance
+  }
+}
+
+interface SpeechRecognitionInstance {
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+  start: () => void
+  stop: () => void
+  onresult: ((event: SpeechRecognitionEvent) => void) | null
+  onend: (() => void) | null
+  onerror: (() => void) | null
+}
+
+interface SpeechRecognitionEvent {
+  results: SpeechRecognitionResultList
+}
+
 export function PearlDropVoice({ onClose }: { onClose: () => void }) {
   const [state, setState] = useState<State>('idle')
   const [transcript, setTranscript] = useState('')
   const [message, setMessage] = useState('')
-  const recognitionRef = useRef<unknown>(null)
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
 
   const startListening = () => {
-    const SpeechRecognition = window.SpeechRecognition ?? window.webkitSpeechRecognition
-    if (!SpeechRecognition) {
+    const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition
+    if (!SR) {
       setState('error')
       setMessage('Voice not supported in this browser. Try Chrome.')
       return
     }
 
-    const recognition = new SpeechRecognition()
+    const recognition = new SR()
     recognition.continuous = false
     recognition.interimResults = true
     recognition.lang = 'en-US'
     recognitionRef.current = recognition
 
-    recognition.onresult = (event) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       const t = Array.from(event.results).map((r) => r[0].transcript).join('')
       setTranscript(t)
     }
@@ -71,17 +93,12 @@ export function PearlDropVoice({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-[4px]" onClick={onClose}>
       <div className="relative mx-4 w-full max-w-[340px] overflow-hidden rounded-[28px] bg-[#141210] p-8 shadow-[0_24px_64px_rgba(0,0,0,0.40)]" onClick={(e) => e.stopPropagation()}>
-        {/* Glow */}
         <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(200,155,47,0.20),transparent_60%)]" />
-
         <div className="relative flex flex-col items-center gap-6">
-          {/* Title */}
           <div className="text-center">
             <p className="text-[11px] uppercase tracking-[0.2em] text-[#C89B2F]">Pearl Drop</p>
             <p className="mt-1 text-[13px] text-[#8B847B]">Speak to update Notion</p>
           </div>
-
-          {/* Mic button */}
           <button
             onMouseDown={startListening}
             onMouseUp={stopListening}
@@ -114,8 +131,6 @@ export function PearlDropVoice({ onClose }: { onClose: () => void }) {
               </svg>
             )}
           </button>
-
-          {/* Status */}
           <div className="text-center">
             {state === 'idle' && <p className="text-[13px] text-[#8B847B]">Hold to speak</p>}
             {state === 'listening' && <p className="text-[13px] text-[#F87171]">Listening... release when done</p>}
@@ -123,15 +138,11 @@ export function PearlDropVoice({ onClose }: { onClose: () => void }) {
             {state === 'success' && <p className="text-[13px] text-[#4ADE80]">{message}</p>}
             {state === 'error' && <p className="text-[13px] text-[#F87171]">{message}</p>}
           </div>
-
-          {/* Transcript */}
           {transcript && (
-            <div className="w-full rounded-[14px] bg-white/8 px-4 py-3">
+            <div className="w-full rounded-[14px] bg-white/10 px-4 py-3">
               <p className="text-center text-[12px] italic text-[#B8A88A]">&ldquo;{transcript}&rdquo;</p>
             </div>
           )}
-
-          {/* Examples */}
           {state === 'idle' && (
             <div className="w-full space-y-1.5">
               {[
@@ -139,13 +150,12 @@ export function PearlDropVoice({ onClose }: { onClose: () => void }) {
                 'Unresolved — Juan hasn\'t confirmed stage plot',
                 'Feed update — bus call moved to 8:50 AM',
               ].map((ex) => (
-                <button key={ex} onClick={() => submit(ex)} className="w-full rounded-[10px] bg-white/6 px-3 py-2 text-left text-[11px] text-[#8B847B]">
+                <button key={ex} onClick={() => submit(ex)} className="w-full rounded-[10px] bg-white/10 px-3 py-2 text-left text-[11px] text-[#8B847B]">
                   &ldquo;{ex}&rdquo;
                 </button>
               ))}
             </div>
           )}
-
           <button onClick={onClose} className="text-[11px] text-[#5E5348]">Cancel</button>
         </div>
       </div>
