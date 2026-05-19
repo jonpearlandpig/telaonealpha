@@ -18,13 +18,19 @@ export default async function ShowTelaHome() {
   } : undefined
 
   const vm: ShowTelaViewModel = {
-    activeOps: data.activeOps.map((p) => ({
-      id: p.id,
-      name: p.name === 'TBD' ? (p.role ?? 'TBD') : p.name,
-      image: p.avatar ?? '',
-      latest: p.role ?? '',
-      unresolvedCount: p.unresolvedCount ?? 0,
-    })),
+    activeOps: data.activeOps.map((p) => {
+      const isCurrentUser = session && (
+        p.name.toLowerCase().includes(session.name.split(' ')[0].toLowerCase()) ||
+        session.name.toLowerCase().includes(p.name.split(' ')[0].toLowerCase())
+      )
+      return {
+        id: p.id,
+        name: p.name === 'TBD' ? (p.role ?? 'TBD') : p.name,
+        image: isCurrentUser ? session.image : (p.avatar ?? ''),
+        latest: p.role ?? '',
+        unresolvedCount: p.unresolvedCount ?? 0,
+      }
+    }),
     fluencyPartners: data.fluencyPartners.map((p) => ({
       id: p.id,
       name: p.name === 'TBD' ? (p.role ?? 'TBD') : p.name,
