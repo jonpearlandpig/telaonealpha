@@ -49,7 +49,7 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
   }
 
   return (
-    <main className="relative mx-auto min-h-screen w-full max-w-sm shell-bg pb-36 text-[#141210]">
+    <main className="relative mx-auto min-h-screen w-full max-w-sm shell-bg pb-36 text-stone-900">
       <span className="pointer-events-none absolute inset-0 shell-glow" />
 
       {tab === 'home' && (
@@ -81,13 +81,13 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
 
       {tab === 'play' && (
         <div className="px-5 pt-[58px]">
-          <h1 className="text-[26px] font-semibold tracking-[-0.5px] text-[#141210]">Show Brief</h1>
+          <h1 className="text-[26px] font-semibold tracking-[-0.5px] text-stone-900">Show Brief</h1>
           <p className="mt-1 text-[13px] text-[#8B847B]">As of right now — here&apos;s where Crusade stands.</p>
           <div className="mt-6 flex flex-col gap-3">
             {feed.slice(0, 8).map((item) => (
               <button key={item.id} onClick={() => setSheet({ type: 'feed', item })} className="w-full rounded-[16px] bg-white px-4 py-3 text-left shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
                 <p className="text-[11px] font-medium text-[#C89B2F]">{item.owner?.name}</p>
-                <p className="mt-0.5 text-[14px] font-semibold text-[#141210]">{item.headline}</p>
+                <p className="mt-0.5 text-[14px] font-semibold text-stone-900">{item.headline}</p>
                 {item.body && <p className="mt-0.5 text-[12px] text-[#5E5348]">{item.body}</p>}
               </button>
             ))}
@@ -99,7 +99,7 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
         <div className="px-5 pt-[58px]">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h1 className="text-[26px] font-semibold tracking-[-0.5px] text-[#141210]">TELA Talk</h1>
+              <h1 className="text-[26px] font-semibold tracking-[-0.5px] text-stone-900">TELA Talk</h1>
               <p className="mt-1 text-[13px] text-[#8B847B]">Messages · Threads · Continuity</p>
             </div>
             <button
@@ -128,7 +128,7 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
                   </button>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[14px] font-semibold text-[#141210]">{p.name}</p>
+                  <p className="text-[14px] font-semibold text-stone-900">{p.name}</p>
                   <p className="text-[12px] text-[#8B847B] truncate">{p.latest}</p>
                 </div>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="#B8A88A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -140,7 +140,7 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
                   <div className="flex h-full w-full items-center justify-center text-base font-semibold text-[#F8E1B0]">{(p.name || p.latest || '?').slice(0,1)}</div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[14px] font-semibold text-[#141210]">{p.name || p.latest}</p>
+                  <p className="text-[14px] font-semibold text-stone-900">{p.name || p.latest}</p>
                   <p className="text-[12px] text-[#8B847B] truncate">{p.latest}</p>
                 </div>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="#B8A88A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -152,7 +152,7 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
 
       {tab === 'search' && (
         <div className="px-5 pt-[58px]">
-          <h1 className="text-[26px] font-semibold tracking-[-0.5px] text-[#141210]">Artifacts</h1>
+          <h1 className="text-[26px] font-semibold tracking-[-0.5px] text-stone-900">Artifacts</h1>
           <p className="mt-1 text-[13px] text-[#8B847B]">Documents · Files · Records</p>
           <div className="mt-4 rounded-[14px] bg-white px-4 py-3 shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
             <input placeholder="Search documents, people, operations..." className="w-full bg-transparent text-[14px] text-[#141210] outline-none placeholder:text-[#B8A88A]" />
@@ -161,7 +161,7 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
             {['CST Call Sheet', 'ShowTELA Feed', 'Decision Log', 'Risk Register', 'Touring Assumptions', 'Communication Rhythm'].map((doc) => (
               <div key={doc} className="flex items-center gap-3 rounded-[14px] bg-white px-4 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
                 <span className="text-[20px]">📄</span>
-                <p className="text-[14px] font-medium text-[#141210]">{doc}</p>
+                <p className="text-[14px] font-medium text-stone-900">{doc}</p>
               </div>
             ))}
           </div>
@@ -185,14 +185,14 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
                 <span className="text-[16px] font-semibold text-white leading-none">+</span>
               </button>
             </div>
-            <h2 className="mt-4 text-[20px] font-semibold text-[#141210]">{user?.name ?? 'Jon Hartman'}</h2>
+            <h2 className="mt-4 text-[20px] font-semibold text-stone-900">{user?.name ?? 'Jon Hartman'}</h2>
             <p className="text-[13px] text-[#8B847B]">{user?.email ?? 'jonathan@pearlandpig.com'}</p>
             <span className="mt-2 rounded-full bg-[#1A1712] px-3 py-1 text-[10px] font-semibold tracking-widest text-[#C89B2F]">PEARL & PIG</span>
           </div>
           <div className="flex flex-col gap-2">
             {['Notification Settings', 'Data & Privacy', 'Connected Accounts'].map((item) => (
               <button key={item} className="flex items-center justify-between rounded-[14px] bg-white px-4 py-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-                <p className="text-[14px] font-medium text-[#141210]">{item}</p>
+                <p className="text-[14px] font-medium text-stone-900">{item}</p>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="#B8A88A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
             ))}
@@ -250,7 +250,7 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
   }
 
   return (
-    <main className="relative mx-auto min-h-screen w-full max-w-sm shell-bg pb-36 text-[#141210]">
+    <main className="relative mx-auto min-h-screen w-full max-w-sm shell-bg pb-36 text-stone-900">
       <span className="pointer-events-none absolute inset-0 shell-glow" />
 
       {tab === 'home' && (
@@ -282,13 +282,13 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
 
       {tab === 'play' && (
         <div className="px-5 pt-[58px]">
-          <h1 className="text-[26px] font-semibold tracking-[-0.5px] text-[#141210]">Show Brief</h1>
+          <h1 className="text-[26px] font-semibold tracking-[-0.5px] text-stone-900">Show Brief</h1>
           <p className="mt-1 text-[13px] text-[#8B847B]">As of right now — here&apos;s where Crusade stands.</p>
           <div className="mt-6 flex flex-col gap-3">
             {feed.slice(0, 8).map((item) => (
               <button key={item.id} onClick={() => setSheet({ type: 'feed', item })} className="w-full rounded-[16px] bg-white px-4 py-3 text-left shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
                 <p className="text-[11px] font-medium text-[#C89B2F]">{item.owner?.name}</p>
-                <p className="mt-0.5 text-[14px] font-semibold text-[#141210]">{item.headline}</p>
+                <p className="mt-0.5 text-[14px] font-semibold text-stone-900">{item.headline}</p>
                 {item.body && <p className="mt-0.5 text-[12px] text-[#5E5348]">{item.body}</p>}
               </button>
             ))}
@@ -300,7 +300,7 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
         <div className="px-5 pt-[58px]">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h1 className="text-[26px] font-semibold tracking-[-0.5px] text-[#141210]">TELA Talk</h1>
+              <h1 className="text-[26px] font-semibold tracking-[-0.5px] text-stone-900">TELA Talk</h1>
               <p className="mt-1 text-[13px] text-[#8B847B]">Messages · Threads · Continuity</p>
             </div>
             <button
@@ -329,7 +329,7 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
                   </button>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[14px] font-semibold text-[#141210]">{p.name}</p>
+                  <p className="text-[14px] font-semibold text-stone-900">{p.name}</p>
                   <p className="text-[12px] text-[#8B847B] truncate">{p.latest}</p>
                 </div>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="#B8A88A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -341,7 +341,7 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
                   <div className="flex h-full w-full items-center justify-center text-base font-semibold text-[#F8E1B0]">{(p.name || p.latest || '?').slice(0,1)}</div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[14px] font-semibold text-[#141210]">{p.name || p.latest}</p>
+                  <p className="text-[14px] font-semibold text-stone-900">{p.name || p.latest}</p>
                   <p className="text-[12px] text-[#8B847B] truncate">{p.latest}</p>
                 </div>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="#B8A88A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -353,7 +353,7 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
 
       {tab === 'search' && (
         <div className="px-5 pt-[58px]">
-          <h1 className="text-[26px] font-semibold tracking-[-0.5px] text-[#141210]">Artifacts</h1>
+          <h1 className="text-[26px] font-semibold tracking-[-0.5px] text-stone-900">Artifacts</h1>
           <p className="mt-1 text-[13px] text-[#8B847B]">Documents · Files · Records</p>
           <div className="mt-4 rounded-[14px] bg-white px-4 py-3 shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
             <input placeholder="Search documents, people, operations..." className="w-full bg-transparent text-[14px] text-[#141210] outline-none placeholder:text-[#B8A88A]" />
@@ -362,7 +362,7 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
             {['CST Call Sheet', 'ShowTELA Feed', 'Decision Log', 'Risk Register', 'Touring Assumptions', 'Communication Rhythm'].map((doc) => (
               <div key={doc} className="flex items-center gap-3 rounded-[14px] bg-white px-4 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
                 <span className="text-[20px]">📄</span>
-                <p className="text-[14px] font-medium text-[#141210]">{doc}</p>
+                <p className="text-[14px] font-medium text-stone-900">{doc}</p>
               </div>
             ))}
           </div>
@@ -386,14 +386,14 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
                 <span className="text-[16px] font-semibold text-white leading-none">+</span>
               </button>
             </div>
-            <h2 className="mt-4 text-[20px] font-semibold text-[#141210]">{user?.name ?? 'Jon Hartman'}</h2>
+            <h2 className="mt-4 text-[20px] font-semibold text-stone-900">{user?.name ?? 'Jon Hartman'}</h2>
             <p className="text-[13px] text-[#8B847B]">{user?.email ?? 'jonathan@pearlandpig.com'}</p>
             <span className="mt-2 rounded-full bg-[#1A1712] px-3 py-1 text-[10px] font-semibold tracking-widest text-[#C89B2F]">PEARL & PIG</span>
           </div>
           <div className="flex flex-col gap-2">
             {['Notification Settings', 'Data & Privacy', 'Connected Accounts'].map((item) => (
               <button key={item} className="flex items-center justify-between rounded-[14px] bg-white px-4 py-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-                <p className="text-[14px] font-medium text-[#141210]">{item}</p>
+                <p className="text-[14px] font-medium text-stone-900">{item}</p>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="#B8A88A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
             ))}
