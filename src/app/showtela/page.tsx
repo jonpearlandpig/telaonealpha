@@ -25,7 +25,7 @@ export default async function ShowTelaHome() {
   unresolvedCount: p.unresolvedCount ?? 0,
 })),
 
-    })),
+    
     crusadeOperations: data.operations.map((o) => ({
       id: o.id,
       name: o.title,
