@@ -51,7 +51,7 @@ export function FluencyPartnersRail(
         </div>
         <button className="text-[11px] font-medium text-[#C89B2F]">View all</button>
       </div>
-      <div className="flex gap-4 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {visible.map((p) => {
           const img = ('avatar' in p && p.avatar) ? p.avatar : undefined
           const pressure = ('pressure' in p && p.pressure) ? p.pressure as string : 'low'
@@ -61,27 +61,27 @@ export function FluencyPartnersRail(
           const initial = hasName ? p.name.slice(0, 1) : abbreviate(role).slice(0, 2)
 
           return (
-            <button key={p.id} className="flex min-w-[72px] flex-col items-center gap-1 p-0" onClick={() => onPersonTap?.(p.name || role, role)}>
+            <button key={p.id} className="flex w-[48px] flex-shrink-0 flex-col items-center gap-1 p-0" onClick={() => onPersonTap?.(p.name || role, role)}>
               <div className="relative">
-                <div className="h-[56px] w-[56px] overflow-hidden rounded-full border-[2px] border-[#1A1712] bg-[#1A1712] shadow-[0_4px_16px_rgba(0,0,0,0.25)]">
+                <div className="h-[32px] w-[32px] overflow-hidden rounded-full border-[1.5px] border-[#1A1712] bg-[#1A1712] shadow-[0_2px_8px_rgba(0,0,0,0.20)]">
                   {img
-                    ? <img src={img} alt={p.name} className="h-full w-full object-cover" />
-                    : <div className="flex h-full w-full items-center justify-center font-semibold text-[#F6DEAF]" style={{ fontSize: hasName ? '18px' : '11px' }}>{initial}</div>
+                    ? <img src={img} alt={p.name} className="h-full w-full object-cover object-center" />
+                    : <div className="flex h-full w-full items-center justify-center font-semibold text-[#F6DEAF]" style={{ fontSize: hasName ? '12px' : '8px' }}>{initial}</div>
                   }
                 </div>
-                <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#F8F6F2]" style={{ backgroundColor: STATUS_COLOR[pressure] ?? '#4ADE80' }} />
+                <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-[#F8F6F2]" style={{ backgroundColor: STATUS_COLOR[pressure] ?? '#4ADE80' }} />
               </div>
-              <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{displayName}</p>
-              <p className="text-center text-[10px] leading-tight text-[#6E6A63]">{role}</p>
+              <p className="text-center text-[9px] font-semibold leading-tight text-[#141210]">{displayName}</p>
+              <p className="text-center text-[8px] leading-tight text-[#6E6A63]">{role}</p>
             </button>
           )
         })}
         {overflow > 0 && (
-          <button className="flex min-w-[72px] flex-col items-center gap-1 p-0">
-            <div className="flex h-[56px] w-[56px] items-center justify-center rounded-full border-[2px] border-dashed border-[#D4C9B4] bg-[#F0EBE1]">
-              <span className="text-[13px] font-semibold text-[#5E5348]">+{overflow}</span>
+          <button className="flex w-[48px] flex-shrink-0 flex-col items-center gap-1 p-0">
+            <div className="flex h-[32px] w-[32px] items-center justify-center rounded-full border border-dashed border-[#D4C9B4] bg-[#F0EBE1]">
+              <span className="text-[10px] font-semibold text-[#5E5348]">+{overflow}</span>
             </div>
-            <p className="text-[12px] font-medium text-[#6E6A63]">More</p>
+            <p className="text-[9px] font-medium text-[#6E6A63]">More</p>
           </button>
         )}
       </div>

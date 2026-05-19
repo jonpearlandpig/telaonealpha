@@ -1,5 +1,14 @@
 import type { PersonEntity } from '@/lib/showtela/types'
 
+function facePhoto(url: string, size: number): string {
+  if (!url) return url
+  if (url.includes('googleusercontent.com')) {
+    return url.replace(/=s\d+-c$/, `=s${size}-c`).replace(/\/s\d+-c\//, `/s${size}-c/`)
+      + (url.includes('=') ? '' : `=s${size}-c`)
+  }
+  return url
+}
+
 export function ActiveOpsRail(
   props:
     | { people: PersonEntity[]; onPersonTap?: (name: string, role?: string) => void }
@@ -23,7 +32,7 @@ export function ActiveOpsRail(
       </div>
       <div className="flex gap-5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {people.map((p) => {
-          const img = ('avatar' in p && p.avatar) ? p.avatar : undefined
+          const img = ('avatar' in p && p.avatar) ? facePhoto(p.avatar, 128) : undefined
           const unresolved = p.unresolvedCount ?? 0
           const role = ('role' in p && p.role) ? p.role : ''
           const hasUnresolved = unresolved > 0
@@ -36,7 +45,7 @@ export function ActiveOpsRail(
                   style={{ borderColor: hasUnresolved ? '#F87171' : '#C89B2F' }}
                 >
                   {img
-                    ? <img src={img} alt={p.name} className="h-full w-full object-cover object-top" />
+                    ? <img src={img} alt={p.name} className="h-full w-full object-cover object-center" />
                     : <div className="flex h-full w-full items-center justify-center text-xl font-semibold text-[#F8E1B0]">{p.name.slice(0, 1)}</div>
                   }
                 </div>
