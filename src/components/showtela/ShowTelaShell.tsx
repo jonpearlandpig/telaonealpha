@@ -54,7 +54,7 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
           </div>
         </div>
       )}
-      {tab === 'messages' && (
+      {tab === 'messages' {tab === 'messages' && ({tab === 'messages' && ( (<TelaTalk activeOps={vm.activeOps} fluencyPartners={vm.fluencyPartners} onPersonTap={(name, role) => setSheet({ type: 'person', name, role })} onVoiceTap={(name) => openVoice(name)} />)}  {tab === 'messages_disabled' {tab === 'messages' && ({tab === 'messages' && ( (
         <div className="px-5 pt-14">
           <div className="mb-4 flex items-center justify-between">
             <h1 className="text-2xl font-semibold text-stone-900">TELA Talk</h1>
