@@ -12,7 +12,6 @@ import { FeedSheet } from './sheets/FeedSheet'
 import { OperationSheet } from './sheets/OperationSheet'
 import { UnresolvedSheet } from './sheets/UnresolvedSheet'
 import { PearlDropVoice } from './PearlDropVoice'
-import { TelaTalk } from './TelaTalk'
 import type { ShowTelaViewModel } from './types'
 import type { ContinuityEvent } from '@/lib/showtela/types'
 
@@ -55,13 +54,31 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
           </div>
         </div>
       )}
-      {tab === 'messages' && (
-        <TelaTalk
-          activeOps={vm.activeOps}
-          fluencyPartners={vm.fluencyPartners}
-          onPersonTap={(name, role) => setSheet({ type: 'person', name, role })}
-          onVoiceTap={(name) => openVoice(name)}
-        />
+      {tab === 'messages' {tab === 'messages' && ({tab === 'messages' && ( (<TelaTalk activeOps={vm.activeOps} fluencyPartners={vm.fluencyPartners} onPersonTap={(name, role) => setSheet({ type: 'person', name, role })} onVoiceTap={(name) => openVoice(name)} />)}  {tab === 'messages_disabled' {tab === 'messages' && ({tab === 'messages' && ( (
+        <div className="px-5 pt-14">
+          <div className="mb-4 flex items-center justify-between">
+            <h1 className="text-2xl font-semibold text-stone-900">TELA Talk</h1>
+            <button onClick={() => openVoice()} className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-600">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="9" y="2" width="6" height="12" rx="3" fill="white"/><path d="M5 10a7 7 0 0014 0" stroke="white" strokeWidth="2" strokeLinecap="round"/><path d="M12 19v3" stroke="white" strokeWidth="2" strokeLinecap="round"/></svg>
+            </button>
+          </div>
+          <div className="divide-y divide-stone-100">
+            {vm.activeOps.map((p) => (
+              <button key={p.id} onClick={() => setSheet({ type: 'person', name: p.name, role: p.latest })} className="flex w-full items-center gap-3 py-3 text-left">
+                <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full border-2 border-yellow-500 bg-stone-800">
+                  {p.image ? <img src={p.image} alt={p.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-base font-semibold text-yellow-200">{p.name.slice(0,1)}</div>}
+                  <button onClick={(e) => { e.stopPropagation(); openVoice(p.name) }} className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-stone-900">
+                    <span className="text-xs font-bold text-white">+</span>
+                  </button>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-stone-900">{p.name}</p>
+                  <p className="truncate text-xs text-stone-500">{p.latest}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
       )}
       {tab === 'search' && (
         <div className="px-5 pt-14">
@@ -94,7 +111,7 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
         </div>
       )}
       <BottomDock activeTab={tab} onTabChange={setTab} userImage={user?.image} userName={user?.name} onPearlDrop={() => openVoice()} />
-      {showVoice && <PearlDropVoice taggedPerson={taggedPerson} submittedBy={user?.name} onClose={() => { setShowVoice(false); setTaggedPerson(undefined) }} />}
+      {showVoice && <PearlDropVoice onClose={() => { setShowVoice(false); setTaggedPerson(undefined) }} />}
       <PersonSheet open={sheet?.type === 'person'} name={sheet?.type === 'person' ? sheet.name : ''} role={sheet?.type === 'person' ? sheet.role : undefined} onClose={() => setSheet(null)} />
       <FeedSheet open={sheet?.type === 'feed'} item={sheet?.type === 'feed' ? sheet.item : null} onClose={() => setSheet(null)} />
       <OperationSheet open={sheet?.type === 'operation'} name={sheet?.type === 'operation' ? sheet.name : ''} onClose={() => setSheet(null)} />
