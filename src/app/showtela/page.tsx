@@ -11,7 +11,7 @@ export default async function ShowTelaHome() {
     activeOps: data.activeOps.map((p) => ({
       id: p.id,
       name: p.name === 'TBD' ? '' : p.name,
-,
+
       image: p.avatar ?? '',
       latest: p.role ?? '',
       unresolvedCount: p.unresolvedCount ?? 0,
