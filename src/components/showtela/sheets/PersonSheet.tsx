@@ -25,6 +25,7 @@ export function PersonSheet({ name, role, open, onClose }: { name: string; role?
 
   useEffect(() => {
     if (!open || !name) return
+    // eslint-disable-next-line react-hooks/no-direct-mutation
     setLoading(true)
     fetchPersonData(name).then((d) => { setData(d); setLoading(false) })
   }, [open, name])
