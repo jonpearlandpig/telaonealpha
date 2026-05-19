@@ -1,15 +1,9 @@
 import type { OperationEntity } from './types'
 
-const OP_ICONS: Record<string, string> = {
-  travel: '✈', logistics: '🚛', venues: '🏛', hospitality: '🍽', security: '🛡',
-}
+const OP_ICONS: Record<string, string> = { travel: '✈', logistics: '🚛', venues: '🏛', hospitality: '🍽', security: '🛡' }
+const OP_SUBTITLES: Record<string, string> = { travel: 'Next: 8:30 AM', logistics: 'Trailer ETA 10:15', venues: 'Hershey', hospitality: 'Crew meals', security: 'No alerts' }
 
-const OP_SUBTITLES: Record<string, string> = {
-  travel: 'Next: 8:30 AM', logistics: 'Trailer ETA 10:15',
-  venues: 'Hershey', hospitality: 'Crew meals', security: 'No alerts',
-}
-
-export function CrusadeOperationsRail({ items }: { items: OperationEntity[] }) {
+export function CrusadeOperationsRail({ items, onOperationTap }: { items: OperationEntity[]; onOperationTap?: (name: string) => void }) {
   const overflow = items.length > 5 ? items.length - 5 : 0
   const visible = items.slice(0, 5)
 
@@ -17,7 +11,7 @@ export function CrusadeOperationsRail({ items }: { items: OperationEntity[] }) {
     <section className="px-5 pb-5">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5E5348]">Crusade Operations</h2>
-        <button className="text-[11px] font-medium text-[#C89B2F]">View all ›</button>
+        <button className="text-[11px] font-medium text-[#C89B2F]">View all</button>
       </div>
       <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {visible.map((item) => {
@@ -29,7 +23,7 @@ export function CrusadeOperationsRail({ items }: { items: OperationEntity[] }) {
           const statusLabel = unresolved > 0 ? `${unresolved} ${unresolved === 1 ? 'pending' : 'unresolved'}` : 'All good'
           const statusColor = unresolved >= 2 ? '#F87171' : unresolved === 1 ? '#F59E0B' : '#4ADE80'
           return (
-            <button key={item.id} className="relative min-w-[108px] overflow-hidden rounded-[18px] bg-[#141210] px-3 py-3.5 text-left shadow-[0_14px_36px_rgba(0,0,0,0.28)]">
+            <button key={item.id} onClick={() => onOperationTap?.(item.label)} className="relative min-w-[108px] overflow-hidden rounded-[18px] bg-[#141210] px-3 py-3.5 text-left shadow-[0_14px_36px_rgba(0,0,0,0.28)]">
               <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(200,155,47,0.18),transparent_65%)]" />
               <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full" style={{ backgroundColor: dotColor }} />
               <div className="relative mb-2 text-[22px]">{icon}</div>
