@@ -25,10 +25,8 @@ export function ActiveOpsRail(
         {people.map((p) => {
           const img = ('avatar' in p && p.avatar) ? p.avatar : undefined
           const unresolved = p.unresolvedCount ?? 0
-          const updates = ('updatesCount' in p && p.updatesCount) ? p.updatesCount : 0
           const role = ('role' in p && p.role) ? p.role : ''
           const hasUnresolved = unresolved > 0
-          const hasUpdates = updates > 0
           return (
             <button key={p.id} className="flex min-w-[80px] flex-col items-center gap-1.5 p-0" onClick={() => onPersonTap?.(p.name, role)}>
               <div className="relative">
@@ -39,10 +37,6 @@ export function ActiveOpsRail(
               </div>
               <p className="text-center text-[13px] font-semibold leading-tight text-[#141210]">{p.name.split(' ')[0]}</p>
               <p className="text-center text-[10px] leading-tight text-[#6E6A63]">{role}</p>
-              <div className="flex flex-col items-center gap-0.5">
-                {hasUpdates && <span className="rounded-full bg-[#E8F5E9] px-2 py-0.5 text-[10px] font-semibold text-[#166534]">{updates} updates</span>}
-                {hasUnresolved && <span className="rounded-full bg-[#FEE2E2] px-2 py-0.5 text-[10px] font-semibold text-[#991B1B]">{unresolved} unresolved</span>}
-              </div>
             </button>
           )
         })}
