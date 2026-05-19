@@ -1,10 +1,9 @@
 import type { PersonEntity } from '@/lib/showtela/types'
 
-function facePhoto(url: string, size: number): string {
+function facePhoto(url: string): string {
   if (!url) return url
   if (url.includes('googleusercontent.com')) {
-    return url.replace(/=s\d+-c$/, `=s${size}-c`).replace(/\/s\d+-c\//, `/s${size}-c/`)
-      + (url.includes('=') ? '' : `=s${size}-c`)
+    return url.replace(/=s\d+-c$/, '=s400-c')
   }
   return url
 }
@@ -30,35 +29,38 @@ export function ActiveOpsRail(
         </div>
         <button className="text-[11px] font-medium text-[#C89B2F]">View all</button>
       </div>
-      <div className="flex gap-5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex gap-4 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {people.map((p) => {
-          const img = ('avatar' in p && p.avatar) ? facePhoto(p.avatar, 128) : undefined
+          const img = ('avatar' in p && p.avatar) ? facePhoto(p.avatar) : undefined
           const unresolved = p.unresolvedCount ?? 0
           const role = ('role' in p && p.role) ? p.role : ''
           const hasUnresolved = unresolved > 0
 
           return (
-            <button key={p.id} className="flex w-[72px] flex-shrink-0 flex-col items-center gap-1.5 p-0" onClick={() => onPersonTap?.(p.name, role)}>
+            <button key={p.id} className="flex w-[80px] flex-shrink-0 flex-col items-center gap-1.5 p-0" onClick={() => onPersonTap?.(p.name, role)}>
               <div className="relative">
+                {/* Outer ring — Instagram style */}
                 <div
-                  className="h-[64px] w-[64px] overflow-hidden rounded-full border-[2.5px] bg-[#1A1712] shadow-[0_0_0_3px_rgba(200,155,47,0.18),0_6px_20px_rgba(0,0,0,0.20)]"
-                  style={{ borderColor: hasUnresolved ? '#F87171' : '#C89B2F' }}
+                  className="flex h-[76px] w-[76px] items-center justify-center rounded-full p-[2.5px]"
+                  style={{ background: hasUnresolved ? '#F87171' : 'linear-gradient(135deg, #C89B2F, #F0D080, #C89B2F)' }}
                 >
-                  {img
-                    ? <img src={img} alt={p.name} className="h-full w-full object-cover object-center" />
-                    : <div className="flex h-full w-full items-center justify-center text-xl font-semibold text-[#F8E1B0]">{p.name.slice(0, 1)}</div>
-                  }
+                  <div className="h-full w-full overflow-hidden rounded-full bg-[#1A1712]">
+                    {img
+                      ? <img src={img} alt={p.name} className="h-full w-full object-cover" />
+                      : <div className="flex h-full w-full items-center justify-center text-[22px] font-semibold text-[#F8E1B0]">{p.name.slice(0, 1)}</div>
+                    }
+                  </div>
                 </div>
-                <span className="absolute bottom-0.5 right-0.5 h-3 w-3 rounded-full border-2 border-[#F8F6F2] bg-[#4ADE80]" />
+                <span className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full border-2 border-[#F8F6F2] bg-[#4ADE80]" />
               </div>
               <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{p.name.split(' ')[0]}</p>
               <p className="text-center text-[10px] leading-tight text-[#6E6A63]">{role}</p>
             </button>
           )
         })}
-        <button className="flex w-[72px] flex-shrink-0 flex-col items-center gap-1.5 p-0">
-          <div className="flex h-[64px] w-[64px] items-center justify-center rounded-full border-[2px] border-dashed border-[#D4C9B4]">
-            <span className="text-[24px] font-thin text-[#8B847B]">+</span>
+        <button className="flex w-[80px] flex-shrink-0 flex-col items-center gap-1.5 p-0">
+          <div className="flex h-[76px] w-[76px] items-center justify-center rounded-full border-[2px] border-dashed border-[#D4C9B4]">
+            <span className="text-[28px] font-thin text-[#8B847B]">+</span>
           </div>
           <p className="text-[12px] font-medium text-[#8B847B]">Add</p>
         </button>
