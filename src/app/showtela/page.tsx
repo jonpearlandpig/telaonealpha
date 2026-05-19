@@ -2,7 +2,7 @@ import { ShowTelaRuntime } from '@/components/showtela/ShowTelaRuntime'
 import { getShowTelaHome } from '@/lib/showtela/hydration'
 import type { ShowTelaViewModel } from '@/components/showtela/types'
 
-export const dynamic = 'force-dynamic no'
+export const dynamic = 'force-dynamic'
 
 export default async function ShowTelaHome() {
   const data = await getShowTelaHome()
