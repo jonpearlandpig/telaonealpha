@@ -32,12 +32,7 @@ export function ShowTelaHeader({ userName, userImage }: { userName?: string; use
           <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.5px] text-[#141210]">{greeting}, {firstName}.</h1>
           <p className="mt-0.5 text-[15px] text-[#6E6A63]">Here&apos;s what matters today.</p>
         </div>
-        <div className="min-w-[130px] rounded-2xl border border-black/8 bg-white/80 px-3 py-2.5 text-right shadow-[0_4px_14px_rgba(17,17,17,0.06)] backdrop-blur-md">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#C89B2F]">Hershey, PA</p>
-          <div className="mt-0.5 flex items-center justify-end gap-1">
-            <span className="text-[13px]">⛅</span>
-            <p className="text-[16px] font-semibold text-[#141210]">63°</p>
-          </div>
+  
           <p className="text-[10px] font-medium text-[#5E5348]">Show Day · 6</p>
           <p className="text-[10px] text-[#8B847B]">Sat, May 16</p>
         </div>
