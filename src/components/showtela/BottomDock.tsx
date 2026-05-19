@@ -16,7 +16,7 @@ export function BottomDock({ onPearlDrop, activeTab, onTabChange }: { onPearlDro
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-[430px]">
-      <div className="mx-3 mb-4 rounded-[28px] border border-white/60 bg-[rgba(248,246,242,0.94)] px-3 py-2 shadow-[0_-2px_24px_rgba(17,17,17,0.10)] backdrop-blur-[28px]">
+      <div className="mx-3 mb-4 rounded-[28px] border border-white/60 bg-[rgba(248,246,242,0.94)] px-4 py-2 shadow-[0_-2px_24px_rgba(17,17,17,0.10)] backdrop-blur-[28px]">
         <div className="flex items-end justify-between">
 
           {/* HOME */}
@@ -30,26 +30,11 @@ export function BottomDock({ onPearlDrop, activeTab, onTabChange }: { onPearlDro
 
           {/* PLAY */}
           <button onClick={() => handleTab('play')} className="flex flex-col items-center gap-1 py-1 min-w-[52px]">
-            <div className="relative">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="3" width="18" height="18" rx="5" stroke={tab === 'play' ? gold : muted} strokeWidth="1.6" fill={tab === 'play' ? `${gold}18` : 'none'}/>
-                <path d="M9.5 8.5l7 3.5-7 3.5V8.5z" fill={tab === 'play' ? gold : muted}/>
-              </svg>
-            </div>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="3" width="18" height="18" rx="5" stroke={tab === 'play' ? gold : muted} strokeWidth="1.6" fill={tab === 'play' ? `${gold}18` : 'none'}/>
+              <path d="M9.5 8.5l7 3.5-7 3.5V8.5z" fill={tab === 'play' ? gold : muted}/>
+            </svg>
             <span className="text-[10px] font-medium" style={{ color: tab === 'play' ? gold : muted }}>Play</span>
-          </button>
-
-          {/* PEARL DROP — center */}
-          <button
-            onClick={onPearlDrop}
-            className="flex flex-col items-center gap-1 -mt-3"
-          >
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#C89B2F] shadow-[0_4px_20px_rgba(200,155,47,0.45),0_0_0_3px_rgba(200,155,47,0.15)]">
-              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                <path d="M11 4v14M4 11h14" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
-              </svg>
-            </div>
-            <span className="text-[9px] font-medium text-[#8B847B]">Drop</span>
           </button>
 
           {/* MESSAGES */}
@@ -57,8 +42,7 @@ export function BottomDock({ onPearlDrop, activeTab, onTabChange }: { onPearlDro
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z" stroke={tab === 'messages' ? gold : muted} strokeWidth="1.6" strokeLinejoin="round" fill={tab === 'messages' ? `${gold}18` : 'none'}/>
             </svg>
-            {/* Unread dot */}
-            <span className="absolute right-2.5 top-0.5 h-2 w-2 rounded-full border border-[#F8F6F2] bg-[#F87171]" />
+            <span className="absolute right-2 top-0.5 h-2 w-2 rounded-full border border-[#F8F6F2] bg-[#F87171]" />
             <span className="text-[10px] font-medium" style={{ color: tab === 'messages' ? gold : muted }}>Messages</span>
           </button>
 
