@@ -14,10 +14,10 @@ const itemImage = item.image || FALLBACK_IMAGES[Math.abs(item.id.charCodeAt(0)) 
   const tags = item.tags ?? []
   return (
     <article className="flex items-start gap-3 border-b border-[#EAE4DA] bg-transparent py-4 last:border-b-0">
-      {item.image && (
+      {itemimage && (
         <div className="h-[72px] w-[72px] flex-shrink-0 overflow-hidden rounded-[14px] bg-[#D4C9B4] shadow-[0_4px_14px_rgba(0,0,0,0.12)]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={item.image} alt="" className="h-full w-full object-cover" />
+          <img src={itemimage} alt="" className="h-full w-full object-cover" />
         </div>
       )}
       <div className="min-w-0 flex-1">
