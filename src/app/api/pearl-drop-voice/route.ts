@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { persistDurableContinuity } from '@/lib/runtime/durableMemory'
+import { deterministicArtifactId } from '@/lib/artifacts/artifactStore'
 
 const NOTION_VERSION = '2022-06-28'
 const notionHeaders = () => ({
@@ -77,6 +79,41 @@ export async function POST(req: NextRequest) {
     console.error('Notion inbox error:', JSON.stringify(data))
     return NextResponse.json({ error: 'Failed to write to TELA Inbox' }, { status: 500 })
   }
+
+  // Persist to Supabase durable layer so it appears in ContinuityPanel hydration
+  const createdAt = new Date().toISOString()
+  const title = parsed.title ?? transcript.slice(0, 80)
+  const artifactId = deterministicArtifactId({ title, threadId: 'pearl-drop', sessionId: 'voice', createdAt })
+  const textContent = [
+    transcript,
+    parsed.notes ? `Notes: ${parsed.notes}` : null,
+    taggedPerson ? `Tagged: ${taggedPerson}` : null,
+    parsed.name ? `Person: ${parsed.name}` : null,
+    parsed.role ? `Role: ${parsed.role}` : null,
+    submittedBy ? `Submitted by: ${submittedBy}` : null,
+  ].filter(Boolean).join('\n')
+
+  persistDurableContinuity('default-workspace', {
+    artifacts: [{
+      id: artifactId,
+      title,
+      threadId: 'pearl-drop',
+      sessionId: 'voice',
+      prompt: transcript,
+      text: textContent,
+      mimeType: 'text/plain',
+      fileName: `pearl-drop-${artifactId}.txt`,
+      entities: [taggedPerson, parsed.name].filter(Boolean) as string[],
+      projects: ['telaone'],
+      lineageId: 'pearl-drop-voice',
+      artifactGroupId: 'pearl-drop',
+      createdAt,
+      pinned: false,
+      classification: 'runtime_artifact',
+    }],
+    entities: [],
+    snapshots: [],
+  }).catch((err) => console.error('[pearl-drop] durable persist failed:', err))
 
   return NextResponse.json({
     success: true,
