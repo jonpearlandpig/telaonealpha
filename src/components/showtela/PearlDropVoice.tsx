@@ -35,11 +35,22 @@ export function PearlDropVoice({ onClose, taggedPerson, submittedBy }: {
   const [transcript, setTranscript] = useState('')
   const [message, setMessage] = useState('')
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
   const transcriptRef = useRef<string>('')
   const mountedRef = useRef(true)
 
-  // Null all handlers then abort — prevents any stale callback from firing
-  // after the session is forcibly terminated. Used on cancel, error, and unmount.
+  // Stop every hardware track on the captured MediaStream.
+  // This is what actually dismisses the orange iPhone mic indicator —
+  // recognition.abort() alone does not release the underlying getUserMedia track on iOS Safari.
+  const killStream = () => {
+    const s = streamRef.current
+    if (!s) return
+    s.getTracks().forEach((t) => { try { t.stop() } catch { /* already stopped */ } })
+    streamRef.current = null
+  }
+
+  // Null all handlers → abort recognition → kill hardware tracks.
+  // Order matters: null first so no stale callback fires during abort.
   const killRecognition = () => {
     const r = recognitionRef.current
     if (!r) return
@@ -48,6 +59,7 @@ export function PearlDropVoice({ onClose, taggedPerson, submittedBy }: {
     r.onerror = null
     try { r.abort() } catch { /* already terminated */ }
     recognitionRef.current = null
+    killStream()
   }
 
   // Unmount cleanup — covers navigation away, parent teardown, hot reload
@@ -60,7 +72,6 @@ export function PearlDropVoice({ onClose, taggedPerson, submittedBy }: {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // All close paths run through here
   const safeClose = () => {
     killRecognition()
     onClose()
@@ -81,14 +92,14 @@ export function PearlDropVoice({ onClose, taggedPerson, submittedBy }: {
       const data = await res.json() as { message?: string; error?: string }
       if (data.error) throw new Error(data.error)
       if (!mountedRef.current) return
-      // Recognition has already ended naturally before submit is called
-      // (onend → submit). Kill defensively in case of any edge path.
+      // killRecognition also calls killStream — full hardware teardown on success
       killRecognition()
       setState('success')
       setMessage(data.message ?? 'Saved to TELA Inbox')
       setTimeout(() => { if (mountedRef.current) onClose() }, 2500)
     } catch {
       if (!mountedRef.current) return
+      // killRecognition also calls killStream — full hardware teardown on error
       killRecognition()
       setState('error')
       setMessage('Failed to save. Try again.')
@@ -102,10 +113,24 @@ export function PearlDropVoice({ onClose, taggedPerson, submittedBy }: {
       setMessage('Voice not supported. Try Chrome.')
       return
     }
-    // Kill any previous session before starting a new one
     killRecognition()
     transcriptRef.current = ''
     setTranscript('')
+
+    // iOS Safari: webkitSpeechRecognition calls getUserMedia internally and never exposes
+    // the resulting MediaStream. We intercept the call once to capture the stream ref so
+    // we can explicitly stop all hardware tracks on every exit path.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const md = navigator.mediaDevices as any
+    if (md && typeof md.getUserMedia === 'function') {
+      const orig = md.getUserMedia.bind(md) as typeof navigator.mediaDevices.getUserMedia
+      md.getUserMedia = async (constraints: MediaStreamConstraints) => {
+        const stream = await orig(constraints)
+        streamRef.current = stream
+        md.getUserMedia = orig   // restore immediately after first capture
+        return stream
+      }
+    }
 
     const recognition = new SR()
     recognition.continuous = false
@@ -119,10 +144,11 @@ export function PearlDropVoice({ onClose, taggedPerson, submittedBy }: {
       if (mountedRef.current) setTranscript(t)
     }
 
-    // onend fires after stop() completes — mic releases at this point on iOS.
-    // Null the ref immediately so killRecognition() won't double-abort.
+    // onend fires after stop() completes — natural end of the recognition session.
+    // Null the ref first, then kill hardware tracks before calling submit.
     recognition.onend = () => {
       recognitionRef.current = null
+      killStream()   // hardware teardown on natural end — orange dot must go here
       const final = transcriptRef.current
       if (!mountedRef.current) return
       if (final.trim()) {
@@ -134,6 +160,7 @@ export function PearlDropVoice({ onClose, taggedPerson, submittedBy }: {
 
     recognition.onerror = () => {
       recognitionRef.current = null
+      killStream()   // hardware teardown on error
       if (!mountedRef.current) return
       setState('error')
       setMessage('Could not hear. Try again.')
@@ -144,7 +171,7 @@ export function PearlDropVoice({ onClose, taggedPerson, submittedBy }: {
   }
 
   // Normal recording end — stop() lets iOS finish processing and fires onend,
-  // which releases the mic. Do NOT null handlers here; onend needs to run.
+  // which handles killStream. Do NOT null handlers here; onend needs to run.
   const stopListening = () => {
     const r = recognitionRef.current
     if (!r) return
