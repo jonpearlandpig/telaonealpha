@@ -5,7 +5,7 @@ import { extractUnresolvedState } from './unresolvedContinuity'
 export async function hydrateRuntime(workspaceId: string) {
   const [state, durable] = await Promise.all([
     loadWorkspaceHydrationState(workspaceId),
-    Promise.resolve(loadDurableContinuity(workspaceId)),
+    loadDurableContinuity(workspaceId),
   ])
   const unresolved = extractUnresolvedState(durable.artifacts as never[])
   return {

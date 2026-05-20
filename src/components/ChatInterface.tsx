@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, KeyboardEvent, type MutableRefObject, type RefObject } from 'react'
 import { extractArtifactsFromAssistant } from '@/lib/artifacts/runtime'
 import { findArtifactById, loadArtifacts, upsertArtifact, type ArtifactRecord } from '@/lib/artifacts/artifactStore'
-import { extractEntities } from '@/lib/entities/entityEngine'
+import { extractEntities, type EntityRecord } from '@/lib/entities/entityEngine'
 import { loadEntities, upsertEntities } from '@/lib/entities/entityStore'
 import { ArtifactRenderer } from './artifacts/ArtifactRenderer'
 import { retrieveOperationalContinuity } from '@/lib/runtime/continuityRetrieval'
@@ -290,11 +290,19 @@ export function ChatInterface({ wikiContext }: Props) {
           })
           return
         }
+        const allEntities: EntityRecord[] = []
         for (const artifact of artifacts) {
-          upsertArtifact(artifact)
+          upsertArtifact(artifact)              // localStorage — immediate client cache
           const entities = extractEntities(accumulated, artifact)
-          upsertEntities(entities)
+          upsertEntities(entities)              // localStorage — immediate client cache
+          allEntities.push(...entities)
         }
+        // Durable write — non-blocking from UX; localStorage is the fallback if this fails
+        fetch('/api/persist-artifact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ artifacts, entities: allEntities }),
+        }).catch(() => { /* localStorage fallback remains intact */ })
         continueFromRef.current = artifacts[artifacts.length - 1]?.id
         const artifactMessage = buildArtifactFirstMessage(accumulated, artifacts.map((artifact) => artifact.fileName || artifact.id))
         setMessages((prev) => {

@@ -11,7 +11,7 @@ export function persistArtifact(workspaceId: string, artifact: ArtifactRecord, p
     mimeType: artifact.mimeType,
     lineageId: artifact.lineageId,
     artifactGroupId: artifact.artifactGroupId,
-    payload: artifact.html ?? artifact.markdown ?? artifact.code ?? artifact.text,
+    payload: JSON.stringify(artifact),
     createdAt: artifact.createdAt,
     updatedAt: new Date().toISOString(),
     provenance,

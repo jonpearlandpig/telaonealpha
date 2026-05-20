@@ -12,14 +12,21 @@ function baseProvenance(sourceId: string): ProvenanceMetadata {
   return { sourceType: 'runtime', sourceId, truthRank: 0.8, lineageRefs: [sourceId], createdAt: now, updatedAt: now }
 }
 
-export function persistDurableContinuity(workspaceId: string, input: { artifacts: ArtifactRecord[]; entities: EntityRecord[]; snapshots: ContinuitySnapshot[] }) {
+export async function persistDurableContinuity(workspaceId: string, input: { artifacts: ArtifactRecord[]; entities: EntityRecord[]; snapshots: ContinuitySnapshot[] }) {
   const ws = assertWorkspace(workspaceId)
-  input.artifacts.forEach((a) => persistArtifact(ws, a, baseProvenance(a.id)))
-  input.entities.forEach((e) => persistEntity(ws, e, baseProvenance(e.id)))
-  input.snapshots.forEach((s) => persistSnapshot(ws, s, baseProvenance(s.id)))
+  await Promise.all([
+    ...input.artifacts.map((a) => persistArtifact(ws, a, baseProvenance(a.id))),
+    ...input.entities.map((e) => persistEntity(ws, e, baseProvenance(e.id))),
+    ...input.snapshots.map((s) => persistSnapshot(ws, s, baseProvenance(s.id))),
+  ])
 }
 
-export function loadDurableContinuity(workspaceId: string) {
+export async function loadDurableContinuity(workspaceId: string) {
   const ws = assertWorkspace(workspaceId)
-  return { artifacts: loadPersistedArtifacts(ws), entities: loadPersistedEntities(ws), snapshots: loadPersistedSnapshots(ws) }
+  const [artifacts, entities, snapshots] = await Promise.all([
+    loadPersistedArtifacts(ws),
+    loadPersistedEntities(ws),
+    loadPersistedSnapshots(ws),
+  ])
+  return { artifacts, entities, snapshots }
 }

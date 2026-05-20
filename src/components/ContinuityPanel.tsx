@@ -13,6 +13,7 @@ import { loadEntities } from '@/lib/entities/entityStore'
 import type { EntityRecord } from '@/lib/entities/entityEngine'
 import { retrieveOperationalContinuity } from '@/lib/runtime/continuityRetrieval'
 import { applyContinuityLifecycle, createContinuitySnapshot, loadContinuitySnapshots, persistContinuitySnapshot, restoreContinuitySnapshot, type ContinuitySnapshot } from '@/lib/runtime/continuitySnapshots'
+import { hydrateClientFromDurable, type HydrateSource } from '@/lib/artifacts/hydrateClient'
 
 type PearlItem = {
   id: string
@@ -143,7 +144,19 @@ export function ContinuityPanel({ data, pearlItems, onCapturePearl, onRefreshPea
   const [entities, setEntities] = useState<EntityRecord[]>(() => loadEntities())
   const [focusedEntityId, setFocusedEntityId] = useState<string | undefined>(undefined)
   const [snapshots, setSnapshots] = useState<ContinuitySnapshot[]>(() => loadContinuitySnapshots())
+  const [hydrateSource, setHydrateSource] = useState<HydrateSource | null>(null)
 
+  // Mount hydration — Supabase → localStorage → empty state
+  useEffect(() => {
+    hydrateClientFromDurable().then((result) => {
+      setHydrateSource(result.source)
+      if (result.source !== 'empty') {
+        setArtifacts(loadArtifacts())
+        setEntities(loadEntities())
+        window.dispatchEvent(new Event('tela-artifacts-updated'))
+      }
+    }).catch(() => setHydrateSource('local'))
+  }, [])
 
   useEffect(() => {
     const refresh = () => { setArtifacts(loadArtifacts()); setEntities(loadEntities()) }
@@ -277,7 +290,14 @@ export function ContinuityPanel({ data, pearlItems, onCapturePearl, onRefreshPea
         </div>
 
         <div style={{ marginTop: 24 }}>
-          <SectionLabel>Artifact Library</SectionLabel>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+            <SectionLabel>Artifact Library</SectionLabel>
+            {hydrateSource && (
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, letterSpacing: '0.12em', color: hydrateSource === 'supabase' ? 'rgba(196,151,58,0.5)' : hydrateSource === 'local' ? 'rgba(234,224,210,0.2)' : 'rgba(234,224,210,0.12)', textTransform: 'uppercase', marginBottom: 10 }}>
+                {hydrateSource === 'supabase' ? 'durable' : hydrateSource === 'local' ? 'local cache' : 'empty'}
+              </span>
+            )}
+          </div>
           <ArtifactLibrary artifacts={seededArtifacts} onTogglePin={(id) => setArtifacts(togglePinArtifact(id))} onContinue={(id) => window.dispatchEvent(new CustomEvent('tela-artifact-continue', { detail: { artifactId: id } }))} />
           <EntityPanel entities={entities} onFocus={setFocusedEntityId} />
         </div>
