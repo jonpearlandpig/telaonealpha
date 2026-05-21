@@ -9,20 +9,42 @@ import type { ShowTelaHomeData } from './types'
 const DEFAULT_OPERATIONS = ['Travel', 'Logistics', 'Venues', 'Hospitality', 'Security']
 
 async function fetchFromNotion(): Promise<ShowTelaHomeData | null> {
+  // Log env var presence before any fetch
+  const envReport = {
+    NOTION_API_KEY: !!process.env.NOTION_API_KEY,
+    NOTION_SHOWTELA_PEOPLE_DB_ID: !!process.env.NOTION_SHOWTELA_PEOPLE_DB_ID,
+    NOTION_CRUSADE_PEOPLE_DB_ID: !!process.env.NOTION_CRUSADE_PEOPLE_DB_ID,
+    NOTION_SHOWTELA_OPERATIONS_DB_ID: !!process.env.NOTION_SHOWTELA_OPERATIONS_DB_ID,
+    NOTION_CRUSADE_OPERATIONS_DB_ID: !!process.env.NOTION_CRUSADE_OPERATIONS_DB_ID,
+    NOTION_SHOWTELA_CONTINUITY_DB_ID: !!process.env.NOTION_SHOWTELA_CONTINUITY_DB_ID,
+    NOTION_CRUSADE_CONTINUITY_DB_ID: !!process.env.NOTION_CRUSADE_CONTINUITY_DB_ID,
+    NOTION_CRUSADE_EVENTS_DB_ID: !!process.env.NOTION_CRUSADE_EVENTS_DB_ID,
+    NOTION_SHOWTELA_UNRESOLVED_DB_ID: !!process.env.NOTION_SHOWTELA_UNRESOLVED_DB_ID,
+    NOTION_CRUSADE_UNRESOLVED_DB_ID: !!process.env.NOTION_CRUSADE_UNRESOLVED_DB_ID,
+    NOTION_SHOWTELA_ARTIFACTS_DB_ID: !!process.env.NOTION_SHOWTELA_ARTIFACTS_DB_ID,
+    NOTION_CRUSADE_ARTIFACTS_DB_ID: !!process.env.NOTION_CRUSADE_ARTIFACTS_DB_ID,
+  }
+  const missingVars = Object.entries(envReport).filter(([, v]) => !v).map(([k]) => k)
+  console.log('[showtela:fetchFromNotion] env vars:', envReport)
+  if (missingVars.length) {
+    console.warn('[showtela:fetchFromNotion] missing env vars:', missingVars)
+  }
+
   const [peopleRaw, operationsRaw, eventsRaw, unresolvedRaw, artifactsRaw] = await Promise.all([
     getPeople(), getOperations(), getContinuityEvents(), getUnresolved(), getArtifacts(),
   ])
 
-  console.log('[showtela] notion fetch:', {
+  const counts = {
     people: peopleRaw.length,
     ops: operationsRaw.length,
     events: eventsRaw.length,
     unresolved: unresolvedRaw.length,
     artifacts: artifactsRaw.length,
-  })
+  }
+  console.log('[showtela:fetchFromNotion] row counts:', counts)
 
   if (!peopleRaw.length && !operationsRaw.length && !eventsRaw.length && !unresolvedRaw.length) {
-    console.warn('[showtela] Notion returned empty — check NOTION_*_DB_ID env vars')
+    console.error('[showtela:fetchFromNotion] all databases returned 0 rows — ingestion failed. Missing env vars:', missingVars)
     return null
   }
 
