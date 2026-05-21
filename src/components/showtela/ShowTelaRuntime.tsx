@@ -72,13 +72,14 @@ export function ShowTelaRuntime({ vm: initialVm, user }: { vm: ShowTelaViewModel
     }
   }, [])
 
+  // TEMPORARY TEST — client refresh disabled
   useEffect(() => {
-    refresh()
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') refresh()
-    }
-    document.addEventListener('visibilitychange', onVisibility)
-    return () => document.removeEventListener('visibilitychange', onVisibility)
+    // refresh()
+    // const onVisibility = () => {
+    //   if (document.visibilityState === 'visible') refresh()
+    // }
+    // document.addEventListener('visibilitychange', onVisibility)
+    // return () => document.removeEventListener('visibilitychange', onVisibility)
   }, [refresh])
 
   const showDiagnostic = vm.diagnosticState && vm.diagnosticState !== 'persistence-connected'
