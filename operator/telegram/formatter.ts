@@ -20,7 +20,8 @@ export function formatResult(mode: string, result: ExecutionResult): string {
     return lines.join('\n')
   }
 
-  lines.push(`✅ [${mode.toUpperCase()}] Complete (${ELAPSED(result.elapsedMs)})`)
+  const buildIcon = result.buildStatus === 'passed' ? '✓' : result.buildStatus === 'failed' ? '✗' : '?'
+  lines.push(`✅ [${mode.toUpperCase()}] Complete (${ELAPSED(result.elapsedMs)}) — Build ${buildIcon}`)
 
   if (result.changedFiles.length) {
     lines.push(`\nChanged files:`)
@@ -30,6 +31,14 @@ export function formatResult(mode: string, result: ExecutionResult): string {
 
   if (result.commitHash) {
     lines.push(`\nCommit: ${result.commitHash}`)
+  }
+
+  if (result.approvalBlocks.length > 0) {
+    lines.push(`\n⚠️ Approval blocks (${result.approvalBlocks.length}):`)
+    result.approvalBlocks.slice(0, 3).forEach(b => {
+      lines.push(`  blocked: ${b.blockedCommand}`)
+      lines.push(`  fix: ${b.suggestedAction}`)
+    })
   }
 
   const summary = extractSummary(result.output)

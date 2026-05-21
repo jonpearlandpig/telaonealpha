@@ -24,8 +24,8 @@
 .DS_Store
 *.pem
 
-# claude code
-.claude/
+# claude code — ignore private/local files, commit project settings
+.claude/*.local.json
 
 # debug
 npm-debug.log*

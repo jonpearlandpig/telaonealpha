@@ -72,10 +72,11 @@ export async function handleUpdate(update: Update): Promise<void> {
     runtime_provider: 'claude-code',
     changed_files: result.changedFiles,
     commit_hash: result.commitHash,
-    build_status: 'unknown',
+    build_status: result.buildStatus,
     deploy_status: 'none',
     elapsed_ms: Date.now() - start,
     error: result.error,
+    approval_blocks: result.approvalBlocks,
   })
 
   await sendMessage(chatId, formatResult(mode, result))
