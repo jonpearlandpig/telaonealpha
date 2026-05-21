@@ -32,13 +32,22 @@ export async function readShowTelaCache(): Promise<ShowTelaHomeData | null> {
     .single()
   if (error || !data?.payload) return null
   try {
-    return JSON.parse(data.payload) as ShowTelaHomeData
+    const parsed = JSON.parse(data.payload) as ShowTelaHomeData
+    if (parsed.source === 'mock') {
+      console.warn('[operationalCache] cached snapshot has source=mock — discarding stale mock data')
+      return null
+    }
+    return parsed
   } catch {
     return null
   }
 }
 
 export async function writeShowTelaCache(data: ShowTelaHomeData): Promise<void> {
+  if (data.source === 'mock') {
+    console.warn('[operationalCache] refusing to write mock data to Supabase cache')
+    return
+  }
   const db = getSupabaseServerClient()
 
   const rows = [

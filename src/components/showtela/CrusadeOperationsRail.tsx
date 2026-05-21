@@ -5,10 +5,6 @@ const OP_ICONS: Record<string, string> = {
   marketing: '📣', finance: '💰', legal: '⚖', production: '🎭', touring: '🗺',
 }
 
-const OP_SUBTITLES: Record<string, string> = {
-  travel: 'Next: 8:30 AM', logistics: 'Trailer ETA 10:15',
-  venues: 'Hershey', hospitality: 'Crew meals', security: 'No alerts',
-}
 
 export function CrusadeOperationsRail({ items, onOperationTap }: { items: OperationEntity[]; onOperationTap?: (name: string) => void }) {
   const overflow = items.length > 5 ? items.length - 5 : 0
@@ -24,7 +20,7 @@ export function CrusadeOperationsRail({ items, onOperationTap }: { items: Operat
         {visible.map((item) => {
           const key = (item.label ?? item.name ?? item.id).toLowerCase()
           const icon = Object.entries(OP_ICONS).find(([k]) => key.includes(k))?.[1] ?? '⚙'
-          const subtitle = item.latest || OP_SUBTITLES[key] || ''
+          const subtitle = item.latest || ''
           const unresolved = item.unresolvedCount ?? 0
           const dotColor = unresolved >= 2 ? '#F87171' : unresolved === 1 ? '#F59E0B' : '#4ADE80'
           const statusLabel = unresolved > 0 ? `${unresolved} ${unresolved === 1 ? 'pending' : 'unresolved'}` : 'All good'

@@ -23,7 +23,7 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
   const [tab, setTab] = useState<Tab>('home')
   const [showVoice, setShowVoice] = useState(false)
   const [taggedPerson, setTaggedPerson] = useState<string | undefined>(undefined)
-  const [feed] = useState<ContinuityEvent[]>(vm.feed.map((i) => ({ id: i.id, headline: i.title, body: i.summary, timestamp: i.timestamp, image: i.image, tags: i.linkedEntities ?? [], owner: { id: i.owner, name: i.owner }, isNew: i.unresolved, pressure: i.unresolved ? ('high' as const) : ('low' as const) })))
+  const feed: ContinuityEvent[] = vm.feed.map((i) => ({ id: i.id, headline: i.title, body: i.summary, timestamp: i.timestamp, image: i.image, tags: i.linkedEntities ?? [], owner: { id: i.owner, name: i.owner }, isNew: i.unresolved, pressure: i.unresolved ? ('high' as const) : ('low' as const) }))
   const [sheet, setSheet] = useState<Sheet>(null)
   const unresolvedItems = vm.unresolved ?? []
   const openVoice = (person?: string) => { setTaggedPerson(person); setShowVoice(true) }
