@@ -74,9 +74,27 @@ export function TelaTalk({
 
       <div className="h-px bg-stone-100 mx-4" />
 
-      {/* Messages list — Instagram style */}
+      {/* Messages list */}
       <div className="px-4">
         <p className="py-3 text-xs font-semibold uppercase tracking-wider text-stone-400">Messages</p>
+
+        {/* Pinned TELA thread */}
+        <button className="flex w-full items-center gap-3 py-3 text-left border-b border-stone-100 mb-1">
+          <div className="relative flex-shrink-0">
+            <div className="h-14 w-14 overflow-hidden rounded-full border-2 border-[#C89B2F] bg-[#141210] flex items-center justify-center">
+              <span className="text-lg font-bold text-[#C89B2F]">T</span>
+            </div>
+            <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-[#4ADE80] border-2 border-white" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="font-semibold text-stone-900">TELA</p>
+              <span className="rounded-full bg-[#C89B2F]/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-[#C89B2F]">Pinned</span>
+            </div>
+            <p className="truncate text-sm text-stone-500">Ask what changed, retrieve unresolved state, launch actions</p>
+          </div>
+        </button>
+
         {all.map((p) => (
           <button key={p.id} onClick={() => onPersonTap(p.name, p.latest)} className="flex w-full items-center gap-3 py-3 text-left">
             <div className="relative flex-shrink-0">

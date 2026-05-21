@@ -107,18 +107,17 @@ async function fetchFromNotion(): Promise<ShowTelaHomeData | null> {
 // Client calls /api/home-feed on mount to get fresh Notion data.
 export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
   // 1. Supabase cache — instant hydration
-  // TEMP DEBUG MODE — bypass all snapshot restoration
-  // try {
-  //   const cached = await readShowTelaCache()
-  //   if (cached) {
-  //     console.log('[showtela] hydrated from Supabase cache')
-  //     return { ...cached, source: 'supabase', diagnosticState: 'persistence-connected' }
-  //   }
-  //   console.log('[showtela] Supabase cache empty — falling through to Notion')
-  // } catch (err) {
-  //   console.error('[showtela] Supabase read failed:', String(err))
-  // }
-  console.log('[showtela] Supabase cache bypassed (debug mode) — going direct to Notion')
+  try {
+    const cached = await readShowTelaCache()
+    if (cached) {
+      console.log('[showtela] hydrated from Supabase cache')
+      return { ...cached, source: 'supabase', diagnosticState: 'persistence-connected' }
+    }
+    console.log('[showtela] Supabase cache empty — falling through to Notion')
+  } catch (err) {
+    console.error('[showtela] Supabase read failed:', String(err))
+    // not returning — fall through to Notion
+  }
 
   // 2. Notion — first load or cold start
   try {

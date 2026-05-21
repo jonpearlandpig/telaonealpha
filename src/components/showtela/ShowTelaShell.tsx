@@ -16,7 +16,7 @@ import { TelaTalk } from './TelaTalk'
 import type { ShowTelaViewModel } from './types'
 import type { ContinuityEvent } from '@/lib/showtela/types'
 
-type Tab = 'home' | 'play' | 'messages' | 'search' | 'profile'
+type Tab = 'home' | 'play' | 'messages' | 'calendar' | 'profile'
 type Sheet = { type: 'person'; name: string; role?: string } | { type: 'feed'; item: ContinuityEvent } | { type: 'operation'; name: string } | { type: 'unresolved' } | null
 
 export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel; onPearlDrop: () => void; user?: { name: string; email: string; image: string } }) {
@@ -49,7 +49,7 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
               <button key={item.id} onClick={() => setSheet({ type: 'feed', item })} className="w-full rounded-2xl bg-white px-4 py-3 text-left shadow-sm">
                 <p className="text-xs font-medium text-yellow-700">{item.owner?.name}</p>
                 <p className="mt-0.5 text-sm font-semibold text-stone-900">{item.headline}</p>
-                {item.body && <p className="mt-0.5 text-xs text-stone-500">{item.body}</p>}
+                {item.body && <p className="mt-0.5 text-xs text-stone-500 line-clamp-1">{item.body}</p>}
               </button>
             ))}
           </div>
@@ -63,16 +63,36 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
           onVoiceTap={(name) => openVoice(name)}
         />
       )}
-      {tab === 'search' && (
-        <div className="px-5 pt-14">
-          <h1 className="text-2xl font-semibold text-stone-900">Artifacts</h1>
-          <div className="mt-4 flex flex-col gap-2">
-            {['CST Call Sheet', 'ShowTELA Feed', 'Decision Log', 'Risk Register'].map((doc) => (
-              <div key={doc} className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-sm">
-                <span className="text-xl">📄</span>
-                <p className="text-sm font-medium text-stone-900">{doc}</p>
+      {tab === 'calendar' && (
+        <div style={{ backgroundColor: '#F8F6F2', minHeight: '100vh' }}>
+          <div className="px-5 pt-14 pb-4 border-b border-[#EAE4DA]">
+            <h1 className="text-xl font-semibold text-[#141210]">Operational Calendar</h1>
+            <p className="mt-0.5 text-[12px] text-[#8B847B]">Forward continuity view</p>
+          </div>
+          <div className="px-5 pt-6 flex flex-col gap-3">
+            {feed.filter(i => i.timestamp).slice(0, 10).map((item) => {
+              const d = item.timestamp ? new Date(item.timestamp) : null
+              const dateStr = d ? d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : ''
+              const pulseColor = item.pressure === 'high' ? '#F87171' : item.pressure === 'medium' ? '#F59E0B' : '#4ADE80'
+              return (
+                <button key={item.id} onClick={() => setSheet({ type: 'feed', item })} className="flex items-start gap-3 w-full text-left rounded-2xl bg-white px-4 py-3 shadow-sm">
+                  <div className="flex-shrink-0 mt-0.5">
+                    <span className="h-2 w-2 rounded-full block" style={{ backgroundColor: pulseColor }} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-medium text-[#A89880] mb-0.5">{dateStr}</p>
+                    <p className="text-[13px] font-semibold text-[#141210] line-clamp-1">{item.headline}</p>
+                    <p className="text-[11px] text-[#8B847B] mt-0.5">{item.owner?.name}</p>
+                  </div>
+                </button>
+              )
+            })}
+            {feed.length === 0 && (
+              <div className="pt-12 text-center">
+                <p className="text-[13px] text-[#8B847B]">No continuity events yet.</p>
+                <p className="text-[11px] text-[#A89880] mt-1">Events will appear as operations update.</p>
               </div>
-            ))}
+            )}
           </div>
         </div>
       )}

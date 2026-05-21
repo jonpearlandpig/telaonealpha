@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 
-type Tab = 'home' | 'play' | 'messages' | 'search' | 'profile'
+type Tab = 'home' | 'play' | 'messages' | 'calendar' | 'profile'
 
 export function BottomDock({ activeTab, onTabChange, userImage, userName, onPearlDrop }: { activeTab?: Tab; onTabChange?: (tab: Tab) => void; userImage?: string; userName?: string; onPearlDrop?: () => void }) {
   const [tab, setTab] = useState<Tab>(activeTab ?? 'home')
@@ -25,6 +25,7 @@ export function BottomDock({ activeTab, onTabChange, userImage, userName, onPear
             </svg>
             <span className="text-[10px] font-medium" style={{ color: tab === 'home' ? gold : muted }}>Home</span>
           </button>
+
           <button onClick={() => handleTab('play')} className="flex flex-col items-center gap-1 py-1 min-w-[52px]">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <rect x="3" y="3" width="18" height="18" rx="5" stroke={tab === 'play' ? gold : muted} strokeWidth="1.6" fill={tab === 'play' ? `${gold}18` : 'none'}/>
@@ -32,6 +33,7 @@ export function BottomDock({ activeTab, onTabChange, userImage, userName, onPear
             </svg>
             <span className="text-[10px] font-medium" style={{ color: tab === 'play' ? gold : muted }}>Play</span>
           </button>
+
           <button onClick={() => handleTab('messages')} className="flex flex-col items-center gap-1 py-1 min-w-[52px] relative">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z" stroke={tab === 'messages' ? gold : muted} strokeWidth="1.6" strokeLinejoin="round" fill={tab === 'messages' ? `${gold}18` : 'none'}/>
@@ -39,13 +41,18 @@ export function BottomDock({ activeTab, onTabChange, userImage, userName, onPear
             <span className="absolute right-2 top-0.5 h-2 w-2 rounded-full border border-[#F8F6F2] bg-[#F87171]" />
             <span className="text-[10px] font-medium" style={{ color: tab === 'messages' ? gold : muted }}>Messages</span>
           </button>
-          <button onClick={() => handleTab('search')} className="flex flex-col items-center gap-1 py-1 min-w-[52px]">
+
+          <button onClick={() => handleTab('calendar')} className="flex flex-col items-center gap-1 py-1 min-w-[52px]">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <circle cx="10.5" cy="10.5" r="6.5" stroke={tab === 'search' ? gold : muted} strokeWidth="1.6" fill={tab === 'search' ? `${gold}18` : 'none'}/>
-              <path d="M15.5 15.5L20 20" stroke={tab === 'search' ? gold : muted} strokeWidth="1.6" strokeLinecap="round"/>
+              <rect x="3" y="4" width="18" height="17" rx="3" stroke={tab === 'calendar' ? gold : muted} strokeWidth="1.6" fill={tab === 'calendar' ? `${gold}18` : 'none'}/>
+              <path d="M3 9h18" stroke={tab === 'calendar' ? gold : muted} strokeWidth="1.6"/>
+              <path d="M8 2v3M16 2v3" stroke={tab === 'calendar' ? gold : muted} strokeWidth="1.6" strokeLinecap="round"/>
+              <rect x="7" y="13" width="3" height="3" rx="0.5" fill={tab === 'calendar' ? gold : muted}/>
+              <rect x="13" y="13" width="3" height="3" rx="0.5" fill={tab === 'calendar' ? `${gold}60` : `${muted}60`}/>
             </svg>
-            <span className="text-[10px] font-medium" style={{ color: tab === 'search' ? gold : muted }}>Search</span>
+            <span className="text-[10px] font-medium" style={{ color: tab === 'calendar' ? gold : muted }}>Calendar</span>
           </button>
+
           <button onClick={() => handleTab('profile')} className="flex flex-col items-center gap-1 py-1 min-w-[52px] relative">
             <div className="h-7 w-7 overflow-hidden rounded-full border-[2px]" style={{ borderColor: tab === 'profile' ? gold : 'transparent' }}>
               {userImage
