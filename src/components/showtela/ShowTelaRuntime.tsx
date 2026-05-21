@@ -50,6 +50,12 @@ export function ShowTelaRuntime({ vm: initialVm, user }: { vm: ShowTelaViewModel
         return
       }
       const fresh: ShowTelaViewModel = await res.json()
+      console.log('[SHOWTELA:setVm]', {
+        source: fresh?.source,
+        feedCount: fresh?.feed?.length,
+        operationsCount: fresh?.crusadeOperations?.length,
+        timestamp: Date.now()
+      })
       setVm(prev => ({
         ...prev,
         activeOps: fresh.activeOps?.length ? fresh.activeOps : prev.activeOps,
