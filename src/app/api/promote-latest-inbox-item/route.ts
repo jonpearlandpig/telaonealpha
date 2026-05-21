@@ -22,7 +22,10 @@ export async function POST() {
   }
 
   const inboxDb = process.env.NOTION_TELA_INBOX_DB_ID ?? '004750ec83914561b1d20b669dd00a3f'
-  const continuityDb = process.env.NOTION_SHOWTELA_CONTINUITY_DB_ID ?? '985c3dd540d64250836a385a0a4e5091'
+  // NOTION_SHOWTELA_CONTINUITY_DB_ID is misconfigured in prod (points to Operations Registry).
+  // NOTION_SHOWTELA_FEED_DB_ID is the dedicated override; fallback is the correct ShowTELA Feed DB.
+  const continuityDb = process.env.NOTION_SHOWTELA_FEED_DB_ID ?? '985c3dd540d64250836a385a0a4e5091'
+  console.log('[PROMOTION] targeting continuity DB:', continuityDb.slice(0, 8) + '…')
 
   // 1. Fetch newest inbox row
   const inboxRes = await fetch(`https://api.notion.com/v1/databases/${inboxDb}/query`, {
