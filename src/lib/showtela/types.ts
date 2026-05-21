@@ -1,5 +1,14 @@
 export type PressureLevel = 'low' | 'medium' | 'high'
 
+export type DataSource = 'supabase' | 'notion' | 'mock'
+
+export type DiagnosticState =
+  | 'persistence-connected'
+  | 'persistence-stale'
+  | 'persistence-failed'
+  | 'notion-unavailable'
+  | 'mock-data-active'
+
 export type PersonEntity = {
   id: string
   name: string
@@ -85,6 +94,8 @@ export type ShowTelaHomeData = {
     medium: number
   }
   runtimeTimeline: RuntimeTimelineItem[]
+  source?: DataSource
+  diagnosticState?: DiagnosticState
 }
 
 export type RuntimeTimelineItem = {

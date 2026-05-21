@@ -56,6 +56,8 @@ export interface ShowTelaViewModel {
   feed: FeedItem[]
   continuityObjects: ContinuityEvent[]
   runtimeTimeline: Array<{ id: string; timestamp: string; actor: string; summary: string; continuityObjectId: string; pressureDelta: number }>
+  source?: 'supabase' | 'notion' | 'mock'
+  diagnosticState?: string
 }
 
 export type ActionType = 'resolve' | 'escalate' | 'comment' | 'archive'

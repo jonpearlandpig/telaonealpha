@@ -1,13 +1,12 @@
 import { ShowTelaRuntime } from '@/components/showtela/ShowTelaRuntime'
 import { getShowTelaHome } from '@/lib/showtela/hydration'
+import { buildShowTelaVM } from '@/lib/showtela/buildViewModel'
 import { getSession } from '@/lib/auth'
-import type { ShowTelaViewModel } from '@/components/showtela/types'
 
 export const dynamic = 'force-dynamic'
 
 function upgradeGooglePhoto(url: string): string {
   if (!url) return url
-  // Google photos: replace s96-c with s400-c for larger, better cropped version
   return url.replace(/=s\d+-c/, '=s400-c').replace(/s96-c/, 's400-c')
 }
 
@@ -25,71 +24,25 @@ export default async function ShowTelaHome() {
     image: userImage ?? session.image,
   } : undefined
 
-  const sortedActiveOps = [...data.activeOps].sort((a, b) => {
-    const aIsUser = session && a.name.toLowerCase().includes(session.name.split(' ')[0].toLowerCase())
-    const bIsUser = session && b.name.toLowerCase().includes(session.name.split(' ')[0].toLowerCase())
-    if (aIsUser) return -1
-    if (bIsUser) return 1
-    return (b.unresolvedCount ?? 0) - (a.unresolvedCount ?? 0)
-  })
+  const vm = buildShowTelaVM(data)
 
-  const vm: ShowTelaViewModel = {
-    activeOps: sortedActiveOps.map((p) => {
-      const isCurrentUser = session && (
-        p.name.toLowerCase().includes(session.name.split(' ')[0].toLowerCase()) ||
-        session.name.toLowerCase().includes(p.name.split(' ')[0].toLowerCase())
-      )
-      return {
-        id: p.id,
-        name: p.name === 'TBD' ? (p.role ?? 'TBD') : p.name,
-        image: isCurrentUser ? (userImage ?? session.image) : (p.avatar ?? ''),
-        latest: p.role ?? '',
-        unresolvedCount: p.unresolvedCount ?? 0,
-      }
-    }),
-    fluencyPartners: data.fluencyPartners.map((p) => ({
-      id: p.id,
-      name: p.name === 'TBD' ? (p.role ?? 'TBD') : p.name,
-      image: p.avatar ?? '',
-      latest: p.role ?? '',
-      unresolvedCount: p.unresolvedCount ?? 0,
-      label: p.role ?? '',
-    })),
-    crusadeOperations: data.operations.map((o) => ({
-      id: o.id,
-      name: o.title,
-      label: o.title,
-      image: '',
-      latest: o.latestMovement ?? '',
-      unresolvedCount: o.unresolvedCount ?? 0,
-    })),
-    unresolvedPressure: {
-      unresolvedCount: data.unresolved.length,
-      overdueCount: data.unresolved.filter((u) => u.severity === 'high').length,
-      blockedCount: data.unresolved.filter((u) => u.blocking).length,
-      pendingApprovals: data.unresolved.filter((u) => u.severity === 'medium').length,
-    },
-    unresolved: data.unresolved.map((u) => ({
-      id: u.id,
-      title: u.title,
-      severity: u.severity,
-      blocking: u.blocking,
-      operation: u.operation,
-      aging: u.aging,
-    })),
-    feed: data.continuityFeed.map((e) => ({
-      id: e.id,
-      timestamp: e.timestamp ?? '',
-      title: e.headline,
-      summary: e.body ?? '',
-      owner: e.owner?.name ?? '',
-      image: e.image ?? '',
-      avatar: '',
-      unresolved: e.isNew ?? false,
-      linkedEntities: e.tags ?? [],
-    })),
-    continuityObjects: [],
-    runtimeTimeline: data.runtimeTimeline,
+  // Apply user-specific avatar and sort current user to front — server-only since it needs session
+  if (session) {
+    const firstName = session.name.split(' ')[0].toLowerCase()
+    vm.activeOps = vm.activeOps
+      .map(p => {
+        const isCurrentUser =
+          p.name.toLowerCase().includes(firstName) ||
+          session.name.toLowerCase().includes(p.name.split(' ')[0].toLowerCase())
+        return { ...p, image: isCurrentUser ? (userImage ?? session.image ?? p.image) : p.image }
+      })
+      .sort((a, b) => {
+        const aIsUser = a.name.toLowerCase().includes(firstName)
+        const bIsUser = b.name.toLowerCase().includes(firstName)
+        if (aIsUser) return -1
+        if (bIsUser) return 1
+        return (b.unresolvedCount ?? 0) - (a.unresolvedCount ?? 0)
+      })
   }
 
   return (
