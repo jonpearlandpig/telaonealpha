@@ -92,6 +92,7 @@ function toSnapshotRow(db: SnapshotDbRow): DurableSnapshotRow {
 }
 
 export async function upsertArtifactRow(row: DurableArtifactRow): Promise<DurableArtifactRow> {
+  console.log('[supabase:queries:upsertArtifactRow] id:', row.id, 'workspace:', row.workspaceId)
   const db = getSupabaseServerClient()
   const { error } = await db.from('durable_artifacts').upsert({
     id: row.id,
@@ -106,11 +107,15 @@ export async function upsertArtifactRow(row: DurableArtifactRow): Promise<Durabl
     updated_at: row.updatedAt,
     provenance: row.provenance,
   }, { onConflict: 'id' })
-  if (error) throw new Error(`upsertArtifactRow: ${error.message}`)
+  if (error) {
+    console.error('[supabase:queries:upsertArtifactRow] failed:', error.message, 'code:', error.code, 'id:', row.id)
+    throw new Error(`upsertArtifactRow: ${error.message}`)
+  }
   return row
 }
 
 export async function upsertEntityRow(row: DurableEntityRow): Promise<DurableEntityRow> {
+  console.log('[supabase:queries:upsertEntityRow] id:', row.id, 'workspace:', row.workspaceId)
   const db = getSupabaseServerClient()
   const { error } = await db.from('durable_entities').upsert({
     id: row.id,
@@ -126,11 +131,15 @@ export async function upsertEntityRow(row: DurableEntityRow): Promise<DurableEnt
     updated_at: row.updatedAt,
     provenance: row.provenance,
   }, { onConflict: 'id' })
-  if (error) throw new Error(`upsertEntityRow: ${error.message}`)
+  if (error) {
+    console.error('[supabase:queries:upsertEntityRow] failed:', error.message, 'code:', error.code, 'id:', row.id)
+    throw new Error(`upsertEntityRow: ${error.message}`)
+  }
   return row
 }
 
 export async function upsertSnapshotRow(row: DurableSnapshotRow): Promise<DurableSnapshotRow> {
+  console.log('[supabase:queries:upsertSnapshotRow] id:', row.id, 'workspace:', row.workspaceId)
   const db = getSupabaseServerClient()
   const { error } = await db.from('durable_snapshots').upsert({
     id: row.id,
@@ -143,7 +152,10 @@ export async function upsertSnapshotRow(row: DurableSnapshotRow): Promise<Durabl
     updated_at: row.updatedAt,
     provenance: row.provenance,
   }, { onConflict: 'id' })
-  if (error) throw new Error(`upsertSnapshotRow: ${error.message}`)
+  if (error) {
+    console.error('[supabase:queries:upsertSnapshotRow] failed:', error.message, 'code:', error.code, 'id:', row.id)
+    throw new Error(`upsertSnapshotRow: ${error.message}`)
+  }
   return row
 }
 

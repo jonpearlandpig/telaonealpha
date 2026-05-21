@@ -118,20 +118,77 @@ export async function GET() {
   )
   const isMockData = allEmpty
 
-  // Supabase connectivity check
-  let supabaseStatus: 'connected' | 'missing_env' | 'error' = 'missing_env'
-  let supabaseError: string | null = null
-  if (e.SUPABASE_URL && e.SUPABASE_SERVICE_ROLE_KEY) {
+  // Supabase connectivity — probe each table and known RPC/endpoint
+  type SupabaseProbeResult = { status: 'ok' | 'missing_env' | 'error' | 'not_found'; rowCount?: number; error: string | null; path: string }
+
+  async function probeSupabaseTable(table: string): Promise<SupabaseProbeResult> {
+    const path = `durable table: ${table}`
+    if (!e.SUPABASE_URL || !e.SUPABASE_SERVICE_ROLE_KEY) return { status: 'missing_env', error: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY', path }
     try {
       const db = getSupabaseServerClient()
-      const { error } = await db.from('durable_artifacts').select('id').limit(1)
-      supabaseStatus = error ? 'error' : 'connected'
-      supabaseError = error ? error.message : null
-    } catch (err) {
-      supabaseStatus = 'error'
-      supabaseError = String(err)
-    }
+      const { data, error } = await db.from(table).select('id').limit(1)
+      if (error) return { status: 'error', error: `${error.message} (code: ${error.code})`, path }
+      return { status: 'ok', rowCount: data?.length ?? 0, error: null, path }
+    } catch (err) { return { status: 'error', error: String(err), path } }
   }
+
+  async function probeSupabaseRpc(rpcName: string): Promise<SupabaseProbeResult> {
+    const path = `rpc: ${rpcName}`
+    if (!e.SUPABASE_URL || !e.SUPABASE_SERVICE_ROLE_KEY) return { status: 'missing_env', error: 'Missing env vars', path }
+    const url = `${e.SUPABASE_URL}/rest/v1/rpc/${rpcName}`
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: e.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${e.SUPABASE_SERVICE_ROLE_KEY}` },
+        body: JSON.stringify({ workspace_id: 'debug-probe' }),
+        cache: 'no-store',
+      })
+      const body = await res.text().catch(() => '')
+      if (res.status === 404) return { status: 'not_found', error: `RPC does not exist. Body: ${body.slice(0, 150)}`, path }
+      if (!res.ok) return { status: 'error', error: `HTTP ${res.status}: ${body.slice(0, 150)}`, path }
+      return { status: 'ok', error: null, path }
+    } catch (err) { return { status: 'error', error: String(err), path } }
+  }
+
+  async function probeSupabaseRestTable(tableName: string): Promise<SupabaseProbeResult> {
+    const path = `rest table: ${tableName}`
+    if (!e.SUPABASE_URL || !e.SUPABASE_SERVICE_ROLE_KEY) return { status: 'missing_env', error: 'Missing env vars', path }
+    const url = `${e.SUPABASE_URL}/rest/v1/${tableName}?limit=1`
+    try {
+      const res = await fetch(url, {
+        headers: { apikey: e.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${e.SUPABASE_SERVICE_ROLE_KEY}` },
+        cache: 'no-store',
+      })
+      const body = await res.text().catch(() => '')
+      if (res.status === 404) return { status: 'not_found', error: `Table does not exist. Body: ${body.slice(0, 150)}`, path }
+      if (!res.ok) return { status: 'error', error: `HTTP ${res.status}: ${body.slice(0, 150)}`, path }
+      return { status: 'ok', error: null, path }
+    } catch (err) { return { status: 'error', error: String(err), path } }
+  }
+
+  const [
+    sbArtifacts,
+    sbEntities,
+    sbSnapshots,
+    sbIngestionJobs,
+    sbRpcHydrate,
+    sbRpcVector,
+    sbRestOperationalMemory,
+  ] = await Promise.all([
+    probeSupabaseTable('durable_artifacts'),
+    probeSupabaseTable('durable_entities'),
+    probeSupabaseTable('durable_snapshots'),
+    probeSupabaseTable('durable_ingestion_jobs'),
+    probeSupabaseRpc('hydrate_workspace_continuity'),
+    probeSupabaseRpc('match_operational_memory'),
+    probeSupabaseRestTable('operational_memory'),
+  ])
+
+  const supabaseStatus = (!e.SUPABASE_URL || !e.SUPABASE_SERVICE_ROLE_KEY) ? 'missing_env'
+    : [sbArtifacts, sbEntities, sbSnapshots, sbIngestionJobs].every(p => p.status === 'ok') ? 'connected'
+    : 'error'
+  const supabaseError = [sbArtifacts, sbEntities, sbSnapshots, sbIngestionJobs]
+    .filter(p => p.status === 'error').map(p => `${p.path}: ${p.error}`).join('; ') || null
 
   // Diagnosis
   const issues: string[] = []
@@ -146,7 +203,13 @@ export async function GET() {
     ingestionStatus: isMockData ? 'failed' : 'ok',
     issues,
     envInventory,
-    probes,
-    supabase: { status: supabaseStatus, error: supabaseError },
+    notion: { probes },
+    supabase: {
+      status: supabaseStatus,
+      error: supabaseError,
+      tables: { durable_artifacts: sbArtifacts, durable_entities: sbEntities, durable_snapshots: sbSnapshots, durable_ingestion_jobs: sbIngestionJobs },
+      rpc: { hydrate_workspace_continuity: sbRpcHydrate, match_operational_memory: sbRpcVector },
+      rest: { operational_memory: sbRestOperationalMemory },
+    },
   }, { headers: { 'Cache-Control': 'no-store' } })
 }
