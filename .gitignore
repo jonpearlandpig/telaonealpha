@@ -37,6 +37,9 @@ yarn-error.log*
 .env.local
 .env.*.local
 
+# telegram operator secrets
+operator/.env
+
 # vercel
 .vercel
 
