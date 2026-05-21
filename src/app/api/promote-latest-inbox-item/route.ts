@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { normalizeContinuityEvent } from '@/lib/showtela/normalizeContinuityEvent'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,14 +17,25 @@ const titleText = (p: unknown) =>
 const selectVal = (p: unknown) =>
   (p as { select?: { name?: string } } | undefined)?.select?.name ?? ''
 
+function notionParagraph(text: string) {
+  return { object: 'block', type: 'paragraph', paragraph: { rich_text: [{ text: { content: text } }] } }
+}
+function notionHeading(text: string) {
+  return { object: 'block', type: 'heading_3', heading_3: { rich_text: [{ text: { content: text } }] } }
+}
+function notionBullet(text: string) {
+  return { object: 'block', type: 'bulleted_list_item', bulleted_list_item: { rich_text: [{ text: { content: text } }] } }
+}
+function notionDivider() {
+  return { object: 'block', type: 'divider', divider: {} }
+}
+
 export async function POST() {
   if (!process.env.NOTION_API_KEY) {
     return NextResponse.json({ error: 'NOTION_API_KEY not set' }, { status: 500 })
   }
 
   const inboxDb = process.env.NOTION_TELA_INBOX_DB_ID ?? '004750ec83914561b1d20b669dd00a3f'
-  // NOTION_SHOWTELA_CONTINUITY_DB_ID is misconfigured in prod (points to Operations Registry).
-  // NOTION_SHOWTELA_FEED_DB_ID is the dedicated override; fallback is the correct ShowTELA Feed DB.
   const continuityDb = process.env.NOTION_SHOWTELA_FEED_DB_ID ?? '985c3dd540d64250836a385a0a4e5091'
   console.log('[PROMOTION] targeting continuity DB:', continuityDb.slice(0, 8) + '…')
 
@@ -67,43 +79,47 @@ export async function POST() {
 
   console.log('[PROMOTION_INPUT]', inboxItem)
 
-  // 2. Normalize to continuity schema
-  const summaryParts = [
-    inboxItem.transcript,
-    inboxItem.notes ? `Notes: ${inboxItem.notes}` : null,
-    inboxItem.taggedPerson ? `Tagged: ${inboxItem.taggedPerson}` : null,
-    inboxItem.type ? `Type: ${inboxItem.type}` : null,
-    `Source: ${inboxItem.source || 'Voice'}`,
-  ].filter(Boolean)
+  // 2. Normalize via Claude
+  const normalized = await normalizeContinuityEvent(inboxItem)
+  console.log('[PROMOTION_OUTPUT]', normalized)
 
-  const rawSeverity = (inboxItem.severity || 'medium').toLowerCase()
-  const priority = rawSeverity === 'high' ? 'High' : rawSeverity === 'low' ? 'Low' : 'Medium'
+  // 3. Build page body: action items, tags, entities, full transcript
+  const children = [
+    ...(normalized.summary ? [notionParagraph(normalized.summary)] : []),
+    notionDivider(),
+    ...(normalized.actionItems.length ? [
+      notionHeading('Action Items'),
+      ...normalized.actionItems.map(notionBullet),
+    ] : []),
+    ...(normalized.people.length || normalized.entities.length ? [
+      notionHeading('Entities & People'),
+      ...[...normalized.people, ...normalized.entities].map(notionBullet),
+    ] : []),
+    ...(normalized.tags.length ? [notionParagraph(`Tags: ${normalized.tags.join(', ')}`)]: []),
+    notionDivider(),
+    notionHeading('Raw Transcript'),
+    notionParagraph(normalized.transcriptRaw || '(no transcript)'),
+    ...(normalized.transcriptClean !== normalized.transcriptRaw ? [
+      notionHeading('Clean Transcript'),
+      notionParagraph(normalized.transcriptClean),
+    ] : []),
+  ]
 
-  const continuityPayload = {
-    name: inboxItem.title || 'Promoted Inbox Item',
-    summary: summaryParts.join(' | '),
-    priority,
-    status: 'Active',
-    owner: inboxItem.submittedBy,
-    updated: new Date().toISOString().split('T')[0],
-  }
-
-  console.log('[PROMOTION_OUTPUT]', continuityPayload)
-
-  // 3. Write to Continuity DB (ShowTELA Feed)
+  // 4. Write to Continuity DB (ShowTELA Feed)
   const insertRes = await fetch('https://api.notion.com/v1/pages', {
     method: 'POST',
     headers: notionHeaders(),
     body: JSON.stringify({
       parent: { database_id: continuityDb },
       properties: {
-        Name: { title: [{ text: { content: continuityPayload.name } }] },
-        Summary: { rich_text: [{ text: { content: continuityPayload.summary } }] },
-        Priority: { select: { name: continuityPayload.priority } },
-        Status: { select: { name: continuityPayload.status } },
-        Owner: { rich_text: [{ text: { content: continuityPayload.owner } }] },
-        Updated: { date: { start: continuityPayload.updated } },
+        Name: { title: [{ text: { content: normalized.headline } }] },
+        Summary: { rich_text: [{ text: { content: normalized.summary } }] },
+        Priority: { select: { name: normalized.pressure } },
+        Status: { select: { name: 'Active' } },
+        Owner: { rich_text: [{ text: { content: inboxItem.submittedBy } }] },
+        Updated: { date: { start: new Date().toISOString().split('T')[0] } },
       },
+      children,
     }),
     cache: 'no-store',
   })
@@ -120,7 +136,7 @@ export async function POST() {
   return NextResponse.json({
     success: true,
     inboxItem,
-    continuityPayload,
+    normalized,
     insertedId: inserted.id,
   })
 }
