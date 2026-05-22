@@ -35,7 +35,7 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
           <ShowTelaHeader userName={user?.name} userImage={user?.image} />
           <ActiveOpsRail items={vm.activeOps.map((i) => ({ id: i.id, name: i.name, latest: i.latest, unresolvedCount: i.unresolvedCount ?? 0, image: i.image, updatesCount: 0 }))} onPersonTap={(name, role) => setSheet({ type: 'person', name, role })} onPearlDrop={(name) => openVoice(name)} />
           <FluencyPartnersRail items={vm.fluencyPartners.map((i) => ({ id: i.id, name: i.name, label: i.name, unresolvedCount: i.unresolvedCount ?? 0, image: i.image, latest: i.latest }))} onPersonTap={(name, role) => setSheet({ type: 'person', name, role })} />
-          <CrusadeOperationsRail items={vm.crusadeOperations} onOperationTap={(name) => setSheet({ type: 'operation', name })} />
+          <CrusadeOperationsRail items={vm.crusadeOperations} unresolvedItems={vm.unresolved} onOperationTap={(name) => setSheet({ type: 'operation', name })} />
           <UnresolvedPressureCard pressure={vm.unresolvedPressure} onOpen={() => setSheet({ type: 'unresolved' })} />
           <ContinuityFeed feed={feed} onFeedTap={(item) => setSheet({ type: 'feed', item })} />
         </>
