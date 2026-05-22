@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import type { ApprovalBlock, BuildStatus } from '../runtime/executor'
+import type { ApprovalBlock, BuildStatus, RuntimeProvider } from '../runtime/executor'
 
 const LOG_PATH = path.resolve(process.cwd(), 'operator/logs/executions.jsonl')
 
@@ -9,7 +9,7 @@ export type ExecutionEvent = {
   timestamp: string
   instruction_type: string
   instruction_source: 'telegram'
-  runtime_provider: 'claude-code'
+  runtime_provider: RuntimeProvider
   changed_files: string[]
   commit_hash: string | null
   build_status: BuildStatus
