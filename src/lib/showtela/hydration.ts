@@ -3,6 +3,7 @@ import { mapArtifact, mapContinuityEvent, mapOperation, mapPerson, mapUnresolved
 import { calculatePressure } from './pressure'
 import { assertShowTelaStartupEnv, getShowTelaEnvStatus, logShowTelaEnvStatus } from './env'
 import { threadContinuity } from './threadContinuity'
+import { cleanBody, extractUnresolvedMarkers, validateAndFilter, validateContinuityEventRecord, validateOperationRecord, validatePersonRecord } from './normalizeNotionRecord'
 import { getShowTelaCacheSchemaCompatibility, readShowTelaCache, writeShowTelaCache } from '@/lib/supabase/operationalCache'
 import type { ShowTelaHomeData, ShowTelaHydrationSummary } from './types'
 
@@ -70,10 +71,17 @@ async function fetchFromNotion(): Promise<ShowTelaHomeData | null> {
     return null
   }
 
-  const people = peopleRaw.map(mapPerson)
+  // Normalization Pass 1 — schema validation before mapper calls.
+  // Invalid records are excluded and logged. Valid records with schema warnings
+  // are included so a single bad property does not drop the entire record.
+  const validPeopleRaw = validateAndFilter(peopleRaw, validatePersonRecord, 'people')
+  const validOperationsRaw = validateAndFilter(operationsRaw, validateOperationRecord, 'operations')
+  const validEventsRaw = validateAndFilter(eventsRaw, validateContinuityEventRecord, 'events')
+
+  const people = validPeopleRaw.map(mapPerson)
   const personById = new Map(people.map(p => [p.id, p]))
   const unresolved = unresolvedRaw.map(mapUnresolved)
-  const operations = operationsRaw.map(mapOperation)
+  const operations = validOperationsRaw.map(mapOperation)
   const artifacts = artifactsRaw.map(mapArtifact)
   const artifactByEvent = new Map(artifacts.filter(a => a.eventId).map(a => [a.eventId as string, a]))
 
@@ -82,11 +90,22 @@ async function fetchFromNotion(): Promise<ShowTelaHomeData | null> {
     : Date.now() - 1000 * 60 * 60 * 24
 
   const continuityFeed = threadContinuity(
-    eventsRaw
+    validEventsRaw
       .map(event => {
         const mapped = mapContinuityEvent(event, personById)
         const artifact = artifactByEvent.get(mapped.id)
-        return { ...mapped, image: mapped.image ?? artifact?.image, isNew: new Date(mapped.timestamp ?? 0).getTime() > lastSeenTimestamp }
+        // Normalization Pass 1 — body cleanup and unresolved marker extraction.
+        // cleanBody removes whitespace artifacts without altering operational meaning.
+        // extractUnresolvedMarkers reads the cleaned body; does not modify it.
+        const body = cleanBody(mapped.body)
+        const unresolvedMarkers = extractUnresolvedMarkers(body)
+        return {
+          ...mapped,
+          body,
+          unresolvedMarkers: unresolvedMarkers.length ? unresolvedMarkers : undefined,
+          image: mapped.image ?? artifact?.image,
+          isNew: new Date(mapped.timestamp ?? 0).getTime() > lastSeenTimestamp,
+        }
       })
       .sort((a, b) => new Date(b.timestamp ?? 0).getTime() - new Date(a.timestamp ?? 0).getTime())
   )

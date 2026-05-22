@@ -50,6 +50,7 @@ export type ContinuityEvent = {
   linkedEntities?: string[]
   linkedThreads?: string[]
   attachments?: MediaMemoryAttachment[]
+  unresolvedMarkers?: string[]
 }
 
 export type MediaMemoryType = 'image' | 'pdf' | 'stage_plot' | 'screenshot' | 'bus_schedule' | 'venue_packet' | 'contract' | 'voice_memo'
