@@ -1,27 +1,31 @@
-import type { ExecutionResult } from '../runtime/executor'
+import type { ExecutionResult, RuntimeProvider } from '../runtime/executor'
 
 const ELAPSED = (ms: number) => `${(ms / 1000).toFixed(1)}s`
 
-export function formatWorking(mode: string): string {
-  return `⏳ [${mode.toUpperCase()}] Executing...\nAnalyzing repo and running Claude Code.`
+function providerLabel(provider: RuntimeProvider): string {
+  return provider === 'codex' ? 'Codex' : 'Claude Code'
 }
 
-export function formatResult(mode: string, result: ExecutionResult): string {
+export function formatWorking(mode: string, provider: RuntimeProvider): string {
+  return `⏳ [${mode.toUpperCase()}] Executing...\nAnalyzing repo and running ${providerLabel(provider)}.`
+}
+
+export function formatResult(mode: string, result: ExecutionResult, provider: RuntimeProvider): string {
   const lines: string[] = []
 
   if (result.error) {
-    lines.push(`❌ [${mode.toUpperCase()}] Failed`)
+    lines.push(`❌ [${mode.toUpperCase()}] ${providerLabel(provider)} failed`)
     lines.push(`Error: ${result.error}`)
     return lines.join('\n')
   }
 
   if (result.timedOut) {
-    lines.push(`⏱ [${mode.toUpperCase()}] Timed out after 5 minutes`)
+    lines.push(`⏱ [${mode.toUpperCase()}] ${providerLabel(provider)} timed out after 5 minutes`)
     return lines.join('\n')
   }
 
   const buildIcon = result.buildStatus === 'passed' ? '✓' : result.buildStatus === 'failed' ? '✗' : '?'
-  lines.push(`✅ [${mode.toUpperCase()}] Complete (${ELAPSED(result.elapsedMs)}) — Build ${buildIcon}`)
+  lines.push(`✅ [${mode.toUpperCase()}] ${providerLabel(provider)} complete (${ELAPSED(result.elapsedMs)}) — Build ${buildIcon}`)
 
   if (result.changedFiles.length) {
     lines.push(`\nChanged files:`)
