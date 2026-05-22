@@ -36,31 +36,33 @@ function OperationCard({ item, onTap }: { item: OperationEntity; onTap?: () => v
   return (
     <button
       onClick={onTap}
-      className="w-full overflow-hidden rounded-[20px] bg-[#FDFCFA] text-left shadow-[0_4px_20px_rgba(0,0,0,0.08)]"
+      className="relative w-full overflow-hidden rounded-[22px] text-left"
+      style={{ height: '200px', boxShadow: '0 10px 48px rgba(0,0,0,0.30)' }}
     >
-      {/* Image */}
-      <div className="relative h-[136px] w-full bg-[#D4C9B4]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={image} alt="" className="h-full w-full object-cover" />
-        <div
-          className="absolute inset-0"
-          style={{ background: 'linear-gradient(to top, rgba(8,6,4,0.22) 0%, transparent 55%)' }}
-        />
+      {/* Background image */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={image} alt="" className="absolute inset-0 h-full w-full object-cover" />
+
+      {/* Deep cinematic gradient — bottom zone is intentionally dark for text */}
+      <div
+        className="absolute inset-0"
+        style={{ background: 'linear-gradient(to top, rgba(8,6,4,0.94) 0%, rgba(8,6,4,0.70) 32%, rgba(8,6,4,0.20) 60%, transparent 100%)' }}
+      />
+
+      {/* Status — top right */}
+      <div className="absolute right-4 top-4">
+        <span className="flex items-center gap-1.5 rounded-full bg-black/28 px-2.5 py-1 backdrop-blur-[6px]">
+          <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ backgroundColor: dotColor }} />
+          <span className="text-[10px] font-medium leading-none text-white/78">{statusLabel}</span>
+        </span>
       </div>
 
-      {/* Operational panel */}
-      <div className="px-5 pb-5 pt-4">
-        <h3 className="text-[22px] font-semibold leading-tight tracking-[-0.3px] text-[#141210]">{displayName}</h3>
+      {/* Content — sits in the dark gradient zone */}
+      <div className="absolute bottom-0 left-0 right-0 px-5 pb-5">
+        <h3 className="text-[26px] font-semibold leading-tight tracking-[-0.4px] text-white">{displayName}</h3>
         {movement && (
-          <p className="mt-1.5 line-clamp-2 text-[14px] leading-snug text-[#5E5348]">{movement}</p>
+          <p className="mt-1.5 line-clamp-1 text-[13px] leading-snug text-white/68">{movement}</p>
         )}
-        <div className="mt-3.5 flex items-center justify-between">
-          <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ backgroundColor: dotColor }} />
-            <span className="text-[11px] text-[#9B9187]">{statusLabel}</span>
-          </span>
-          <span className="text-[13px] font-medium text-[#C89B2F]">Review →</span>
-        </div>
       </div>
     </button>
   )
