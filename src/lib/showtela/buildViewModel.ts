@@ -50,6 +50,7 @@ export function buildShowTelaVM(data: ShowTelaHomeData): ShowTelaViewModel {
       avatar: '',
       unresolved: e.isNew ?? false,
       linkedEntities: e.tags ?? [],
+      pressure: e.pressure,
     })),
     continuityObjects: [],
     runtimeTimeline: data.runtimeTimeline,
