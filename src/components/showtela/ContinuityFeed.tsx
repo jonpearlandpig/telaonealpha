@@ -18,10 +18,10 @@ export function ContinuityFeed(props: Props) {
 
   return (
     <section className="px-5 pb-32">
-      <div className="mb-1 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between">
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5E5348]">Continuity Feed</h2>
       </div>
-      <div className="divide-y divide-[#EAE4DA]">
+      <div className="flex flex-col gap-4">
         {feed.map((item) => (
           <button key={item.id} className="w-full text-left" onClick={() => onFeedTap?.(item)}>
             <ContinuityCard item={item} />

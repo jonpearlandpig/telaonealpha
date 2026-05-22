@@ -6,9 +6,9 @@ export function ShowTelaHeader({ userName, userImage }: { userName?: string; use
   const firstName = userName?.split(' ')[0] ?? 'there'
 
   return (
-    <header className="px-5 pb-4 pt-[58px]">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+    <header className="px-5 pb-6 pt-[58px]">
+      <div className="mb-5 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[#C89B2F]/60 bg-[#141210]">
             <span className="text-[11px] font-semibold tracking-tight text-[#D8A742]">ST</span>
           </div>
@@ -28,8 +28,8 @@ export function ShowTelaHeader({ userName, userImage }: { userName?: string; use
         </div>
       </div>
       <div>
-        <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.5px] text-[#141210]">{greeting}, {firstName}.</h1>
-        <p className="mt-0.5 text-[15px] text-[#6E6A63]">Here&apos;s what matters today.</p>
+        <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.6px] text-[#141210]">{greeting}, {firstName}.</h1>
+        <p className="mt-1 text-[15px] leading-snug text-[#6E6A63]">Here&apos;s what&apos;s live on the Crusade.</p>
       </div>
     </header>
   )
