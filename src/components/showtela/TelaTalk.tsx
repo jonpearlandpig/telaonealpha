@@ -1,123 +1,100 @@
 'use client'
-import type { PersonItem } from './types'
 
-function timeAgo(iso?: string) {
-  if (!iso) return ''
-  const diff = Date.now() - new Date(iso).getTime()
-  const m = Math.floor(diff / 60000)
-  if (m < 60) return `${m}m ago`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ago`
-  return `${Math.floor(h / 24)}d ago`
+type AutoscanAction = {
+  id: string
+  label: string
+  detail: string
+}
+
+type AutoscanSummary = {
+  currentTruth: string
+  mattersNow: string
+  nextMovement: string
+  suggestedActions: AutoscanAction[]
+  latestChange?: string
+  activeOperators: string[]
 }
 
 export function TelaTalk({
-  activeOps,
-  fluencyPartners,
-  onPersonTap,
-  onVoiceTap,
+  autoscan,
 }: {
-  activeOps: PersonItem[]
-  fluencyPartners: PersonItem[]
-  onPersonTap: (name: string, role?: string) => void
-  onVoiceTap: (name?: string) => void
+  autoscan: AutoscanSummary
 }) {
-  const all = [...activeOps, ...fluencyPartners.slice(0, 6)]
-
   return (
-    <div style={{ backgroundColor: '#fff', minHeight: '100vh' }}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-14 pb-3 border-b border-stone-100">
-        <h1 className="text-xl font-bold text-stone-900">TELA Talk</h1>
-        <button onClick={() => onVoiceTap()} className="flex h-9 w-9 items-center justify-center rounded-full bg-stone-100">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z" fill="#141210"/>
-            <path d="M19 10a7 7 0 0 1-14 0" stroke="#141210" strokeWidth="1.8" strokeLinecap="round"/>
-            <path d="M12 19v3" stroke="#141210" strokeWidth="1.8" strokeLinecap="round"/>
-          </svg>
-        </button>
-      </div>
-
-      {/* Search */}
-      <div className="px-4 py-3">
-        <div className="flex items-center gap-2 rounded-full bg-stone-100 px-4 py-2">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <circle cx="11" cy="11" r="7" stroke="#8B847B" strokeWidth="2"/>
-            <path d="M16 16l4 4" stroke="#8B847B" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-          <span className="text-sm text-stone-400">Search</span>
+    <div className="min-h-screen bg-[linear-gradient(180deg,#F6F2EA_0%,#EFE6D7_100%)] px-5 pb-32 pt-14">
+      <div className="rounded-[30px] border border-[#2A231A] bg-[radial-gradient(circle_at_top,#372C1E_0%,#17130F_68%)] p-5 text-[#F5EEDC] shadow-[0_24px_56px_rgba(20,18,16,0.22)]">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#D7BC7F]">TELA</p>
+            <h1 className="mt-2 text-[28px] font-semibold tracking-[-0.04em]">Persistent Operational Presence</h1>
+          </div>
+          <div className="rounded-full border border-[#5A4725] bg-[#221B13] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#DABD79]">
+            Crusade
+          </div>
+        </div>
+        <div className="mt-5 space-y-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#C8B28A]">Current Operational Truth</p>
+            <p className="mt-1 text-[19px] font-semibold leading-tight">{autoscan.currentTruth}</p>
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#C8B28A]">What Matters Now</p>
+            <p className="mt-1 text-[14px] leading-relaxed text-[#DDD1BB]">{autoscan.mattersNow}</p>
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#C8B28A]">Next Meaningful Movement</p>
+            <p className="mt-1 text-[14px] leading-relaxed text-[#DDD1BB]">{autoscan.nextMovement}</p>
+          </div>
         </div>
       </div>
 
-      {/* Stories-style Active Ops row */}
-      <div className="flex gap-4 overflow-x-auto px-4 pb-4 [scrollbar-width:none]">
-        {activeOps.map((p) => (
-          <button key={p.id} onClick={() => onPersonTap(p.name, p.latest)} className="flex flex-col items-center gap-1 flex-shrink-0">
-            <div className="relative">
-              <div className="h-16 w-16 overflow-hidden rounded-full border-2 border-yellow-500">
-                {p.image
-                  ? <img src={p.image} alt={p.name} className="h-full w-full object-cover" />
-                  : <div className="flex h-full w-full items-center justify-center bg-stone-800 text-lg font-semibold text-yellow-200">{p.name.slice(0,1)}</div>
-                }
-              </div>
-              <button
-                onClick={(e) => { e.stopPropagation(); onVoiceTap(p.name) }}
-                className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-stone-900"
-              >
-                <span className="text-xs font-bold text-white leading-none">+</span>
-              </button>
-            </div>
-            <p className="text-xs font-medium text-stone-700 max-w-16 truncate">{p.name.split(' ')[0]}</p>
-          </button>
-        ))}
-      </div>
-
-      <div className="h-px bg-stone-100 mx-4" />
-
-      {/* Messages list */}
-      <div className="px-4">
-        <p className="py-3 text-xs font-semibold uppercase tracking-wider text-stone-400">Messages</p>
-
-        {/* Pinned TELA thread */}
-        <button className="flex w-full items-center gap-3 py-3 text-left border-b border-stone-100 mb-1">
-          <div className="relative flex-shrink-0">
-            <div className="h-14 w-14 overflow-hidden rounded-full border-2 border-[#C89B2F] bg-[#141210] flex items-center justify-center">
-              <span className="text-lg font-bold text-[#C89B2F]">T</span>
-            </div>
-            <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-[#4ADE80] border-2 border-white" />
+      <section className="mt-4 rounded-[24px] border border-[#E3D8C7] bg-white/82 p-4 shadow-[0_14px_34px_rgba(17,17,17,0.06)] backdrop-blur-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8A7351]">Field Scan</p>
+            <p className="mt-1 text-[14px] font-semibold text-[#171411]">Ambient intelligence without chat.</p>
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <p className="font-semibold text-stone-900">TELA</p>
-              <span className="rounded-full bg-[#C89B2F]/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-[#C89B2F]">Pinned</span>
-            </div>
-            <p className="truncate text-sm text-stone-500">Ask what changed, retrieve unresolved state, launch actions</p>
+          <div className="rounded-full border border-[#D7CCBC] bg-[#F4EFE6] px-2.5 py-1">
+            <span className="flex items-center gap-1 text-[11px] font-medium text-[#6B5D4B]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#6FAE7B]" />
+              autoscan live
+            </span>
           </div>
-        </button>
-
-        {all.map((p) => (
-          <button key={p.id} onClick={() => onPersonTap(p.name, p.latest)} className="flex w-full items-center gap-3 py-3 text-left">
-            <div className="relative flex-shrink-0">
-              <div className="h-14 w-14 overflow-hidden rounded-full border border-stone-200 bg-stone-800">
-                {p.image
-                  ? <img src={p.image} alt={p.name} className="h-full w-full object-cover" />
-                  : <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-yellow-200">{p.name.slice(0,1)}</div>
-                }
+        </div>
+        {autoscan.latestChange && (
+          <div className="mt-4 rounded-[18px] bg-[#F7F1E7] px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8A7351]">Latest Continuity Change</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-[#5E5348]">{autoscan.latestChange}</p>
+          </div>
+        )}
+        <div className="mt-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8A7351]">Suggested Next Actions</p>
+          <div className="mt-2 space-y-2">
+            {autoscan.suggestedActions.map((action, index) => (
+              <div key={action.id} className="rounded-[18px] border border-[#ECE3D6] bg-[#FCFAF7] px-4 py-3">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-[#171411] text-[11px] font-semibold text-[#F6EFDF]">{index + 1}</span>
+                  <div>
+                    <p className="text-[13px] font-semibold text-[#171411]">{action.label}</p>
+                    <p className="mt-0.5 text-[12px] leading-relaxed text-[#6B5D4B]">{action.detail}</p>
+                  </div>
+                </div>
               </div>
-              <button
-                onClick={(e) => { e.stopPropagation(); onVoiceTap(p.name) }}
-                className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-stone-900"
-              >
-                <span className="text-xs font-bold text-white leading-none">+</span>
-              </button>
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-stone-900">{p.name}</p>
-              <p className="truncate text-sm text-stone-500">{p.latest}</p>
-            </div>
-          </button>
-        ))}
-      </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-4 rounded-[24px] border border-[#E3D8C7] bg-white/82 p-4 shadow-[0_14px_34px_rgba(17,17,17,0.06)]">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8A7351]">Active Operators</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {autoscan.activeOperators.map((name) => (
+            <span key={name} className="rounded-full border border-[#DDD1BF] bg-[#F5F0E6] px-3 py-1.5 text-[12px] font-medium text-[#5E5348]">
+              {name}
+            </span>
+          ))}
+        </div>
+      </section>
     </div>
   )
 }

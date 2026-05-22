@@ -51,6 +51,26 @@ export type ContinuityEvent = {
   linkedThreads?: string[]
   attachments?: MediaMemoryAttachment[]
   unresolvedMarkers?: string[]
+  continuityObject?: {
+    id: string
+    kind: string
+    title: string
+    summary: string
+    capturedAt: string
+    provenance: {
+      who?: string
+      what: string
+      when: string
+      linkedEntity?: string
+      linkedOperation?: string
+    }
+    source: {
+      mode: string
+      linkUrl?: string
+      assetNames?: string[]
+      notes?: string
+    }
+  }
 }
 
 export type MediaMemoryType = 'image' | 'pdf' | 'stage_plot' | 'screenshot' | 'bus_schedule' | 'venue_packet' | 'contract' | 'voice_memo'

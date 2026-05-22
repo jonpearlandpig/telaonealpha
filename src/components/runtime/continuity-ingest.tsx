@@ -1,248 +1,285 @@
 'use client'
-import { useState, useRef } from 'react'
 
-type Mode = 'voice' | 'text' | 'upload' | 'paste'
-type Status = 'idle' | 'recording' | 'submitting' | 'done' | 'error'
+import { useState } from 'react'
+import type { ContinuityIngestionInput, ContinuityIngestionMode } from '@/lib/continuity/normalize-ingestion'
+
+type Option = {
+  id: string
+  label: string
+}
 
 type Props = {
-  submittedBy?: string
-  taggedPerson?: string
+  open: boolean
+  ownerName?: string
+  people: Option[]
+  operations: Option[]
+  initialMode?: ContinuityIngestionMode | null
   onClose: () => void
-  onSuccess?: (message: string) => void
+  onSubmit: (input: ContinuityIngestionInput) => void
+  onVoiceNote?: () => void
 }
 
-const MODE_LABELS: Record<Mode, string> = {
-  voice: 'Voice',
-  text: 'Text',
-  upload: 'Upload',
-  paste: 'Quick Paste',
-}
+const QUICK_TAGS = ['handoff', 'note', 'risk', 'approval']
 
-export function ContinuityIngest({ submittedBy, taggedPerson, onClose, onSuccess }: Props) {
-  const [mode, setMode] = useState<Mode>('text')
-  const [text, setText] = useState('')
-  const [status, setStatus] = useState<Status>('idle')
-  const [message, setMessage] = useState('')
-  const fileRef = useRef<HTMLInputElement>(null)
-  const mediaRef = useRef<MediaRecorder | null>(null)
-  const chunksRef = useRef<Blob[]>([])
+const INGEST_OPTIONS: Array<{
+  id: ContinuityIngestionMode
+  label: string
+  eyebrow: string
+  description: string
+}> = [
+  { id: 'voice-note', label: 'Voice Note', eyebrow: 'Immediate', description: 'Capture spoken continuity without leaving the field.' },
+  { id: 'quick-update', label: 'Quick Update', eyebrow: 'Fastest', description: 'Log what changed, what matters, and what needs movement.' },
+  { id: 'upload-files', label: 'Upload Files', eyebrow: 'Artifacts', description: 'Stage docs into continuity as traced operational objects.' },
+  { id: 'paste-notes', label: 'Paste Notes', eyebrow: 'Raw Intake', description: 'Drop messy notes and let continuity hold the thread.' },
+  { id: 'add-photos', label: 'Add Photos', eyebrow: 'Visual Field', description: 'Capture photos as operational memory, not loose media.' },
+  { id: 'add-link', label: 'Add Link', eyebrow: 'Reference', description: 'Anchor an external thread or source inside continuity.' },
+]
 
-  async function submitTranscript(transcript: string) {
-    setStatus('submitting')
-    try {
-      const res = await fetch('/api/pearl-drop-voice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transcript, submittedBy: submittedBy ?? 'Unknown', taggedPerson: taggedPerson ?? '' }),
-      })
-      const data = await res.json() as { message?: string; error?: string }
-      if (!res.ok) throw new Error(data.error ?? 'Submission failed')
-      setMessage(data.message ?? 'Captured')
-      setStatus('done')
-      onSuccess?.(data.message ?? 'Captured')
-    } catch (err) {
-      setMessage(String(err))
-      setStatus('error')
-    }
+export function ContinuityIngest({
+  open,
+  ownerName,
+  people,
+  operations,
+  initialMode,
+  onClose,
+  onSubmit,
+  onVoiceNote,
+}: Props) {
+  const [mode, setMode] = useState<ContinuityIngestionMode | null>(initialMode ?? null)
+  const [headline, setHeadline] = useState('')
+  const [body, setBody] = useState('')
+  const [owner, setOwner] = useState(ownerName ?? '')
+  const [operation, setOperation] = useState('')
+  const [linkedEntity, setLinkedEntity] = useState('')
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [linkUrl, setLinkUrl] = useState('')
+  const [assetNames, setAssetNames] = useState<string[]>([])
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags((current) =>
+      current.includes(tag)
+        ? current.filter((item) => item !== tag)
+        : [...current, tag],
+    )
   }
 
-  async function startRecording() {
-    chunksRef.current = []
-    setStatus('recording')
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    const recorder = new MediaRecorder(stream)
-    mediaRef.current = recorder
-    recorder.ondataavailable = (e) => chunksRef.current.push(e.data)
-    recorder.onstop = async () => {
-      stream.getTracks().forEach(t => t.stop())
-      const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
-      const fd = new FormData()
-      fd.append('audio', blob, 'recording.webm')
-      setStatus('submitting')
-      const res = await fetch('/api/transcribe-audio', { method: 'POST', body: fd })
-      const data = await res.json() as { transcript?: string; error?: string }
-      if (!res.ok || !data.transcript) { setMessage(data.error ?? 'Transcription failed'); setStatus('error'); return }
-      await submitTranscript(data.transcript)
-    }
-    recorder.start()
+  const option = INGEST_OPTIONS.find((item) => item.id === mode) ?? null
+  const fileLabel = mode === 'add-photos' ? 'Photos' : 'Files'
+  const bodyLabel = mode === 'paste-notes' ? 'Pasted Notes' : mode === 'add-link' ? 'Why this matters now' : 'Context'
+  const bodyPlaceholder =
+    mode === 'paste-notes'
+      ? 'Paste the messy field notes, call notes, or copied thread here.'
+      : mode === 'add-link'
+        ? 'Add the reason this link matters, what changed, or what needs movement.'
+        : 'Add the operational thread, blocker, or handoff detail.'
+
+  const canSubmit = Boolean(mode && (headline.trim() || body.trim() || linkUrl.trim() || assetNames.length))
+
+  const submit = () => {
+    if (!mode) return
+
+    onSubmit({
+      mode,
+      headline: headline.trim() || undefined,
+      body,
+      owner,
+      operation,
+      linkedEntity,
+      tags: selectedTags,
+      linkUrl,
+      assetNames,
+    })
+    onClose()
   }
 
-  function stopRecording() {
-    mediaRef.current?.stop()
-  }
-
-  async function handleFile(file: File) {
-    setStatus('submitting')
-    const reader = new FileReader()
-    reader.onload = async () => {
-      const content = reader.result as string
-      const lines = content.split('\n').filter(Boolean).slice(0, 40).join('\n')
-      await submitTranscript(`[Uploaded: ${file.name}]\n${lines}`)
-    }
-    reader.readAsText(file)
-  }
-
-  async function handlePaste() {
-    try {
-      const t = await navigator.clipboard.readText()
-      if (!t.trim()) { setMessage('Clipboard is empty'); setStatus('error'); return }
-      setText(t)
-    } catch {
-      setMessage('Clipboard access denied — paste manually')
-      setStatus('error')
-    }
-  }
-
-  const isSubmitting = status === 'submitting'
+  if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: 'rgba(20,18,16,0.55)', backdropFilter: 'blur(4px)' }}>
-      <div className="w-full max-w-sm rounded-t-[28px] bg-[#F8F6F2] px-5 pb-8 pt-5 shadow-2xl">
-        {/* Handle */}
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-[#D4C9B4]" />
-
-        {/* Header */}
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-[15px] font-semibold text-[#141210]">Add to Continuity</h2>
-          <button onClick={onClose} className="h-7 w-7 flex items-center justify-center rounded-full bg-[#EAE4DA] text-[#5E5348]">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-            </svg>
+    <div className="fixed inset-0 z-[70] bg-[rgba(20,18,16,0.28)] backdrop-blur-[6px]" onClick={onClose}>
+      <div
+        className="absolute bottom-0 left-0 right-0 mx-auto max-w-sm rounded-t-[30px] border border-[#E8E0D2] bg-[#F7F3EC] px-5 pb-8 pt-5 shadow-[0_-18px_42px_rgba(17,17,17,0.18)]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-[#D5CCBD]" />
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Add Continuity</p>
+            <h2 className="mt-1 text-[22px] font-semibold tracking-[-0.02em] text-[#171411]">Bring messy reality into continuity.</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#EAE3D7] text-[#5E5348]"
+            aria-label="Close continuity ingest"
+          >
+            ×
           </button>
         </div>
 
-        {/* Mode tabs */}
-        <div className="mb-4 flex gap-1 rounded-[14px] bg-[#EAE4DA] p-1">
-          {(Object.keys(MODE_LABELS) as Mode[]).map((m) => (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              className="flex-1 rounded-[10px] py-1.5 text-[11px] font-semibold transition-all"
-              style={{
-                backgroundColor: mode === m ? '#141210' : 'transparent',
-                color: mode === m ? '#F8E1B0' : '#8B847B',
-              }}
-            >
-              {MODE_LABELS[m]}
-            </button>
-          ))}
-        </div>
-
-        {/* Mode content */}
-        {status === 'done' && (
-          <div className="py-6 text-center">
-            <p className="text-[13px] font-semibold text-[#141210]">{message}</p>
-            <button onClick={onClose} className="mt-4 rounded-full bg-[#141210] px-6 py-2 text-[12px] font-semibold text-[#F8E1B0]">Done</button>
+        {!mode && (
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            {INGEST_OPTIONS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  if (item.id === 'voice-note') {
+                    onClose()
+                    onVoiceNote?.()
+                    return
+                  }
+                  setMode(item.id)
+                }}
+                className="rounded-[22px] border border-[#E0D7C9] bg-white px-4 py-4 text-left shadow-[0_8px_24px_rgba(17,17,17,0.05)]"
+              >
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">{item.eyebrow}</p>
+                <p className="mt-2 text-[15px] font-semibold text-[#171411]">{item.label}</p>
+                <p className="mt-1 text-[12px] leading-relaxed text-[#6B5D4B]">{item.description}</p>
+              </button>
+            ))}
           </div>
         )}
 
-        {status === 'error' && (
-          <div className="mb-3 rounded-xl bg-[#F8717118] px-3 py-2">
-            <p className="text-[11px] text-[#F87171]">{message}</p>
-          </div>
-        )}
+        {mode && (
+          <div className="mt-5 space-y-3">
+            <div className="flex items-center justify-between rounded-[18px] border border-[#E5DBCB] bg-white/75 px-4 py-3">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9A7C46]">Continuity Mode</p>
+                <p className="mt-1 text-[14px] font-semibold text-[#171411]">{option?.label}</p>
+              </div>
+              <button type="button" onClick={() => setMode(null)} className="text-[12px] font-medium text-[#6B5D4B]">
+                Change
+              </button>
+            </div>
 
-        {status !== 'done' && (
-          <>
-            {mode === 'text' && (
-              <div className="flex flex-col gap-3">
-                <textarea
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  placeholder="What needs to be captured?"
-                  className="h-28 w-full resize-none rounded-[14px] bg-white px-4 py-3 text-[13px] text-[#141210] placeholder:text-[#A89880] outline-none border border-[#EAE4DA] focus:border-[#C89B2F]"
+            <label className="block">
+              <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6B5D4B]">Headline</span>
+              <input
+                value={headline}
+                onChange={(event) => setHeadline(event.target.value)}
+                placeholder={mode === 'add-link' ? 'Name the thread or source' : 'What changed in the field?'}
+                className="w-full rounded-[18px] border border-[#DED4C4] bg-white px-4 py-3 text-[14px] text-[#171411] outline-none placeholder:text-[#A69987]"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6B5D4B]">{bodyLabel}</span>
+              <textarea
+                value={body}
+                onChange={(event) => setBody(event.target.value)}
+                placeholder={bodyPlaceholder}
+                className="min-h-[112px] w-full rounded-[18px] border border-[#DED4C4] bg-white px-4 py-3 text-[14px] text-[#171411] outline-none placeholder:text-[#A69987]"
+              />
+            </label>
+
+            {(mode === 'upload-files' || mode === 'add-photos') && (
+              <label className="block">
+                <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6B5D4B]">{fileLabel}</span>
+                <input
+                  type="file"
+                  multiple
+                  accept={mode === 'add-photos' ? 'image/*' : undefined}
+                  onChange={(event) => setAssetNames(Array.from(event.target.files ?? []).map((file) => file.name))}
+                  className="w-full rounded-[18px] border border-[#DED4C4] bg-white px-4 py-3 text-[13px] text-[#171411] file:mr-3 file:rounded-full file:border-0 file:bg-[#171411] file:px-3 file:py-2 file:text-[12px] file:font-semibold file:text-[#F6EFDF]"
                 />
-                <button
-                  disabled={!text.trim() || isSubmitting}
-                  onClick={() => submitTranscript(text)}
-                  className="w-full rounded-full py-3 text-[13px] font-semibold transition-opacity disabled:opacity-40"
-                  style={{ backgroundColor: '#141210', color: '#F8E1B0' }}
-                >
-                  {isSubmitting ? 'Capturing…' : 'Add to Continuity'}
-                </button>
-              </div>
+                {assetNames.length > 0 && <p className="mt-2 text-[12px] text-[#6B5D4B]">{assetNames.length} item{assetNames.length === 1 ? '' : 's'} staged into continuity.</p>}
+              </label>
             )}
 
-            {mode === 'voice' && (
-              <div className="flex flex-col items-center gap-4 py-4">
-                {status === 'recording' ? (
-                  <>
-                    <div className="h-16 w-16 rounded-full bg-[#F87171] flex items-center justify-center" style={{ animation: 'subtlePulse 1.2s ease-in-out infinite' }}>
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <rect x="9" y="4" width="6" height="6" rx="1" fill="white"/>
-                      </svg>
-                    </div>
-                    <p className="text-[12px] text-[#5E5348]">Recording… tap to stop</p>
-                    <button onClick={stopRecording} className="rounded-full border border-[#EAE4DA] px-6 py-2 text-[12px] font-semibold text-[#141210]">Stop</button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={startRecording}
-                      disabled={isSubmitting}
-                      className="h-16 w-16 rounded-full bg-[#141210] flex items-center justify-center disabled:opacity-40"
-                    >
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z" fill="#C89B2F"/>
-                        <path d="M19 10a7 7 0 0 1-14 0" stroke="#C89B2F" strokeWidth="1.8" strokeLinecap="round"/>
-                        <path d="M12 19v3" stroke="#C89B2F" strokeWidth="1.8" strokeLinecap="round"/>
-                      </svg>
-                    </button>
-                    <p className="text-[12px] text-[#8B847B]">{isSubmitting ? 'Transcribing…' : 'Tap to record'}</p>
-                  </>
-                )}
-              </div>
-            )}
-
-            {mode === 'upload' && (
-              <div className="flex flex-col gap-3">
-                <input ref={fileRef} type="file" accept=".txt,.md,.pdf" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
-                <button
-                  onClick={() => fileRef.current?.click()}
-                  disabled={isSubmitting}
-                  className="w-full rounded-[14px] border-2 border-dashed border-[#D4C9B4] py-8 text-center disabled:opacity-40"
-                >
-                  <p className="text-[13px] font-semibold text-[#5E5348]">{isSubmitting ? 'Processing…' : 'Tap to upload'}</p>
-                  <p className="mt-1 text-[11px] text-[#A89880]">TXT, Markdown, PDF</p>
-                </button>
-              </div>
-            )}
-
-            {mode === 'paste' && (
-              <div className="flex flex-col gap-3">
-                <textarea
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  placeholder="Paste content here…"
-                  className="h-28 w-full resize-none rounded-[14px] bg-white px-4 py-3 text-[13px] text-[#141210] placeholder:text-[#A89880] outline-none border border-[#EAE4DA] focus:border-[#C89B2F]"
+            {mode === 'add-link' && (
+              <label className="block">
+                <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6B5D4B]">Link</span>
+                <input
+                  value={linkUrl}
+                  onChange={(event) => setLinkUrl(event.target.value)}
+                  placeholder="https://"
+                  className="w-full rounded-[18px] border border-[#DED4C4] bg-white px-4 py-3 text-[14px] text-[#171411] outline-none placeholder:text-[#A69987]"
                 />
-                <div className="flex gap-2">
-                  <button
-                    onClick={handlePaste}
-                    className="flex-1 rounded-full border border-[#EAE4DA] py-3 text-[12px] font-semibold text-[#5E5348]"
-                  >
-                    Paste from clipboard
-                  </button>
-                  <button
-                    disabled={!text.trim() || isSubmitting}
-                    onClick={() => submitTranscript(text)}
-                    className="flex-1 rounded-full py-3 text-[12px] font-semibold disabled:opacity-40"
-                    style={{ backgroundColor: '#141210', color: '#F8E1B0' }}
-                  >
-                    {isSubmitting ? 'Capturing…' : 'Capture'}
-                  </button>
+              </label>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6B5D4B]">Owner</span>
+                <select
+                  value={owner}
+                  onChange={(event) => setOwner(event.target.value)}
+                  className="w-full rounded-[18px] border border-[#DED4C4] bg-white px-4 py-3 text-[14px] text-[#171411] outline-none"
+                >
+                  <option value="">Unassigned</option>
+                  {ownerName ? <option value={ownerName}>{ownerName}</option> : null}
+                  {people.map((person) => (
+                    <option key={person.id} value={person.label}>{person.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6B5D4B]">Crusade</span>
+                <select
+                  value={operation}
+                  onChange={(event) => setOperation(event.target.value)}
+                  className="w-full rounded-[18px] border border-[#DED4C4] bg-white px-4 py-3 text-[14px] text-[#171411] outline-none"
+                >
+                  <option value="">General</option>
+                  {operations.map((item) => (
+                    <option key={item.id} value={item.label}>{item.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6B5D4B]">Linked Entity</span>
+                <select
+                  value={linkedEntity}
+                  onChange={(event) => setLinkedEntity(event.target.value)}
+                  className="w-full rounded-[18px] border border-[#DED4C4] bg-white px-4 py-3 text-[14px] text-[#171411] outline-none"
+                >
+                  <option value="">No direct entity link</option>
+                  {people.map((person) => (
+                    <option key={person.id} value={person.label}>{person.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <div>
+                <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6B5D4B]">Signal</span>
+                <div className="flex flex-wrap gap-2">
+                  {QUICK_TAGS.map((tag) => {
+                    const active = selectedTags.includes(tag)
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => toggleTag(tag)}
+                        className="rounded-full border px-3 py-1.5 text-[12px] font-medium transition"
+                        style={{
+                          borderColor: active ? '#C89B2F' : '#D8CEBF',
+                          backgroundColor: active ? '#F4E6BE' : '#FFFFFF',
+                          color: active ? '#6F541A' : '#6B5D4B',
+                        }}
+                      >
+                        {tag}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
-            )}
-          </>
+            </div>
+          </div>
         )}
+
+        <div className="mt-5 flex items-center justify-between gap-3">
+          <p className="text-[12px] leading-relaxed text-[#7A6D5A]">Every entry captures who, what, when, linked entity, and linked crusade without changing runtime memory paths.</p>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={!canSubmit}
+            className="rounded-full bg-[#171411] px-4 py-2.5 text-[13px] font-semibold text-[#F6EFDF] disabled:opacity-45"
+          >
+            Add Continuity
+          </button>
+        </div>
       </div>
-      <style>{`
-        @keyframes subtlePulse {
-          0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.08); opacity: 0.85; }
-        }
-      `}</style>
     </div>
   )
 }

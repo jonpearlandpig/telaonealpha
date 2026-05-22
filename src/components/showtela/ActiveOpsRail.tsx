@@ -1,5 +1,15 @@
 'use client'
-import type { PersonEntity } from '@/lib/showtela/types'
+
+import type { ReactNode } from 'react'
+
+type ActiveRailItem = {
+  id: string
+  name: string
+  latest?: string
+  unresolvedCount: number
+  image: string
+  updatesCount?: number
+}
 
 function facePhoto(url: string): string {
   if (!url) return url
@@ -9,33 +19,97 @@ function facePhoto(url: string): string {
   return url
 }
 
-export function ActiveOpsRail(
-  props:
-    | { people: PersonEntity[]; onPersonTap?: (name: string, role?: string) => void; onPearlDrop?: (personName: string) => void }
-    | { items: Array<{ id: string; name: string; latest?: string; unresolvedCount: number; image: string; updatesCount?: number }>; onPersonTap?: (name: string, role?: string) => void; onPearlDrop?: (personName: string) => void }
-) {
-  const onPersonTap = props.onPersonTap
-  const onPearlDrop = props.onPearlDrop
-  const people = 'people' in props ? props.people
-    : props.items.map((i) => ({ id: i.id, name: i.name, role: i.latest, unresolvedCount: i.unresolvedCount, updatesCount: i.updatesCount ?? 0, avatar: i.image }))
+function CircleShell({
+  children,
+  background,
+  tone = 'light',
+}: {
+  children: ReactNode
+  background: string
+  tone?: 'light' | 'dark'
+}) {
+  return (
+    <div
+      className="flex h-[78px] w-[78px] items-center justify-center rounded-full p-[2.5px] shadow-[0_10px_24px_rgba(17,17,17,0.10)]"
+      style={{ background }}
+    >
+      <div className={`flex h-full w-full items-center justify-center overflow-hidden rounded-full ${tone === 'dark' ? 'bg-[#18140F]' : 'bg-[#F8F6F2]'}`}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+export function ActiveOpsRail({
+  userName,
+  userImage,
+  telaLabel,
+  items,
+  onProfileTap,
+  onTelaTap,
+  onPersonTap,
+  onPearlDrop,
+  onAddContinuity,
+}: {
+  userName?: string
+  userImage?: string
+  telaLabel: string
+  items: ActiveRailItem[]
+  onProfileTap?: () => void
+  onTelaTap?: () => void
+  onPersonTap?: (name: string, role?: string) => void
+  onPearlDrop?: (personName: string) => void
+  onAddContinuity?: () => void
+}) {
+  const firstName = userName?.split(' ')[0] ?? 'You'
 
   return (
     <section className="px-5 pb-5 pt-1">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5E5348]">Active Ops</h2>
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5E5348]">Persistent Presence</h2>
           <span className="flex items-center gap-1 rounded-full bg-[#1A1712] px-2 py-0.5">
             <span className="h-1.5 w-1.5 rounded-full bg-[#4ADE80]" />
-            <span className="text-[10px] font-medium text-[#E5DBC8]">{people.length} active now</span>
+            <span className="text-[10px] font-medium text-[#E5DBC8]">{items.length + 2} active now</span>
           </span>
         </div>
         <button className="text-[11px] font-medium text-[#C89B2F]">View all</button>
       </div>
       <div className="flex gap-4 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {people.map((p) => {
-          const img = ('avatar' in p && p.avatar) ? facePhoto(p.avatar) : undefined
+        <button className="flex w-[84px] flex-shrink-0 flex-col items-center gap-1.5 p-0" onClick={onProfileTap}>
+          <div className="relative">
+            <CircleShell background="linear-gradient(135deg, #D5C4A2 0%, #F6E9C9 55%, #C8A25A 100%)">
+              {userImage
+                ? <img src={facePhoto(userImage)} alt={userName ?? 'You'} className="h-full w-full object-cover" />
+                : <div className="flex h-full w-full items-center justify-center bg-[#1A1712] text-[22px] font-semibold text-[#F8E1B0]">{firstName.slice(0, 1)}</div>}
+            </CircleShell>
+            <span className="absolute bottom-1 right-1 rounded-full border border-[#F8F6F2] bg-[#F4EFE6] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#6B5D4B]">
+              You
+            </span>
+          </div>
+          <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{firstName}</p>
+          <p className="text-center text-[10px] leading-tight text-[#6E6A63]">Personal anchor</p>
+        </button>
+
+        <button className="flex w-[84px] flex-shrink-0 flex-col items-center gap-1.5 p-0" onClick={onTelaTap}>
+          <div className="relative">
+            <CircleShell background="linear-gradient(140deg, #11100D 0%, #2B2218 48%, #7A5A25 100%)" tone="dark">
+              <div className="flex h-full w-full flex-col items-center justify-center bg-[radial-gradient(circle_at_top,#3B3125_0%,#17130F_62%)]">
+                <span className="text-[14px] font-semibold tracking-[0.18em] text-[#E3BE68]">TELA</span>
+              </div>
+            </CircleShell>
+            <span className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full border border-[#5A4725] bg-[#221B13] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#DABD79]">
+              Crusade
+            </span>
+          </div>
+          <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">TELA</p>
+          <p className="text-center text-[10px] leading-tight text-[#6E6A63]">{telaLabel}</p>
+        </button>
+
+        {items.map((p) => {
+          const img = p.image ? facePhoto(p.image) : undefined
           const unresolved = p.unresolvedCount ?? 0
-          const role = ('role' in p && p.role) ? p.role : ''
+          const role = p.latest ?? ''
           const hasUnresolved = unresolved > 0
           const handleTap = () => onPersonTap?.(p.name, role)
 
@@ -46,32 +120,26 @@ export function ActiveOpsRail(
               tabIndex={0}
               className="flex w-[80px] flex-shrink-0 flex-col items-center gap-1.5 p-0"
               onClick={handleTap}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
                   handleTap()
                 }
               }}
             >
               <div className="relative">
-                <div
-                  className="flex h-[76px] w-[76px] items-center justify-center rounded-full p-[2.5px]"
-                  style={{ background: hasUnresolved ? '#F87171' : 'linear-gradient(135deg, #C89B2F, #F0D080, #C89B2F)' }}
-                >
-                  <div className="h-full w-full overflow-hidden rounded-full bg-[#1A1712]">
-                    {img
-                      ? <img src={img} alt={p.name} className="h-full w-full object-cover" />
-                      : <div className="flex h-full w-full items-center justify-center text-[22px] font-semibold text-[#F8E1B0]">{p.name.slice(0, 1)}</div>
-                    }
-                  </div>
-                </div>
-                <span className="absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full border-2 border-[#F8F6F2] bg-[#4ADE80]" />
-                {/* Pearl Drop + button */}
+                <CircleShell background={hasUnresolved ? 'linear-gradient(135deg, #7A6451 0%, #C7A77A 100%)' : 'linear-gradient(135deg, #D8CCB8 0%, #F5ECE0 100%)'}>
+                  {img
+                    ? <img src={img} alt={p.name} className="h-full w-full object-cover" />
+                    : <div className="flex h-full w-full items-center justify-center text-[22px] font-semibold text-[#6F541A]">{p.name.slice(0, 1)}</div>}
+                </CircleShell>
+                <span className={`absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full border-2 border-[#F8F6F2] ${hasUnresolved ? 'bg-[#C89B2F]' : 'bg-[#6FAE7B]'}`} />
                 <button
-                  onClick={(e) => { e.stopPropagation(); onPearlDrop?.(p.name) }}
+                  onClick={(event) => { event.stopPropagation(); onPearlDrop?.(p.name) }}
                   className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#F8F6F2] bg-[#141210] shadow-[0_2px_8px_rgba(0,0,0,0.30)]"
+                  aria-label={`Add continuity for ${p.name}`}
                 >
-                  <span className="text-[14px] font-semibold text-white leading-none">+</span>
+                  <span className="text-[14px] font-semibold leading-none text-white">+</span>
                 </button>
               </div>
               <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{p.name.split(' ')[0]}</p>
@@ -79,12 +147,22 @@ export function ActiveOpsRail(
             </div>
           )
         })}
-        {people.length === 0 && (
+
+        {items.length === 0 && (
           <div className="w-full rounded-[18px] border border-dashed border-[#D4C9B4] px-4 py-5 text-center">
             <p className="text-[13px] font-medium text-[#8B847B]">No active operators yet.</p>
           </div>
         )}
+
+        <button className="flex w-[80px] flex-shrink-0 flex-col items-center gap-1.5 p-0" onClick={onAddContinuity}>
+          <div className="flex h-[78px] w-[78px] items-center justify-center rounded-full border border-dashed border-[#C89B2F]/40 bg-[linear-gradient(180deg,#F7F3EC_0%,#EEE5D7_100%)] shadow-[0_8px_20px_rgba(17,17,17,0.04)]">
+            <span className="text-[26px] font-thin text-[#7E6B52]">+</span>
+          </div>
+          <p className="text-center text-[12px] font-medium text-[#6E6A63]">Add</p>
+          <p className="text-center text-[10px] leading-tight text-[#8B847B]">Continuity</p>
+        </button>
       </div>
+      <p className="mt-3 text-[11px] leading-relaxed text-[#8B847B]">Order is fixed: personal continuity anchor first, TELA second, then active operators.</p>
     </section>
   )
 }
