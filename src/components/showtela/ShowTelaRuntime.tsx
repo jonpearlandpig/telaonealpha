@@ -119,7 +119,7 @@ export function ShowTelaRuntime({ vm: initialVm, user }: { vm: ShowTelaViewModel
   return (
     <>
       {showHydrationDebug && <HydrationDiagnostics vm={vm} />}
-      <ShowTelaShell vm={vm} onPearlDrop={() => {}} user={user} />
+      <ShowTelaShell vm={vm} user={user} />
       {showDiagnostic && (
         <div className="pointer-events-none fixed bottom-28 left-0 right-0 z-40 mx-auto max-w-md px-5">
           <DiagnosticBar state={vm.diagnosticState!} />
