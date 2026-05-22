@@ -193,9 +193,24 @@ export async function refreshShowTelaFromNotion(): Promise<ShowTelaHomeData> {
   try {
     const data = await fetchFromNotion()
     if (data) {
-      await writeShowTelaCache(data)
-      console.log('[showtela] hydration success: refreshed from Notion and wrote durable_artifacts')
-      return { ...data, source: 'notion', diagnosticState: 'persistence-connected' }
+      try {
+        await writeShowTelaCache(data)
+        console.log('[showtela] hydration success: refreshed from Notion and wrote durable_artifacts')
+        return { ...data, source: 'notion', diagnosticState: 'persistence-connected' }
+      } catch (err) {
+        console.error('[showtela] cache write failed after Notion refresh:', String(err))
+        return {
+          ...data,
+          source: 'notion',
+          diagnosticState: 'persistence-connected',
+          hydration: hydrationSummary(data, {
+            connectedToNotion: true,
+            connectedToSupabase: false,
+            supabaseWriteOk: false,
+            cacheSource: 'notion',
+          }),
+        }
+      }
     }
     // Notion empty — serve stale Supabase if available
     console.warn('[showtela] Notion empty on refresh — attempting Supabase fallback')

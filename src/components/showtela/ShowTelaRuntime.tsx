@@ -101,12 +101,17 @@ export function ShowTelaRuntime({ vm: initialVm, user }: { vm: ShowTelaViewModel
   }, [])
 
   useEffect(() => {
-    refresh()
+    const refreshTimer = window.setTimeout(() => {
+      void refresh()
+    }, 0)
     const onVisibility = () => {
-      if (document.visibilityState === 'visible') refresh()
+      if (document.visibilityState === 'visible') void refresh()
     }
     document.addEventListener('visibilitychange', onVisibility)
-    return () => document.removeEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.clearTimeout(refreshTimer)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
   }, [refresh])
 
   const showDiagnostic = vm.diagnosticState && vm.diagnosticState !== 'persistence-connected'

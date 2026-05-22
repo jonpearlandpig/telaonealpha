@@ -37,9 +37,22 @@ export function ActiveOpsRail(
           const unresolved = p.unresolvedCount ?? 0
           const role = ('role' in p && p.role) ? p.role : ''
           const hasUnresolved = unresolved > 0
+          const handleTap = () => onPersonTap?.(p.name, role)
 
           return (
-            <button key={p.id} className="flex w-[80px] flex-shrink-0 flex-col items-center gap-1.5 p-0" onClick={() => onPersonTap?.(p.name, role)}>
+            <div
+              key={p.id}
+              role="button"
+              tabIndex={0}
+              className="flex w-[80px] flex-shrink-0 flex-col items-center gap-1.5 p-0"
+              onClick={handleTap}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  handleTap()
+                }
+              }}
+            >
               <div className="relative">
                 <div
                   className="flex h-[76px] w-[76px] items-center justify-center rounded-full p-[2.5px]"
@@ -63,7 +76,7 @@ export function ActiveOpsRail(
               </div>
               <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{p.name.split(' ')[0]}</p>
               <p className="text-center text-[10px] leading-tight text-[#6E6A63]">{role}</p>
-            </button>
+            </div>
           )
         })}
         {people.length === 0 && (
