@@ -21,6 +21,11 @@ const FORBIDDEN_PATTERNS = [
   /credential/i,
   /api_key/i,
   /password/i,
+  /\brm\b/i,
+  /\bsudo\b/i,
+  /\breboot\b/i,
+  /\bshutdown\b/i,
+  /git\s+reset\s+.*--hard/i,
 ]
 
 export function isAllowedSender(userId: number): boolean {

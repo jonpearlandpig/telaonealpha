@@ -1,21 +1,35 @@
 import { sendMessage, type Update } from './bot'
 import { formatWorking, formatResult, formatStatus, formatError } from './formatter'
-import { executeInstruction } from '../runtime/executor'
+import { executeInstruction, type RuntimeProvider } from '../runtime/executor'
 import { gatherContext } from '../runtime/contextGatherer'
 import { isAllowedSender, requiresApproval, isForbidden } from '../safety/validator'
 import { logExecution, makeEventId } from '../logs/executionLog'
 
 type Mode = 'build' | 'ui' | 'patch' | 'review' | 'deploy' | 'status'
 
-function parseCommand(text: string): { mode: Mode; instruction: string } {
+function parseCommand(text: string): { mode: Mode; instruction: string; provider: RuntimeProvider } {
   const trimmed = text.trim()
+  const codexMatch = trimmed.match(/^\/codex(?:\s+(build|ui|patch|review|deploy))?\s*/i)
+  if (codexMatch) {
+    const mode = (codexMatch[1]?.toLowerCase() ?? 'build') as Mode
+    const instruction = trimmed.slice(codexMatch[0].length).trim()
+    return { mode, instruction, provider: 'codex' }
+  }
+
+  const claudeMatch = trimmed.match(/^\/claude(?:\s+(build|ui|patch|review|deploy))?\s*/i)
+  if (claudeMatch) {
+    const mode = (claudeMatch[1]?.toLowerCase() ?? 'build') as Mode
+    const instruction = trimmed.slice(claudeMatch[0].length).trim()
+    return { mode, instruction, provider: 'claude-code' }
+  }
+
   const commandMatch = trimmed.match(/^\/(build|ui|patch|review|deploy|status)\s*/i)
   if (commandMatch) {
     const mode = commandMatch[1].toLowerCase() as Mode
     const instruction = trimmed.slice(commandMatch[0].length).trim()
-    return { mode, instruction }
+    return { mode, instruction, provider: 'claude-code' }
   }
-  return { mode: 'build', instruction: trimmed }
+  return { mode: 'build', instruction: trimmed, provider: 'claude-code' }
 }
 
 export async function handleUpdate(update: Update): Promise<void> {
@@ -31,7 +45,7 @@ export async function handleUpdate(update: Update): Promise<void> {
     return
   }
 
-  const { mode, instruction } = parseCommand(text)
+  const { mode, instruction, provider } = parseCommand(text)
 
   if (mode === 'status') {
     const ctx = gatherContext()
@@ -40,7 +54,10 @@ export async function handleUpdate(update: Update): Promise<void> {
   }
 
   if (!instruction) {
-    await sendMessage(chatId, formatError(`No instruction provided. Usage: /${mode} <instructions>`))
+    const usage = provider === 'codex'
+      ? '/codex [build|ui|patch|review|deploy] <instructions>'
+      : `/${mode} <instructions>`
+    await sendMessage(chatId, formatError(`No instruction provided. Usage: ${usage}`))
     return
   }
 
@@ -56,20 +73,20 @@ export async function handleUpdate(update: Update): Promise<void> {
     return
   }
 
-  await sendMessage(chatId, formatWorking(mode))
+  await sendMessage(chatId, formatWorking(mode, provider))
 
   const context = gatherContext()
   const eventId = makeEventId()
   const start = Date.now()
 
-  const result = await executeInstruction(instruction, context, mode)
+  const result = await executeInstruction(instruction, context, mode, provider)
 
   logExecution({
     event_id: eventId,
     timestamp: new Date().toISOString(),
     instruction_type: mode,
     instruction_source: 'telegram',
-    runtime_provider: 'claude-code',
+    runtime_provider: provider,
     changed_files: result.changedFiles,
     commit_hash: result.commitHash,
     build_status: result.buildStatus,
@@ -79,5 +96,5 @@ export async function handleUpdate(update: Update): Promise<void> {
     approval_blocks: result.approvalBlocks,
   })
 
-  await sendMessage(chatId, formatResult(mode, result))
+  await sendMessage(chatId, formatResult(mode, result, provider))
 }
