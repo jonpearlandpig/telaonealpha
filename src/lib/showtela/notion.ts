@@ -15,6 +15,39 @@ export type ShowTelaNotionProbe = {
   error?: string
 }
 
+// DIAGNOSTIC — temporary mention probe. Remove after identifying object_not_found sources.
+function probeMentions(results: NotionResult[], tag: string): void {
+  let total = 0
+  for (const page of results) {
+    if (!page.properties) continue
+    for (const [propName, propValue] of Object.entries(page.properties)) {
+      const pv = propValue as Record<string, unknown>
+      const segments: Array<Record<string, unknown>> = [
+        ...((pv.rich_text as Array<Record<string, unknown>> | undefined) ?? []),
+        ...((pv.title as Array<Record<string, unknown>> | undefined) ?? []),
+      ]
+      for (const seg of segments) {
+        if (seg.type !== 'mention') continue
+        const mention = seg.mention as Record<string, unknown> | undefined
+        const mentionType = (mention?.type as string | undefined) ?? 'unknown'
+        const targetId =
+          (mention?.page as { id?: string } | undefined)?.id ??
+          (mention?.database as { id?: string } | undefined)?.id ??
+          (mention?.user as { id?: string } | undefined)?.id
+        console.warn(
+          `${tag} mention found — page=${page.id.slice(0, 8)}… prop="${propName}" mention_type=${mentionType} target=${targetId ? targetId.slice(0, 8) + '…' : 'unknown'}`
+        )
+        total++
+      }
+    }
+  }
+  if (total === 0) {
+    console.log(`${tag} mention-probe: no mention objects in ${results.length} row(s)`)
+  } else {
+    console.warn(`${tag} mention-probe: ${total} mention object(s) found across ${results.length} row(s) — check above for details`)
+  }
+}
+
 async function queryDatabase(databaseId: string | undefined, label?: string): Promise<NotionResult[]> {
   const tag = label ? `[notion:${label}]` : '[notion]'
 
@@ -89,6 +122,11 @@ async function queryDatabase(databaseId: string | undefined, label?: string): Pr
   } else {
     console.warn(`${tag} DB ${idPreview} returned 0 rows — database may be empty or filter too restrictive`)
   }
+
+  // DIAGNOSTIC — temporary mention probe, remove after identifying object_not_found sources.
+  // Scans rich_text and title properties for @mention objects that may reference
+  // inaccessible blocks. Read-only. Does not modify results or mapper behavior.
+  probeMentions(results, tag)
 
   return results
 }
