@@ -31,23 +31,23 @@ function pressureColor(pressure?: string) {
 export function ContinuityCard({ item }: { item: ContinuityEvent }) {
   const itemImage = item.image || FALLBACK_IMAGES[Math.abs(item.id.charCodeAt(0)) % FALLBACK_IMAGES.length]
   const ownerName = item.owner?.name ?? ''
-  const tags = item.tags ?? []
+  const tags = (item.tags ?? []).slice(0, 2)
   const pulseColor = pressureColor(item.pressure)
   const isUnresolved = item.isNew || item.pressure === 'high'
-  const pressureLabel = item.pressure === 'high' ? 'High pressure' : 'Medium'
+  const pressureLabel = item.pressure === 'high' ? 'High' : 'Med'
 
   return (
-    <article className="overflow-hidden rounded-[20px] bg-[#FDFCFA] shadow-[0_6px_28px_rgba(0,0,0,0.09)]">
+    <article className="overflow-hidden rounded-[20px] bg-[#FDFCFA] shadow-[0_4px_20px_rgba(0,0,0,0.07)]">
       {/* Image header */}
-      <div className="relative h-[140px] w-full bg-[#D4C9B4]">
+      <div className="relative h-[148px] w-full bg-[#D4C9B4]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={itemImage} alt="" className="h-full w-full object-cover" />
         <div
           className="absolute inset-0"
-          style={{ background: 'linear-gradient(to top, rgba(8,6,4,0.40) 0%, transparent 60%)' }}
+          style={{ background: 'linear-gradient(to top, rgba(8,6,4,0.55) 0%, rgba(8,6,4,0.10) 55%, transparent 100%)' }}
         />
         {pulseColor && (
-          <span className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-black/38 px-2.5 py-1 backdrop-blur-sm">
+          <span className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 backdrop-blur-sm">
             <span
               className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
               style={{
@@ -61,30 +61,25 @@ export function ContinuityCard({ item }: { item: ContinuityEvent }) {
       </div>
 
       {/* Content */}
-      <div className="px-5 py-4">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            {ownerName && (
-              <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#C89B2F]">{ownerName}</span>
-            )}
-            {ownerName && <span className="text-[10px] text-[#D4C9B4]">·</span>}
-            <span className="text-[11px] text-[#8B847B]">{timeAgo(item.timestamp)}</span>
-          </div>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="mt-0.5 flex-shrink-0 text-[#B8A88A]">
-            <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+      <div className="px-5 pb-5 pt-4">
+        <div className="flex items-center gap-1.5">
+          {ownerName && (
+            <span className="text-[11px] font-semibold uppercase tracking-[0.07em] text-[#C89B2F]">{ownerName}</span>
+          )}
+          {ownerName && <span className="text-[10px] text-[#C8BFB0]">·</span>}
+          <span className="text-[11px] text-[#9B9187]">{timeAgo(item.timestamp)}</span>
         </div>
 
-        <h3 className="mt-2 text-[16px] font-semibold leading-snug tracking-[-0.2px] text-[#141210]">{item.headline}</h3>
+        <h3 className="mt-2 text-[17px] font-semibold leading-snug tracking-[-0.3px] text-[#141210]">{item.headline}</h3>
 
         {item.body && (
-          <p className="mt-1.5 text-[13px] leading-relaxed text-[#5E5348]">{item.body}</p>
+          <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-[#6B6560]">{item.body}</p>
         )}
 
         {tags.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
+          <div className="mt-3 flex gap-1.5">
             {tags.map((tag) => (
-              <span key={tag} className="rounded-full bg-[#EAE4DA] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#5E5348]">{tag}</span>
+              <span key={tag} className="rounded-full bg-[#EDEAE4] px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.07em] text-[#6B6560]">{tag}</span>
             ))}
           </div>
         )}
