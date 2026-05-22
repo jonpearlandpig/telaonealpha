@@ -36,43 +36,31 @@ function OperationCard({ item, onTap }: { item: OperationEntity; onTap?: () => v
   return (
     <button
       onClick={onTap}
-      className="relative w-full overflow-hidden rounded-[22px] shadow-[0_8px_40px_rgba(0,0,0,0.22)]"
-      style={{ height: '188px' }}
+      className="w-full overflow-hidden rounded-[20px] bg-[#FDFCFA] text-left shadow-[0_4px_20px_rgba(0,0,0,0.08)]"
     >
-      {/* Background image */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={image}
-        alt=""
-        className="absolute inset-0 h-full w-full object-cover"
-      />
-
-      {/* Cinematic dark gradient — bottom-heavy */}
-      <div
-        className="absolute inset-0"
-        style={{ background: 'linear-gradient(to top, rgba(8,6,4,0.92) 0%, rgba(8,6,4,0.38) 52%, rgba(0,0,0,0.06) 100%)' }}
-      />
-
-      {/* Warm gold edge tint */}
-      <div
-        className="absolute inset-0"
-        style={{ background: 'linear-gradient(135deg, rgba(200,155,47,0.08) 0%, transparent 50%)' }}
-      />
-
-      {/* Status — top right */}
-      <div className="absolute right-4 top-4">
-        <span className="flex items-center gap-1.5 rounded-full bg-black/35 px-2.5 py-1 backdrop-blur-sm">
-          <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
-          <span className="text-[10px] font-medium text-white/85 leading-none">{statusLabel}</span>
-        </span>
+      {/* Image */}
+      <div className="relative h-[136px] w-full bg-[#D4C9B4]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={image} alt="" className="h-full w-full object-cover" />
+        <div
+          className="absolute inset-0"
+          style={{ background: 'linear-gradient(to top, rgba(8,6,4,0.22) 0%, transparent 55%)' }}
+        />
       </div>
 
-      {/* Content — bottom */}
-      <div className="absolute bottom-0 left-0 right-0 px-5 pb-5">
-        <h3 className="text-[28px] font-semibold leading-none tracking-[-0.4px] text-white">{displayName}</h3>
+      {/* Operational panel */}
+      <div className="px-5 pb-5 pt-4">
+        <h3 className="text-[22px] font-semibold leading-tight tracking-[-0.3px] text-[#141210]">{displayName}</h3>
         {movement && (
-          <p className="mt-2 line-clamp-1 text-[13px] leading-none text-white/50">{movement}</p>
+          <p className="mt-1.5 line-clamp-2 text-[14px] leading-snug text-[#5E5348]">{movement}</p>
         )}
+        <div className="mt-3.5 flex items-center justify-between">
+          <span className="flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ backgroundColor: dotColor }} />
+            <span className="text-[11px] text-[#9B9187]">{statusLabel}</span>
+          </span>
+          <span className="text-[13px] font-medium text-[#C89B2F]">Review →</span>
+        </div>
       </div>
     </button>
   )
@@ -95,7 +83,7 @@ export function CrusadeOperationsRail({ items, onOperationTap }: { items: Operat
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5E5348]">Operations</h2>
         <button className="text-[11px] font-medium text-[#C89B2F]">View all</button>
       </div>
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3.5">
         {items.map((item) => (
           <OperationCard
             key={item.id}
