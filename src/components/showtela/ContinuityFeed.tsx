@@ -27,6 +27,12 @@ export function ContinuityFeed(props: Props) {
             <ContinuityCard item={item} />
           </button>
         ))}
+        {feed.length === 0 && (
+          <div className="rounded-[18px] border border-dashed border-[#D4C9B4] px-4 py-8 text-center">
+            <p className="text-[13px] font-medium text-[#8B847B]">No live continuity events yet.</p>
+            <p className="mt-1 text-[11px] text-[#A89880]">Authenticated operational updates will appear here.</p>
+          </div>
+        )}
       </div>
     </section>
   )

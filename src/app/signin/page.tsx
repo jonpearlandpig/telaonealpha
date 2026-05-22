@@ -1,14 +1,21 @@
-import { getSession } from '@/lib/auth'
+import { getGoogleRedirectUri, getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 
-const REDIRECT_URI = 'https://telaonealpha-jn9i.vercel.app/api/auth/callback'
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID ?? ''
 
 export default async function SignInPage() {
   const session = await getSession()
   if (session) redirect('/showtela')
 
-  const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=openid%20email%20profile&access_type=offline&prompt=select_account`
+  const googleAuthParams = new URLSearchParams({
+    client_id: CLIENT_ID,
+    redirect_uri: getGoogleRedirectUri(),
+    response_type: 'code',
+    scope: 'openid email profile',
+    access_type: 'offline',
+    prompt: 'select_account',
+  })
+  const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?${googleAuthParams.toString()}`
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-[#F8F6F2] px-6">

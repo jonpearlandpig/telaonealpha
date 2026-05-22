@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { isLikelyNotionDatabaseId, resolveShowTelaDatabase } from '@/lib/showtela/env'
 
 const NOTION_VERSION = '2022-06-28'
 const headers = () => ({
@@ -34,12 +35,20 @@ type NotionPage = { id: string; properties?: Record<string, Record<string, unkno
 
 async function queryDB(dbId: string | undefined, filter?: Record<string, unknown>): Promise<NotionPage[]> {
   if (!dbId) return []
+  if (!isLikelyNotionDatabaseId(dbId)) {
+    console.error('[showtela-person] invalid Notion database ID format')
+    return []
+  }
   const body: Record<string, unknown> = { page_size: 50 }
   if (filter) body.filter = filter
   const res = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
     method: 'POST', headers: headers(), body: JSON.stringify(body), cache: 'no-store',
   })
-  if (!res.ok) return []
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    console.error('[showtela-person] Notion query failed:', res.status, body.slice(0, 300))
+    return []
+  }
   const data = await res.json() as { results?: NotionPage[] }
   return data.results ?? []
 }
@@ -48,9 +57,9 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const name = searchParams.get('name') ?? ''
 
-  const unresolvedDb = process.env.NOTION_CRUSADE_UNRESOLVED_DB_ID
-  const eventsDb = process.env.NOTION_CRUSADE_EVENTS_DB_ID
-  const peopleDb = process.env.NOTION_CRUSADE_PEOPLE_DB_ID
+  const unresolvedDb = resolveShowTelaDatabase('unresolved').value
+  const eventsDb = resolveShowTelaDatabase('continuity').value
+  const peopleDb = resolveShowTelaDatabase('people').value
 
   const [allUnresolved, allFeed, allPeople] = await Promise.all([
     queryDB(unresolvedDb),

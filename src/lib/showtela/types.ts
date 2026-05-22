@@ -1,13 +1,12 @@
 export type PressureLevel = 'low' | 'medium' | 'high'
 
-export type DataSource = 'supabase' | 'notion' | 'mock'
+export type DataSource = 'supabase' | 'notion' | 'empty'
 
 export type DiagnosticState =
   | 'persistence-connected'
   | 'persistence-stale'
   | 'persistence-failed'
   | 'notion-unavailable'
-  | 'mock-data-active'
 
 export type PersonEntity = {
   id: string
@@ -96,6 +95,25 @@ export type ShowTelaHomeData = {
   runtimeTimeline: RuntimeTimelineItem[]
   source?: DataSource
   diagnosticState?: DiagnosticState
+  hydration?: ShowTelaHydrationSummary
+}
+
+export type ShowTelaHydrationSummary = {
+  connectedToNotion: boolean
+  connectedToSupabase: boolean
+  counts: {
+    people: number
+    operations: number
+    continuity: number
+    unresolved: number
+    artifacts: number
+  }
+  lastHydratedAt: string
+  cacheSource: DataSource
+  supabaseWriteOk?: boolean
+  durableArtifactsCompatible?: boolean
+  missingRequiredEnv?: string[]
+  invalidDatabaseIds?: string[]
 }
 
 export type RuntimeTimelineItem = {

@@ -100,12 +100,12 @@ export function ShowTelaShell({ vm, onPearlDrop, user }: { vm: ShowTelaViewModel
         <div className="px-5 pt-14">
           <div className="flex flex-col items-center py-8">
             <div className="relative h-20 w-20 overflow-hidden rounded-full border-2 border-yellow-500 bg-stone-800">
-              {user?.image ? <img src={user.image} alt={user.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-yellow-200">{user?.name?.slice(0,1) ?? 'J'}</div>}
+              {user?.image ? <img src={user.image} alt={user.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-yellow-200">{user?.name?.slice(0,1) ?? 'S'}</div>}
               <button onClick={() => openVoice(user?.name)} className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-stone-900">
                 <span className="text-base font-bold text-white">+</span>
               </button>
             </div>
-            <h2 className="mt-3 text-xl font-semibold text-stone-900">{user?.name ?? 'Jon Hartman'}</h2>
+            <h2 className="mt-3 text-xl font-semibold text-stone-900">{user?.name ?? 'Signed in user'}</h2>
             <p className="text-sm text-stone-500">{user?.email}</p>
           </div>
           <a href="/api/auth/signout" className="flex items-center justify-between rounded-2xl bg-white px-4 py-3.5 shadow-sm">

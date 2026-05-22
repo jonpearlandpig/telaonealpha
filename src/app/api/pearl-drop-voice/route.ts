@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { persistDurableContinuity } from '@/lib/runtime/durableMemory'
 import { deterministicArtifactId } from '@/lib/artifacts/artifactStore'
+import { resolveShowTelaDatabase } from '@/lib/showtela/env'
 
 const NOTION_VERSION = '2022-06-28'
 const notionHeaders = () => ({
@@ -49,7 +50,12 @@ export async function POST(req: NextRequest) {
   if (!transcript?.trim()) return NextResponse.json({ error: 'No transcript' }, { status: 400 })
 
   const parsed = await askClaude(transcript)
-  const inboxDb = process.env.NOTION_TELA_INBOX_DB_ID ?? '004750ec83914561b1d20b669dd00a3f'
+  const inbox = resolveShowTelaDatabase('inbox')
+  const inboxDb = inbox.value
+  if (!inboxDb) {
+    console.error('[pearl-drop-voice] missing Notion inbox database env var:', inbox.key)
+    return NextResponse.json({ error: 'Missing Notion inbox database env var', required: inbox.key }, { status: 500 })
+  }
 
   const res = await fetch('https://api.notion.com/v1/pages', {
     method: 'POST',

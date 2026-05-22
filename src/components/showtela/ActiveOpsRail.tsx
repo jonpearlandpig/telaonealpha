@@ -66,12 +66,11 @@ export function ActiveOpsRail(
             </button>
           )
         })}
-        <button className="flex w-[80px] flex-shrink-0 flex-col items-center gap-1.5 p-0">
-          <div className="flex h-[76px] w-[76px] items-center justify-center rounded-full border-[2px] border-dashed border-[#D4C9B4]">
-            <span className="text-[28px] font-thin text-[#8B847B]">+</span>
+        {people.length === 0 && (
+          <div className="w-full rounded-[18px] border border-dashed border-[#D4C9B4] px-4 py-5 text-center">
+            <p className="text-[13px] font-medium text-[#8B847B]">No active operators yet.</p>
           </div>
-          <p className="text-[12px] font-medium text-[#8B847B]">Add</p>
-        </button>
+        )}
       </div>
     </section>
   )

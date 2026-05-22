@@ -4,7 +4,15 @@ import { getShowTelaHome } from '@/lib/showtela/hydration'
 export async function GET() {
   const data = await getShowTelaHome()
   return NextResponse.json({
-    isMockData: data.activeOps[0]?.name === 'Jon',
+    hasLiveData: Boolean(
+      data.activeOps.length ||
+      data.fluencyPartners.length ||
+      data.operations.length ||
+      data.unresolved.length ||
+      data.continuityFeed.length
+    ),
+    source: data.source,
+    diagnosticState: data.diagnosticState,
     activeOps: data.activeOps.map(p => ({ name: p.name, role: p.role })),
     fluencyPartners: data.fluencyPartners.map(p => ({ name: p.name, role: p.role })),
     operations: data.operations.map(o => ({ name: o.title, status: o.status })),

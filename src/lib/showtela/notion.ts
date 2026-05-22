@@ -1,11 +1,18 @@
 import { Client } from '@notionhq/client'
+import { SHOWTELA_DATABASES, isLikelyNotionDatabaseId, resolveShowTelaDatabase } from './env'
 
 const notion = process.env.NOTION_API_KEY ? new Client({ auth: process.env.NOTION_API_KEY }) : null
 
 type NotionResult = { id: string; properties?: Record<string, Record<string, unknown>>; last_edited_time?: string }
-
-function envId(keys: string[]) {
-  return keys.map((k) => process.env[k]).find(Boolean)
+export type ShowTelaNotionProbe = {
+  key: string
+  label: string
+  envKey: string
+  configured: boolean
+  validId: boolean
+  status: 'ok' | 'missing_api_key' | 'missing_env' | 'malformed_db_id' | 'unauthorized' | 'forbidden' | 'not_found' | 'http_error' | 'network_error' | 'parse_error'
+  rowCount: number
+  error?: string
 }
 
 async function queryDatabase(databaseId: string | undefined, label?: string): Promise<NotionResult[]> {
@@ -18,6 +25,11 @@ async function queryDatabase(databaseId: string | undefined, label?: string): Pr
 
   if (!databaseId) {
     console.error(`${tag} database ID is undefined — check env var`)
+    return []
+  }
+
+  if (!isLikelyNotionDatabaseId(databaseId)) {
+    console.error(`${tag} invalid Notion database ID format`)
     return []
   }
 
@@ -82,38 +94,69 @@ async function queryDatabase(databaseId: string | undefined, label?: string): Pr
 }
 
 export async function getPeople() {
-  return queryDatabase(envId([
-    'NOTION_SHOWTELA_PEOPLE_DB_ID',
-    'NOTION_CRUSADE_PEOPLE_DB_ID',
-  ]), 'people')
+  return queryDatabase(resolveShowTelaDatabase('people').value, 'people')
 }
 
 export async function getOperations() {
-  return queryDatabase(envId([
-    'NOTION_SHOWTELA_OPERATIONS_DB_ID',
-    'NOTION_CRUSADE_OPERATIONS_DB_ID',
-  ]), 'operations')
+  return queryDatabase(resolveShowTelaDatabase('operations').value, 'operations')
 }
 
 export async function getContinuityEvents() {
-  return queryDatabase(envId([
-    'NOTION_SHOWTELA_CONTINUITY_DB_ID',
-    'NOTION_CRUSADE_CONTINUITY_DB_ID',
-    'NOTION_CRUSADE_EVENTS_DB_ID',
-    'NOTION_SHOWTELA_EVENTS_DB_ID',
-  ]), 'events')
+  return queryDatabase(resolveShowTelaDatabase('continuity').value, 'events')
 }
 
 export async function getUnresolved() {
-  return queryDatabase(envId([
-    'NOTION_SHOWTELA_UNRESOLVED_DB_ID',
-    'NOTION_CRUSADE_UNRESOLVED_DB_ID',
-  ]), 'unresolved')
+  return queryDatabase(resolveShowTelaDatabase('unresolved').value, 'unresolved')
 }
 
 export async function getArtifacts() {
-  return queryDatabase(envId([
-    'NOTION_SHOWTELA_ARTIFACTS_DB_ID',
-    'NOTION_CRUSADE_ARTIFACTS_DB_ID',
-  ]), 'artifacts')
+  return queryDatabase(resolveShowTelaDatabase('artifacts').value, 'artifacts')
+}
+
+export async function probeShowTelaNotionDatabases(): Promise<ShowTelaNotionProbe[]> {
+  return Promise.all(
+    (['people', 'operations', 'continuity', 'unresolved', 'artifacts'] as const).map(async (key) => {
+      const definition = SHOWTELA_DATABASES[key]
+      const resolved = resolveShowTelaDatabase(key)
+      const base = {
+        key,
+        label: definition.label,
+        envKey: resolved.key,
+        configured: Boolean(resolved.value),
+        validId: Boolean(resolved.value) && isLikelyNotionDatabaseId(resolved.value),
+        rowCount: 0,
+      }
+
+      if (!process.env.NOTION_API_KEY) return { ...base, status: 'missing_api_key' as const, error: 'NOTION_API_KEY is not set' }
+      if (!resolved.value) return { ...base, status: 'missing_env' as const, error: `${resolved.key} is not set` }
+      if (!isLikelyNotionDatabaseId(resolved.value)) return { ...base, status: 'malformed_db_id' as const, error: `${resolved.key} is not a Notion database ID` }
+
+      try {
+        const res = await fetch(`https://api.notion.com/v1/databases/${resolved.value}/query`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${process.env.NOTION_API_KEY}`,
+            'Notion-Version': '2022-06-28',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ page_size: 1 }),
+          cache: 'no-store',
+        })
+
+        if (!res.ok) {
+          const body = await res.text().catch(() => '')
+          const status = res.status === 401 ? 'unauthorized'
+            : res.status === 403 ? 'forbidden'
+            : res.status === 404 ? 'not_found'
+            : 'http_error'
+          return { ...base, status, error: body.slice(0, 300) } as ShowTelaNotionProbe
+        }
+
+        const data = await res.json() as { results?: unknown[] }
+        return { ...base, status: 'ok' as const, rowCount: data.results?.length ?? 0 }
+      } catch (err) {
+        return { ...base, status: 'network_error' as const, error: String(err) }
+      }
+    })
+  )
 }

@@ -1,34 +1,54 @@
-import { getArtifacts, getContinuityEvents, getOperations, getPeople, getUnresolved } from './notion'
-import { mockShowTelaHomeData } from './mockData'
+import { getArtifacts, getContinuityEvents, getOperations, getPeople, getUnresolved, probeShowTelaNotionDatabases } from './notion'
 import { mapArtifact, mapContinuityEvent, mapOperation, mapPerson, mapUnresolved } from './notionMappers'
 import { calculatePressure } from './pressure'
+import { assertShowTelaStartupEnv, getShowTelaEnvStatus, logShowTelaEnvStatus } from './env'
 import { threadContinuity } from './threadContinuity'
-import { readShowTelaCache, writeShowTelaCache } from '@/lib/supabase/operationalCache'
-import type { ShowTelaHomeData } from './types'
+import { getShowTelaCacheSchemaCompatibility, readShowTelaCache, writeShowTelaCache } from '@/lib/supabase/operationalCache'
+import type { ShowTelaHomeData, ShowTelaHydrationSummary } from './types'
 
-const DEFAULT_OPERATIONS = ['Travel', 'Logistics', 'Venues', 'Hospitality', 'Security']
+function emptyShowTelaHomeData(): ShowTelaHomeData {
+  return {
+    activeOps: [],
+    fluencyPartners: [],
+    operations: [],
+    unresolved: [],
+    continuityFeed: [],
+    pressureSummary: { total: 0, high: 0, medium: 0 },
+    runtimeTimeline: [],
+  }
+}
+
+function countsFor(data: ShowTelaHomeData) {
+  return {
+    people: data.activeOps.length + data.fluencyPartners.length,
+    operations: data.operations.length,
+    continuity: data.continuityFeed.length,
+    unresolved: data.unresolved.length,
+    artifacts: 0,
+  }
+}
+
+function hydrationSummary(
+  data: ShowTelaHomeData,
+  input: Partial<ShowTelaHydrationSummary> & Pick<ShowTelaHydrationSummary, 'cacheSource'>
+): ShowTelaHydrationSummary {
+  const env = getShowTelaEnvStatus()
+  return {
+    connectedToNotion: input.connectedToNotion ?? false,
+    connectedToSupabase: input.connectedToSupabase ?? false,
+    counts: input.counts ?? countsFor(data),
+    lastHydratedAt: input.lastHydratedAt ?? new Date().toISOString(),
+    cacheSource: input.cacheSource,
+    supabaseWriteOk: input.supabaseWriteOk,
+    durableArtifactsCompatible: getShowTelaCacheSchemaCompatibility().compatible,
+    missingRequiredEnv: env.missingRequired,
+    invalidDatabaseIds: env.invalidDatabaseIds,
+  }
+}
 
 async function fetchFromNotion(): Promise<ShowTelaHomeData | null> {
-  // Log env var presence before any fetch
-  const envReport = {
-    NOTION_API_KEY: !!process.env.NOTION_API_KEY,
-    NOTION_SHOWTELA_PEOPLE_DB_ID: !!process.env.NOTION_SHOWTELA_PEOPLE_DB_ID,
-    NOTION_CRUSADE_PEOPLE_DB_ID: !!process.env.NOTION_CRUSADE_PEOPLE_DB_ID,
-    NOTION_SHOWTELA_OPERATIONS_DB_ID: !!process.env.NOTION_SHOWTELA_OPERATIONS_DB_ID,
-    NOTION_CRUSADE_OPERATIONS_DB_ID: !!process.env.NOTION_CRUSADE_OPERATIONS_DB_ID,
-    NOTION_SHOWTELA_CONTINUITY_DB_ID: !!process.env.NOTION_SHOWTELA_CONTINUITY_DB_ID,
-    NOTION_CRUSADE_CONTINUITY_DB_ID: !!process.env.NOTION_CRUSADE_CONTINUITY_DB_ID,
-    NOTION_CRUSADE_EVENTS_DB_ID: !!process.env.NOTION_CRUSADE_EVENTS_DB_ID,
-    NOTION_SHOWTELA_UNRESOLVED_DB_ID: !!process.env.NOTION_SHOWTELA_UNRESOLVED_DB_ID,
-    NOTION_CRUSADE_UNRESOLVED_DB_ID: !!process.env.NOTION_CRUSADE_UNRESOLVED_DB_ID,
-    NOTION_SHOWTELA_ARTIFACTS_DB_ID: !!process.env.NOTION_SHOWTELA_ARTIFACTS_DB_ID,
-    NOTION_CRUSADE_ARTIFACTS_DB_ID: !!process.env.NOTION_CRUSADE_ARTIFACTS_DB_ID,
-  }
-  const missingVars = Object.entries(envReport).filter(([, v]) => !v).map(([k]) => k)
-  console.log('[showtela:fetchFromNotion] env vars:', envReport)
-  if (missingVars.length) {
-    console.warn('[showtela:fetchFromNotion] missing env vars:', missingVars)
-  }
+  assertShowTelaStartupEnv('showtela:startup')
+  logShowTelaEnvStatus('showtela:fetchFromNotion')
 
   const [peopleRaw, operationsRaw, eventsRaw, unresolvedRaw, artifactsRaw] = await Promise.all([
     getPeople(), getOperations(), getContinuityEvents(), getUnresolved(), getArtifacts(),
@@ -42,9 +62,11 @@ async function fetchFromNotion(): Promise<ShowTelaHomeData | null> {
     artifacts: artifactsRaw.length,
   }
   console.log('[showtela:fetchFromNotion] row counts:', counts)
+  const probes = await probeShowTelaNotionDatabases()
+  console.log('[showtela:fetchFromNotion] Notion probes:', probes.map(p => ({ label: p.label, envKey: p.envKey, status: p.status, rowCount: p.rowCount })))
 
   if (!peopleRaw.length && !operationsRaw.length && !eventsRaw.length && !unresolvedRaw.length) {
-    console.error('[showtela:fetchFromNotion] all databases returned 0 rows — ingestion failed. Missing env vars:', missingVars)
+    console.error('[showtela:fetchFromNotion] all live Notion databases returned 0 rows')
     return null
   }
 
@@ -69,13 +91,6 @@ async function fetchFromNotion(): Promise<ShowTelaHomeData | null> {
       .sort((a, b) => new Date(b.timestamp ?? 0).getTime() - new Date(a.timestamp ?? 0).getTime())
   )
 
-  const operationsFilled = [...operations]
-  for (const title of DEFAULT_OPERATIONS) {
-    if (!operationsFilled.find(o => o.title.toLowerCase() === title.toLowerCase())) {
-      operationsFilled.push({ id: title.toLowerCase(), title, status: 'Unknown', unresolvedCount: 0, latestMovement: 'No movement logged' })
-    }
-  }
-
   const high = unresolved.filter(u => u.severity === 'high').length
   const medium = unresolved.filter(u => u.severity === 'medium').length
   const pressure = calculatePressure(unresolved)
@@ -95,11 +110,23 @@ async function fetchFromNotion(): Promise<ShowTelaHomeData | null> {
   return {
     activeOps: people.filter(p => p.active).slice(0, 12),
     fluencyPartners: people.filter(p => p.partner).slice(0, 12),
-    operations: operationsFilled,
+    operations,
     unresolved,
     continuityFeed,
     pressureSummary: { total: Math.max(unresolved.length, pressure.score), high, medium },
     runtimeTimeline,
+    hydration: hydrationSummary(emptyShowTelaHomeData(), {
+      connectedToNotion: true,
+      connectedToSupabase: false,
+      counts: {
+        people: peopleRaw.length,
+        operations: operationsRaw.length,
+        continuity: eventsRaw.length,
+        unresolved: unresolvedRaw.length,
+        artifacts: artifactsRaw.length,
+      },
+      cacheSource: 'notion',
+    }),
   }
 }
 
@@ -111,7 +138,12 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
     const cached = await readShowTelaCache()
     if (cached) {
       console.log('[showtela] hydrated from Supabase cache')
-      return { ...cached, source: 'supabase', diagnosticState: 'persistence-connected' }
+      return {
+        ...cached,
+        source: 'supabase',
+        diagnosticState: 'persistence-connected',
+        hydration: hydrationSummary(cached, { connectedToSupabase: true, cacheSource: 'supabase' }),
+      }
     }
     console.log('[showtela] Supabase cache empty — falling through to Notion')
   } catch (err) {
@@ -123,16 +155,18 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
   try {
     const data = await fetchFromNotion()
     if (data) {
-      writeShowTelaCache(data).catch(err => console.error('[showtela] cache write failed:', String(err)))
+      writeShowTelaCache(data)
+        .then(() => console.log('[showtela] hydration success: Notion fetched and Supabase cache write completed'))
+        .catch(err => console.error('[showtela] cache write failed:', String(err)))
       return { ...data, source: 'notion', diagnosticState: 'persistence-connected' }
     }
   } catch (err) {
     console.error('[showtela] Notion fetch threw:', String(err))
   }
 
-  // 3. Mock — explicit diagnostic, no silent fallback
-  console.warn('[showtela] all sources failed — serving mock data. Set NOTION_*_DB_ID env vars.')
-  return { ...mockShowTelaHomeData, source: 'mock', diagnosticState: 'mock-data-active' }
+  console.warn('[showtela] no live ShowTELA data available — serving empty state')
+  const empty = emptyShowTelaHomeData()
+  return { ...empty, source: 'empty', diagnosticState: 'notion-unavailable', hydration: hydrationSummary(empty, { cacheSource: 'empty' }) }
 }
 
 // API route path: always fetch fresh from Notion, write to Supabase.
@@ -141,13 +175,19 @@ export async function refreshShowTelaFromNotion(): Promise<ShowTelaHomeData> {
     const data = await fetchFromNotion()
     if (data) {
       await writeShowTelaCache(data)
+      console.log('[showtela] hydration success: refreshed from Notion and wrote durable_artifacts')
       return { ...data, source: 'notion', diagnosticState: 'persistence-connected' }
     }
     // Notion empty — serve stale Supabase if available
     console.warn('[showtela] Notion empty on refresh — attempting Supabase fallback')
     const cached = await readShowTelaCache()
     if (cached) {
-      return { ...cached, source: 'supabase', diagnosticState: 'notion-unavailable' }
+      return {
+        ...cached,
+        source: 'supabase',
+        diagnosticState: 'notion-unavailable',
+        hydration: hydrationSummary(cached, { connectedToSupabase: true, cacheSource: 'supabase' }),
+      }
     }
   } catch (err) {
     console.error('[showtela] refresh error:', String(err))
@@ -155,13 +195,54 @@ export async function refreshShowTelaFromNotion(): Promise<ShowTelaHomeData> {
     try {
       const cached = await readShowTelaCache()
       if (cached) {
-        return { ...cached, source: 'supabase', diagnosticState: 'notion-unavailable' }
+        return {
+          ...cached,
+          source: 'supabase',
+          diagnosticState: 'notion-unavailable',
+          hydration: hydrationSummary(cached, { connectedToSupabase: true, cacheSource: 'supabase' }),
+        }
       }
     } catch {
       // both failed
     }
   }
 
-  console.warn('[showtela] refresh: all sources failed — serving mock data')
-  return { ...mockShowTelaHomeData, source: 'mock', diagnosticState: 'mock-data-active' }
+  console.warn('[showtela] refresh: no live ShowTELA data available — serving empty state')
+  const empty = emptyShowTelaHomeData()
+  return { ...empty, source: 'empty', diagnosticState: 'notion-unavailable', hydration: hydrationSummary(empty, { cacheSource: 'empty' }) }
+}
+
+export async function forceRefreshShowTelaFromNotion(): Promise<{ data: ShowTelaHomeData; summary: ShowTelaHydrationSummary; probes: Awaited<ReturnType<typeof probeShowTelaNotionDatabases>> }> {
+  const probes = await probeShowTelaNotionDatabases()
+  console.log('[showtela:force-refresh] Notion probes:', probes.map(p => ({ label: p.label, envKey: p.envKey, status: p.status, rowCount: p.rowCount })))
+
+  const data = await fetchFromNotion()
+  if (!data) {
+    const empty = emptyShowTelaHomeData()
+    const summary = hydrationSummary(empty, { cacheSource: 'empty', connectedToNotion: false })
+    console.warn('[showtela:force-refresh] no live Notion data returned')
+    return { data: { ...empty, source: 'empty', diagnosticState: 'notion-unavailable', hydration: summary }, summary, probes }
+  }
+
+  let supabaseWriteOk = false
+  try {
+    await writeShowTelaCache(data)
+    supabaseWriteOk = true
+    console.log('[showtela:force-refresh] hydration success: Notion fetched and durable_artifacts write completed')
+  } catch (err) {
+    console.error('[showtela:force-refresh] Supabase write failed:', String(err))
+  }
+
+  const summary = hydrationSummary(data, {
+    cacheSource: 'notion',
+    connectedToNotion: true,
+    connectedToSupabase: supabaseWriteOk,
+    supabaseWriteOk,
+  })
+
+  return {
+    data: { ...data, source: 'notion', diagnosticState: supabaseWriteOk ? 'persistence-connected' : 'persistence-failed', hydration: summary },
+    summary,
+    probes,
+  }
 }

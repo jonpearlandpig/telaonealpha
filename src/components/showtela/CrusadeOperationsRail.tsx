@@ -42,6 +42,11 @@ export function CrusadeOperationsRail({ items, onOperationTap }: { items: Operat
             <span className="mt-0.5 text-[10px] text-[#5E5348]">More</span>
           </button>
         )}
+        {items.length === 0 && (
+          <div className="w-full rounded-[18px] border border-dashed border-[#D4C9B4] px-4 py-5 text-center">
+            <p className="text-[13px] font-medium text-[#8B847B]">No operations yet.</p>
+          </div>
+        )}
       </div>
     </section>
   )

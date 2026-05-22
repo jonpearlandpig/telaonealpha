@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSessionCookie } from '@/lib/auth'
-
-const REDIRECT_URI = 'https://telaonealpha-jn9i.vercel.app/api/auth/callback'
+import {
+  createSessionCookie,
+  getGoogleRedirectUri,
+  SESSION_COOKIE_NAME,
+  shouldUseSecureSessionCookie,
+} from '@/lib/auth'
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code')
@@ -15,13 +18,16 @@ export async function GET(req: NextRequest) {
         code,
         client_id: process.env.GOOGLE_CLIENT_ID!,
         client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-        redirect_uri: REDIRECT_URI,
+        redirect_uri: getGoogleRedirectUri(),
         grant_type: 'authorization_code',
       }),
     })
 
     const tokens = await tokenRes.json() as { access_token?: string; error?: string }
-    if (!tokens.access_token) return NextResponse.redirect(new URL('/signin?error=no_token', req.url))
+    if (!tokens.access_token) {
+      console.error('Google token exchange failed:', tokens.error ?? 'missing_access_token')
+      return NextResponse.redirect(new URL('/signin?error=no_token', req.url))
+    }
 
     const userRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
@@ -36,9 +42,10 @@ export async function GET(req: NextRequest) {
     })
 
     const response = NextResponse.redirect(new URL('/showtela', req.url))
-    response.cookies.set('showtela_session', session, {
+    response.cookies.set(SESSION_COOKIE_NAME, session, {
       httpOnly: true,
-      secure: true,
+      secure: shouldUseSecureSessionCookie(),
+      sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
     })

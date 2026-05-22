@@ -84,6 +84,11 @@ export function FluencyPartnersRail(
             <p className="text-[9px] font-medium text-[#6E6A63]">More</p>
           </button>
         )}
+        {people.length === 0 && (
+          <div className="w-full rounded-[18px] border border-dashed border-[#D4C9B4] px-4 py-4 text-center">
+            <p className="text-[13px] font-medium text-[#8B847B]">No fluency partners yet.</p>
+          </div>
+        )}
       </div>
     </section>
   )

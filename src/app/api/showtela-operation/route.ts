@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { isLikelyNotionDatabaseId, resolveShowTelaDatabase } from '@/lib/showtela/env'
 
 const NOTION_VERSION = '2022-06-28'
 const headers = () => ({ Authorization: `Bearer ${process.env.NOTION_API_KEY}`, 'Notion-Version': NOTION_VERSION, 'Content-Type': 'application/json' })
@@ -16,8 +17,16 @@ type NotionPage = { id: string; properties?: Record<string, Record<string, unkno
 
 async function queryDB(dbId: string | undefined): Promise<NotionPage[]> {
   if (!dbId) return []
+  if (!isLikelyNotionDatabaseId(dbId)) {
+    console.error('[showtela-operation] invalid Notion database ID format')
+    return []
+  }
   const res = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, { method: 'POST', headers: headers(), body: JSON.stringify({ page_size: 50 }), cache: 'no-store' })
-  if (!res.ok) return []
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    console.error('[showtela-operation] Notion query failed:', res.status, body.slice(0, 300))
+    return []
+  }
   const data = await res.json() as { results?: NotionPage[] }
   return data.results ?? []
 }
@@ -27,8 +36,8 @@ export async function GET(request: Request) {
   const name = searchParams.get('name') ?? ''
 
   const [allOps, allUnresolved] = await Promise.all([
-    queryDB(process.env.NOTION_CRUSADE_OPERATIONS_DB_ID),
-    queryDB(process.env.NOTION_CRUSADE_UNRESOLVED_DB_ID),
+    queryDB(resolveShowTelaDatabase('operations').value),
+    queryDB(resolveShowTelaDatabase('unresolved').value),
   ])
 
   const op = allOps.find((o) => richText(o.properties?.['Name']).toLowerCase().includes(name.toLowerCase()))

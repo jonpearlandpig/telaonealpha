@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { normalizeContinuityEvent } from '@/lib/showtela/normalizeContinuityEvent'
+import { resolveShowTelaDatabase } from '@/lib/showtela/env'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,8 +36,14 @@ export async function POST() {
     return NextResponse.json({ error: 'NOTION_API_KEY not set' }, { status: 500 })
   }
 
-  const inboxDb = process.env.NOTION_TELA_INBOX_DB_ID ?? '004750ec83914561b1d20b669dd00a3f'
-  const continuityDb = process.env.NOTION_SHOWTELA_FEED_DB_ID ?? '985c3dd540d64250836a385a0a4e5091'
+  const inbox = resolveShowTelaDatabase('inbox')
+  const continuity = resolveShowTelaDatabase('continuity')
+  const inboxDb = inbox.value
+  const continuityDb = continuity.value
+  if (!inboxDb || !continuityDb) {
+    console.error('[PROMOTION] missing Notion database env vars:', { inbox: inbox.key, continuity: continuity.key })
+    return NextResponse.json({ error: 'Missing Notion database env vars', required: [inbox.key, continuity.key] }, { status: 500 })
+  }
   console.log('[PROMOTION] targeting continuity DB:', continuityDb.slice(0, 8) + '…')
 
   // 1. Fetch newest inbox row

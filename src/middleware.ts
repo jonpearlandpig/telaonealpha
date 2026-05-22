@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { SESSION_COOKIE_NAME } from './lib/auth-config'
 
 export function middleware(req: NextRequest) {
-  const session = req.cookies.get('showtela_session')
+  const session = req.cookies.get(SESSION_COOKIE_NAME)
   const isLoggedIn = !!session?.value
   const isOnSignIn = req.nextUrl.pathname.startsWith('/signin')
   const isOnShowtela = req.nextUrl.pathname.startsWith('/showtela')

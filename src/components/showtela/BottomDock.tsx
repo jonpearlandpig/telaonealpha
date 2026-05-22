@@ -57,7 +57,7 @@ export function BottomDock({ activeTab, onTabChange, userImage, userName, onPear
             <div className="h-7 w-7 overflow-hidden rounded-full border-[2px]" style={{ borderColor: tab === 'profile' ? gold : 'transparent' }}>
               {userImage
                 ? <img src={userImage} alt={userName ?? 'Profile'} className="h-full w-full object-cover" />
-                : <div className="flex h-full w-full items-center justify-center bg-[#1A1712] text-[11px] font-semibold text-[#F8E1B0]">{userName?.slice(0,1) ?? 'J'}</div>
+                : <div className="flex h-full w-full items-center justify-center bg-[#1A1712] text-[11px] font-semibold text-[#F8E1B0]">{userName?.slice(0,1) ?? 'S'}</div>
               }
             </div>
             <span className="absolute right-2 top-0 h-2.5 w-2.5 rounded-full border-[1.5px] border-[#F8F6F2] bg-[#C89B2F]" />

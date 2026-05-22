@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
+import { getShowTelaEnvStatus, isLikelyNotionDatabaseId, resolveShowTelaDatabase } from '@/lib/showtela/env'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,6 +25,9 @@ async function probeNotionDB(label: string, envKey: string, dbId: string | undef
   }
   if (!dbId) {
     return { ...base, status: 'missing_env', error: `${envKey} is not set` }
+  }
+  if (!isLikelyNotionDatabaseId(dbId)) {
+    return { ...base, status: 'http_error', error: `${envKey} is not a valid Notion database id` }
   }
 
   let res: Response
@@ -72,15 +76,9 @@ async function probeNotionDB(label: string, envKey: string, dbId: string | undef
   return { ...base, httpStatus: res.status, status: 'ok', rowCount: results.length, propertySchema }
 }
 
-function resolveEnv(keys: string[]): { key: string; value: string | undefined } {
-  for (const key of keys) {
-    if (process.env[key]) return { key, value: process.env[key] }
-  }
-  return { key: keys[0], value: undefined }
-}
-
 export async function GET() {
   const e = process.env
+  const showTelaEnv = getShowTelaEnvStatus()
 
   // Env inventory
   const envInventory = {
@@ -89,11 +87,11 @@ export async function GET() {
     SUPABASE_URL: !!e.SUPABASE_URL,
     SUPABASE_SERVICE_ROLE_KEY: !!e.SUPABASE_SERVICE_ROLE_KEY,
     databases: {
-      people: resolveEnv(['NOTION_SHOWTELA_PEOPLE_DB_ID', 'NOTION_CRUSADE_PEOPLE_DB_ID']),
-      operations: resolveEnv(['NOTION_SHOWTELA_OPERATIONS_DB_ID', 'NOTION_CRUSADE_OPERATIONS_DB_ID']),
-      events: resolveEnv(['NOTION_SHOWTELA_CONTINUITY_DB_ID', 'NOTION_CRUSADE_CONTINUITY_DB_ID', 'NOTION_CRUSADE_EVENTS_DB_ID', 'NOTION_SHOWTELA_EVENTS_DB_ID']),
-      unresolved: resolveEnv(['NOTION_SHOWTELA_UNRESOLVED_DB_ID', 'NOTION_CRUSADE_UNRESOLVED_DB_ID']),
-      artifacts: resolveEnv(['NOTION_SHOWTELA_ARTIFACTS_DB_ID', 'NOTION_CRUSADE_ARTIFACTS_DB_ID']),
+      people: resolveShowTelaDatabase('people'),
+      operations: resolveShowTelaDatabase('operations'),
+      events: resolveShowTelaDatabase('continuity'),
+      unresolved: resolveShowTelaDatabase('unresolved'),
+      artifacts: resolveShowTelaDatabase('artifacts'),
     },
   }
 
@@ -108,7 +106,7 @@ export async function GET() {
 
   const probes = { people, operations, events, unresolved, artifacts }
 
-  // isMockData determination
+  // Live data determination
   const allEmpty = [people, operations, events, unresolved].every(p => p.rowCount === 0)
   const anyPermissionFailure = [people, operations, events, unresolved].some(p =>
     p.status === 'unauthorized' || p.status === 'forbidden'
@@ -116,7 +114,7 @@ export async function GET() {
   const anyMissing = [people, operations, events, unresolved].some(p =>
     p.status === 'missing_env' || p.status === 'missing_api_key'
   )
-  const isMockData = allEmpty
+  const hasLiveData = !allEmpty
 
   // Supabase connectivity — probe each table and known RPC/endpoint
   type SupabaseProbeResult = { status: 'ok' | 'missing_env' | 'error' | 'not_found'; rowCount?: number; error: string | null; path: string }
@@ -195,14 +193,16 @@ export async function GET() {
   if (!e.NOTION_API_KEY) issues.push('NOTION_API_KEY is not set')
   if (anyPermissionFailure) issues.push('One or more Notion databases returned 401/403 — check integration permissions')
   if (anyMissing && e.NOTION_API_KEY) issues.push('One or more database ID env vars are missing')
+  if (showTelaEnv.invalidDatabaseIds.length) issues.push(`Invalid Notion database ID format: ${showTelaEnv.invalidDatabaseIds.join(', ')}`)
   if (allEmpty && e.NOTION_API_KEY && !anyPermissionFailure && !anyMissing) issues.push('All databases returned 0 rows — databases may be empty or IDs are wrong')
   if (supabaseStatus !== 'connected') issues.push(`Supabase: ${supabaseStatus}${supabaseError ? ` — ${supabaseError}` : ''}`)
 
   return NextResponse.json({
-    isMockData,
-    ingestionStatus: isMockData ? 'failed' : 'ok',
+    hasLiveData,
+    ingestionStatus: hasLiveData ? 'ok' : 'empty',
     issues,
     envInventory,
+    showTelaEnv,
     notion: { probes },
     supabase: {
       status: supabaseStatus,

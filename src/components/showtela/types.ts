@@ -1,4 +1,4 @@
-import type { ContinuityEvent } from '@/lib/showtela/types'
+import type { ContinuityEvent, ShowTelaHydrationSummary } from '@/lib/showtela/types'
 
 export interface PersonItem {
   id: string
@@ -56,8 +56,9 @@ export interface ShowTelaViewModel {
   feed: FeedItem[]
   continuityObjects: ContinuityEvent[]
   runtimeTimeline: Array<{ id: string; timestamp: string; actor: string; summary: string; continuityObjectId: string; pressureDelta: number }>
-  source?: 'supabase' | 'notion' | 'mock'
+  source?: 'supabase' | 'notion' | 'empty'
   diagnosticState?: string
+  hydration?: ShowTelaHydrationSummary
 }
 
 export type ActionType = 'resolve' | 'escalate' | 'comment' | 'archive'

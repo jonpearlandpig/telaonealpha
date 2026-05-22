@@ -3,7 +3,7 @@
 export function ShowTelaHeader({ userName, userImage }: { userName?: string; userImage?: string }) {
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
-  const firstName = userName?.split(' ')[0] ?? 'Jon'
+  const firstName = userName?.split(' ')[0] ?? 'there'
 
   return (
     <header className="px-5 pb-4 pt-[58px]">
@@ -34,4 +34,3 @@ export function ShowTelaHeader({ userName, userImage }: { userName?: string; use
     </header>
   )
 }
-
