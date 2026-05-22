@@ -45,6 +45,7 @@ export interface FeedItem {
   avatar: string
   unresolved: boolean
   linkedEntities: string[]
+  pressure?: string
 }
 
 export interface ShowTelaViewModel {
