@@ -2,12 +2,10 @@
 
 import { useMemo, useState } from 'react'
 import { EventFeed } from '@/components/constitutional/EventFeed'
-import type { OperationalCalendarEvent } from '@/lib/showtela/calendar'
-import { formatOperationalTime, getWeekDays, getUnresolvedCount } from '@/lib/showtela/calendar'
+import type { OperationalCalendarEvent, OperationalWeekDay } from '@/lib/showtela/calendar'
 import { buildContinuityMemory, deriveOperationalLineage, derivePressureEvolution, deriveStateTransitions } from '@/lib/showtela/lineage'
 import { buildPredictionSummary } from '@/lib/showtela/prediction'
 import { buildReasoningSummary } from '@/lib/showtela/reasoning'
-import { CalendarEventCard } from './CalendarEventCard'
 import { ContinuityMemoryPanel } from './ContinuityMemoryPanel'
 import { ContinuityDriftCard } from './ContinuityDriftCard'
 import { ContinuityWatchPanel } from './ContinuityWatchPanel'
@@ -23,15 +21,16 @@ import { StateTransitionCard } from './StateTransitionCard'
 import { TelaCalendarActionPanel } from './TelaCalendarActionPanel'
 import { TelaReasoningPanel } from './TelaReasoningPanel'
 import { BottomSheet } from './sheets/BottomSheet'
+import { getWeekDays } from '@/lib/showtela/calendar'
 
 const STATE_LABELS: Record<string, string> = {
   calm: 'Calm',
   active: 'Active',
-  pressure: 'Pressure',
-  critical: 'Critical',
-  waiting: 'Waiting',
-  needs_decision: 'Needs Decision',
-  tela_ready: 'TELA Ready',
+  pressure: 'Attention Needed',
+  critical: 'Attention Needed',
+  waiting: 'Watching',
+  needs_decision: 'Attention Needed',
+  tela_ready: 'Active',
 }
 
 const STATE_TONES: Record<
@@ -48,39 +47,48 @@ const STATE_TONES: Record<
 }
 
 function buildOperationalSentence(event?: OperationalCalendarEvent) {
-  if (!event) return 'No active movement is derived for this day yet.'
+  if (!event) return 'The day is mostly stable right now.'
   if (event.summary) return event.summary
   if (event.telaHint) return event.telaHint
-  if (event.unresolvedCount > 0) return `${event.title} still needs confirmation before the day can settle.`
-  return `${event.title} is the clearest operational movement on this day.`
+  if (event.unresolvedCount > 0) return `${event.title} still needs confirmation.`
+  return `${event.title} is the clearest thing to keep in view.`
 }
 
-function buildNextAction(event?: OperationalCalendarEvent) {
-  if (!event) return 'Review'
-  if (event.unresolvedCount > 0 || ['critical', 'needs_decision', 'pressure'].includes(event.pressureState)) return 'Resolve'
-  if (event.people.length === 0 || event.continuityState === 'stale') return 'Confirm'
-  return 'Review'
+function buildDaySummary(event?: OperationalCalendarEvent, unresolvedCount = 0) {
+  if (!event && unresolvedCount === 0) return 'The day is mostly stable.'
+  if (!event) return 'One detail still needs a follow-up.'
+  if (event.type === 'hospitality' && unresolvedCount > 0) return 'Hospitality is waiting on a final count.'
+  if (event.type === 'venue' && unresolvedCount > 0) return 'One venue detail still needs confirmation.'
+  if (event.type === 'travel' && unresolvedCount > 0) return 'Travel still has one moving piece to confirm.'
+  if (event.unresolvedCount > 0) return `${event.title} still needs a final confirmation.`
+  if (event.type === 'show' || event.type === 'production') return `${event.title} is the main thing holding the day together.`
+  return buildOperationalSentence(event)
 }
 
-function buildConfidenceSignal({
-  continuityState,
-  predictionRisk,
-  unresolvedCount,
-}: {
-  continuityState?: string
-  predictionRisk?: string
-  unresolvedCount: number
-}) {
-  if (continuityState === 'fresh' && (predictionRisk === 'stable' || predictionRisk === 'watch') && unresolvedCount === 0) {
-    return 'Confidence high'
+function buildChangeSummary(event?: OperationalCalendarEvent) {
+  if (!event) return 'Nothing material has shifted since the last update.'
+  if (event.continuityState === 'fresh') return 'Fresh context came in for this plan.'
+  if (event.unresolvedCount > 0) return 'One open detail is still shaping the day.'
+  if (event.people.length === 0) return 'Ownership still needs to be made explicit.'
+  return 'The plan is holding without a major shift.'
+}
+
+function buildNextAction(event?: OperationalCalendarEvent, fallback?: string) {
+  if (fallback) return fallback
+  if (!event) return 'Stay with the current plan and check again later.'
+  if (event.unresolvedCount > 0 || ['critical', 'needs_decision', 'pressure'].includes(event.pressureState)) {
+    return `Confirm the open detail around ${event.title.toLowerCase()}.`
   }
-  if (continuityState === 'stale' || predictionRisk === 'critical' || predictionRisk === 'high') {
-    return 'Confidence guarded'
-  }
-  if (continuityState === 'aging' || unresolvedCount > 0) {
-    return 'Confidence watch'
-  }
-  return 'Confidence stable'
+  if (event.people.length === 0) return `Assign a clear owner for ${event.title.toLowerCase()}.`
+  if (event.continuityState === 'stale') return `Refresh the latest context for ${event.title.toLowerCase()}.`
+  return `Keep ${event.title.toLowerCase()} on track and watch for changes.`
+}
+
+function buildWeekRailLine(day: OperationalWeekDay) {
+  if (day.nextEvent?.unresolvedCount) return 'One thing to confirm'
+  if (day.nextEvent?.continuityState === 'fresh') return 'Fresh update'
+  if (day.events.length === 0) return 'Quiet day'
+  return day.nextEvent?.title ?? 'Holding steady'
 }
 
 export function OperationalCalendar({
@@ -115,7 +123,6 @@ export function OperationalCalendar({
     () => derivePressureEvolution(events, selectedDay?.key ?? selectedDayKey, prediction.dependencies),
     [events, prediction.dependencies, selectedDay?.key, selectedDayKey],
   )
-  const unresolvedCount = getUnresolvedCount(events)
   const pressureEvents = events.filter((event) => ['pressure', 'critical', 'needs_decision', 'tela_ready'].includes(event.pressureState))
   const recentChanges = events
     .filter((event) => event.continuityState === 'fresh' || event.sourceEntityId)
@@ -124,43 +131,35 @@ export function OperationalCalendar({
   const focusEvent = reasoning.highestPressureEvent ?? briefingEvent
   const dayState = focusEvent?.pressureState ?? selectedDay?.state ?? 'calm'
   const dayTone = STATE_TONES[dayState] ?? STATE_TONES.calm
-  const operationalSentence = buildOperationalSentence(focusEvent)
-  const nextActionLabel = buildNextAction(focusEvent)
-  const confidenceSignal = buildConfidenceSignal({
-    continuityState: selectedDay?.continuityState,
-    predictionRisk: prediction.predictions[0]?.riskLevel,
-    unresolvedCount: selectedDay?.unresolvedCount ?? 0,
-  })
-  const nextActionText =
-    prediction.predictions[0]?.recommendedFocus ??
-    reasoning.recommendedFocus ??
-    (focusEvent ? `Clarify ${focusEvent.title}.` : 'Select a day with derived movement.')
+  const daySummary = buildDaySummary(focusEvent, selectedDay?.unresolvedCount ?? 0)
+  const changeSummary = buildChangeSummary(focusEvent)
+  const nextActionText = buildNextAction(
+    focusEvent,
+    prediction.predictions[0]?.recommendedFocus ?? reasoning.recommendedFocus,
+  )
 
   return (
     <div className="min-h-screen bg-[#F8F6F2] pb-8">
-      <header className="border-b border-[#EAE0D3] bg-[#F8F6F2] px-5 pb-4 pt-14">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Operational Time</p>
-        <h1 className="mt-1 text-[24px] font-semibold leading-tight text-[#141210]">Calendar readiness</h1>
-        <p className="mt-1 text-[13px] leading-relaxed text-[#6B5D4B]">Certainty first. Reasoning is available when requested.</p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <span className="rounded-full bg-[#17130F] px-3 py-1.5 text-[11px] font-semibold text-[#F8F1E2]">{events.length} events</span>
-          <span className="rounded-full bg-[#FFFDF8] px-3 py-1.5 text-[11px] font-semibold text-[#17130F] shadow-[0_8px_20px_rgba(27,22,16,0.05)]">{unresolvedCount} open</span>
-          <span className="rounded-full bg-[#FFFDF8] px-3 py-1.5 text-[11px] font-semibold text-[#17130F] shadow-[0_8px_20px_rgba(27,22,16,0.05)]">{pressureEvents.length} under pressure</span>
-        </div>
+      <header className="bg-[#F8F6F2] px-5 pb-2 pt-14">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Calendar</p>
+        <h1 className="mt-1 text-[24px] font-semibold leading-tight text-[#141210]">Quietly keeping you oriented</h1>
+        <p className="mt-2 max-w-[32ch] text-[14px] leading-relaxed text-[#6B5D4B]">
+          One calm briefing at a time. The deeper reasoning layer stays available when you want it.
+        </p>
       </header>
 
-      <section className="pt-5">
+      <section className="pt-4">
         <div className="mb-3 flex items-center justify-between px-5">
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5E5348]">Week Selector</h2>
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7C705F]">This Week</h2>
           <button
             type="button"
             onClick={onOpenVoice}
-            className="min-h-[36px] rounded-full border border-[#D8C7A6] bg-[#FFFDF8] px-3 text-[11px] font-semibold text-[#8A6725]"
+            className="min-h-[36px] rounded-full bg-[#FFF9EF] px-3 text-[11px] font-semibold text-[#8A6725]"
           >
-            Voice Ready
+            Add note
           </button>
         </div>
-        <div className="flex gap-2 overflow-x-auto px-5 pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-2.5 overflow-x-auto px-5 pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {days.map((day) => {
             const selected = day.key === selectedDay?.key
             return (
@@ -168,11 +167,13 @@ export function OperationalCalendar({
                 key={day.key}
                 type="button"
                 onClick={() => setSelectedDayKey(day.key)}
-                className={`min-h-[74px] w-[66px] flex-shrink-0 rounded-[18px] border px-2 py-2 text-left ${selected ? 'border-[#17130F] bg-[#17130F] text-[#F8F1E2]' : 'border-[#E3D8CA] bg-[#FFFDF8] text-[#17130F]'}`}
+                className={`w-[78px] flex-shrink-0 rounded-[24px] px-3 py-3 text-left transition-colors ${selected ? 'bg-[#EFE7D9] text-[#17130F]' : 'bg-[#FBF8F2] text-[#4F463D]'}`}
               >
-                <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${selected ? 'text-[#D7BC7F]' : 'text-[#8A7351]'}`}>{day.label}</p>
-                <p className="mt-1 text-[21px] font-semibold leading-none">{day.dateLabel}</p>
-                <p className={`mt-1 text-[9px] font-semibold uppercase tracking-[0.08em] ${selected ? 'text-[#D8CDB8]' : 'text-[#8B847B]'}`}>{STATE_LABELS[day.state]}</p>
+                <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${selected ? 'text-[#8A6725]' : 'text-[#8A7D6E]'}`}>{day.label}</p>
+                <p className="mt-1 text-[24px] font-semibold leading-none">{day.dateLabel}</p>
+                <p className={`mt-2 line-clamp-2 text-[11px] leading-snug ${selected ? 'text-[#4F463D]' : 'text-[#7B7064]'}`}>
+                  {buildWeekRailLine(day)}
+                </p>
               </button>
             )
           })}
@@ -181,121 +182,52 @@ export function OperationalCalendar({
 
       <section className="px-5 pt-5">
         <div
-          className="rounded-[28px] border px-4 py-4 shadow-[0_12px_30px_rgba(27,22,16,0.06)]"
+          className="rounded-[32px] border px-5 py-5 shadow-[0_12px_30px_rgba(27,22,16,0.05)]"
           style={{ backgroundColor: dayTone.panelBg, borderColor: dayTone.panelBorder }}
         >
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Default Briefing</p>
-              <h2 className="mt-1 text-[22px] font-semibold leading-tight text-[#17130F]">{selectedDay?.fullLabel}</h2>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Daily Briefing</p>
+              <h2 className="mt-1 text-[24px] font-semibold leading-tight text-[#17130F]">{selectedDay?.fullLabel}</h2>
             </div>
             <span
-              className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
+              className="rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
               style={{ backgroundColor: dayTone.badgeBg, color: dayTone.badgeText }}
             >
               {STATE_LABELS[dayState]}
             </span>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span
-              className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
-              style={{ backgroundColor: dayTone.badgeBg, color: dayTone.badgeText }}
-            >
-              {selectedDay?.unresolvedCount ?? 0} open
-            </span>
-            <span className="rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-semibold capitalize text-[#5E5348]">
-              {selectedDay?.continuityState ?? 'unknown'} continuity
-            </span>
-            <span className="rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-semibold text-[#5E5348]">
-              {selectedDay?.density ?? 'light'} load
-            </span>
+          <p className="mt-5 text-[26px] font-semibold leading-tight text-[#17130F]">{daySummary}</p>
+          <p className="mt-3 text-[14px] leading-relaxed text-[#5E5348]">{changeSummary}</p>
+
+          <div className="mt-5 rounded-[22px] bg-white/78 px-4 py-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9A7C46]">Next Move</p>
+            <p className="mt-2 text-[14px] leading-relaxed text-[#3E352C]">{nextActionText}</p>
           </div>
 
-          <p className="mt-4 text-[18px] font-semibold leading-snug text-[#17130F]">{focusEvent?.title ?? 'No primary movement selected'}</p>
-          <p className="mt-2 text-[14px] leading-relaxed text-[#5E5348]">{operationalSentence}</p>
-
-          <div className="mt-4 rounded-[18px] bg-white/80 px-3 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9A7C46]">Next Action</p>
-            <p className="mt-1 text-[13px] leading-relaxed text-[#3E352C]">{nextActionText}</p>
-          </div>
-
-          <div className="mt-4 flex items-center justify-between gap-3 rounded-[18px] border border-white/80 bg-white/70 px-3 py-3">
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9A7C46]">Confidence</p>
-              <p className="mt-1 text-[13px] font-semibold text-[#17130F]">{confidenceSignal}</p>
-            </div>
-            <div className="h-2 w-2 flex-shrink-0 rounded-full" style={{ backgroundColor: dayTone.accent }} />
-          </div>
-
-          <div className="mt-4 flex gap-2">
-            <button
-              type="button"
-              className="min-h-[48px] flex-1 rounded-[18px] bg-[#17130F] px-4 text-[13px] font-semibold text-[#F8F1E2]"
-            >
-              {nextActionLabel}
-            </button>
+          <div className="mt-5 flex items-center justify-between gap-3">
             <button
               type="button"
               onClick={() => setShowTelaWhy(true)}
-              className="min-h-[48px] rounded-[18px] border border-[#D8C7A6] bg-[#FFFDF8] px-4 text-[13px] font-semibold text-[#8A6725]"
+              className="min-h-[40px] rounded-full bg-white/76 px-4 text-[12px] font-semibold text-[#7A6643]"
             >
-              TELAwhy
+              More
             </button>
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="h-2 w-2 flex-shrink-0 rounded-full" style={{ backgroundColor: dayTone.accent }} />
+              <p className="truncate text-[12px] text-[#6B5D4B]">{focusEvent?.title ?? 'No major change in view'}</p>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="px-5 pt-5">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5E5348]">Day Lane</h2>
-          <p className="text-[11px] font-medium text-[#8B847B]">{selectedEvents.length} visible</p>
-        </div>
-        <div className="flex flex-col gap-3">
-          {selectedEvents.map((event) => (
-            <article key={event.id} className="rounded-[22px] border border-[#E8DDCC] bg-[#FFFDF8] px-4 py-4 shadow-[0_10px_28px_rgba(27,22,16,0.05)]">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: (STATE_TONES[event.pressureState] ?? STATE_TONES.calm).accent }} />
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8A7351]">
-                      {event.type} / {STATE_LABELS[event.pressureState]}
-                    </p>
-                  </div>
-                  <h3 className="mt-2 text-[15px] font-semibold leading-tight text-[#17130F]">{event.title}</h3>
-                  <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-[#62564B]">
-                    {event.summary ?? event.telaHint ?? 'Operational movement is present for this slot.'}
-                  </p>
-                </div>
-                <p className="flex-shrink-0 text-[11px] font-semibold text-[#8A6725]">{formatOperationalTime(event.startTime ?? event.timestamp)}</p>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <span className="rounded-full bg-[#F6F0E7] px-2.5 py-1 text-[11px] font-semibold capitalize text-[#5E5348]">{event.continuityState}</span>
-                <span className="rounded-full bg-[#F6F0E7] px-2.5 py-1 text-[11px] font-semibold text-[#5E5348]">{event.density} density</span>
-                <span className="rounded-full bg-[#F6F0E7] px-2.5 py-1 text-[11px] font-semibold text-[#5E5348]">
-                  {event.people.length > 0 ? event.people.slice(0, 2).join(' / ') : 'Owner open'}
-                </span>
-                {event.unresolvedCount > 0 && (
-                  <span className="rounded-full bg-[#17130F] px-2.5 py-1 text-[11px] font-semibold text-[#F4D7A1]">{event.unresolvedCount} unresolved</span>
-                )}
-              </div>
-            </article>
-          ))}
-          {selectedEvents.length === 0 && (
-            <div className="rounded-[22px] border border-dashed border-[#D6C9B7] px-4 py-8 text-center">
-              <p className="text-[13px] font-semibold text-[#6B5D4B]">No derived operational events for this day.</p>
-              <p className="mt-1 text-[12px] leading-relaxed text-[#8B847B]">The calendar is waiting for continuity, unresolved pressure, or entity movement.</p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      <BottomSheet open={showTelaWhy} onClose={() => setShowTelaWhy(false)} title={`${selectedDay?.fullLabel ?? 'Calendar'} TELAwhy`}>
+      <BottomSheet open={showTelaWhy} onClose={() => setShowTelaWhy(false)} title={`${selectedDay?.fullLabel ?? 'Calendar'} Context`}>
         <div className="space-y-4">
           <div className="rounded-[20px] border border-[#E5D8C7] bg-[#FFFDF8] px-4 py-4 shadow-[0_10px_26px_rgba(27,22,16,0.05)]">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Requested Cognition</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Context</p>
             <p className="mt-2 text-[14px] leading-relaxed text-[#3E352C]">
-              Reasoning, prediction, continuity drift, lineage, and escalation logic are available here after explicit request.
+              Reasoning, prediction, continuity drift, lineage, and escalation stay here when you want more detail without crowding the main briefing.
             </p>
           </div>
 
@@ -330,22 +262,7 @@ export function OperationalCalendar({
           ))}
 
           <section>
-            <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5E5348]">Operational Event Stream</h2>
-            <div className="flex flex-col gap-3">
-              {selectedEvents.map((event) => (
-                <CalendarEventCard key={event.id} event={event} />
-              ))}
-              {selectedEvents.length === 0 && (
-                <div className="rounded-[22px] border border-dashed border-[#D6C9B7] px-4 py-8 text-center">
-                  <p className="text-[13px] font-semibold text-[#6B5D4B]">No derived operational events for this day.</p>
-                  <p className="mt-1 text-[12px] leading-relaxed text-[#8B847B]">The calendar is waiting for continuity, unresolved pressure, or entity movement.</p>
-                </div>
-              )}
-            </div>
-          </section>
-
-          <section>
-            <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5E5348]">Upcoming Dependencies</h2>
+            <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5E5348]">What Still Needs Care</h2>
             <div className="flex flex-col gap-2">
               {pressureEvents.slice(0, 4).map((event) => (
                 <div key={event.id} className="rounded-[18px] bg-[#FFFDF8] px-3 py-3 shadow-[0_8px_20px_rgba(27,22,16,0.05)]">
@@ -354,13 +271,13 @@ export function OperationalCalendar({
                 </div>
               ))}
               {pressureEvents.length === 0 && (
-                <p className="rounded-[18px] bg-[#FFFDF8] px-3 py-3 text-[12px] text-[#8B847B]">No pressure dependencies derived from current runtime state.</p>
+                <p className="rounded-[18px] bg-[#FFFDF8] px-3 py-3 text-[12px] text-[#8B847B]">No immediate dependency needs extra care right now.</p>
               )}
             </div>
           </section>
 
           <section className="rounded-[22px] border border-[#E4D8C9] bg-[#FFFDF8] px-4 py-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Recent Continuity Changes</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">What Changed</p>
             <div className="mt-3 flex flex-col gap-2">
               {recentChanges.map((event) => (
                 <div key={event.id} className="border-t border-[#EEE5D8] pt-2 first:border-t-0 first:pt-0">
@@ -372,7 +289,7 @@ export function OperationalCalendar({
           </section>
 
           <section className="rounded-[22px] border border-[#D8C7A6] bg-[#F4ECDD] px-4 py-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8A6725]">Provenance Placeholder</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8A6725]">Lineage</p>
             <p className="mt-1 text-[12px] leading-relaxed text-[#5B4D3D]">
               Calendar lineage is prepared for Notion, Google Calendar, manual entries, TELA-created actions, and system-generated events. This pass does not write persistence.
             </p>
