@@ -72,7 +72,7 @@ export function ShowTelaHeader({
         }
 
         .telatop-ticker-track {
-          animation: telatopTicker 28s linear infinite;
+          animation: telatopTicker 112s linear infinite;
           will-change: transform;
         }
 

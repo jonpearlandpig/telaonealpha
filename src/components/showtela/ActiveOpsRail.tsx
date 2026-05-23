@@ -89,16 +89,12 @@ export function ActiveOpsRail({
         </button>
 
         <button className="flex w-[84px] flex-shrink-0 flex-col items-center gap-1.5 p-0" onClick={onTelaTap}>
-          <div className="relative">
-            <CircleShell background="linear-gradient(140deg, #11100D 0%, #2B2218 48%, #7A5A25 100%)" tone="dark">
-              <div className="flex h-full w-full flex-col items-center justify-center bg-[radial-gradient(circle_at_top,#3B3125_0%,#17130F_62%)]">
-                <span className="text-[14px] font-semibold tracking-[0.18em] text-[#E3BE68]">TELA</span>
-              </div>
-            </CircleShell>
-            <span className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full border border-[#5A4725] bg-[#221B13] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#DABD79]">
-              Crusade
-            </span>
-          </div>
+          <CircleShell background="linear-gradient(140deg, #11100D 0%, #2B2218 48%, #7A5A25 100%)" tone="dark">
+            <div className="relative h-full w-full">
+              <img src="/showtela/crusade-anchor.jpg" alt="Crusade" className="h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(17,16,13,0.08)_0%,rgba(17,16,13,0.32)_100%)]" />
+            </div>
+          </CircleShell>
           <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">SHOWTELA</p>
           <p className="min-h-[12px] text-center text-[10px] leading-tight text-transparent">.</p>
         </button>
@@ -130,7 +126,7 @@ export function ActiveOpsRail({
                     ? <img src={img} alt={p.name} className="h-full w-full object-cover" />
                     : <div className="flex h-full w-full items-center justify-center text-[22px] font-semibold text-[#6F541A]">{p.name.slice(0, 1)}</div>}
                 </CircleShell>
-                <span className={`absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full border-2 border-[#F8F6F2] ${hasUnresolved ? 'bg-[#C89B2F]' : 'bg-[#6FAE7B]'}`} />
+                {hasUnresolved && <span className="absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full border-2 border-[#F8F6F2] bg-[#C89B2F]" />}
               </div>
               <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{p.name.split(' ')[0]}</p>
               <p className="text-center text-[10px] leading-tight text-[#6E6A63]">{role}</p>
