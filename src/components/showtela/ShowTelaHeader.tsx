@@ -23,9 +23,6 @@ export function ShowTelaHeader({
 
   return (
     <header className="px-5 pb-8 pt-[58px]">
-      <div style={{ background: '#FF0000', color: '#FFFFFF', fontSize: '16px', fontWeight: 'bold', padding: '12px 16px', marginBottom: '12px' }}>
-        PRODUCTION TRACE — abd1781 — IF YOU SEE THIS THE DEPLOYMENT IS LIVE
-      </div>
       <div className="mb-5 flex items-center justify-between">
         <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#C89B2F]">Crusade: The Musical</p>
         <button className="relative flex h-9 w-9 items-center justify-center rounded-full bg-black/[0.04]">
@@ -40,24 +37,26 @@ export function ShowTelaHeader({
         <p className="mt-1 text-[15px] leading-snug text-[#6E6A63]">Operations are live.</p>
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-[14px] bg-[linear-gradient(160deg,#FAF7F1_0%,#EEE3CC_100%)] px-4 py-4 shadow-[0_2px_10px_rgba(17,17,17,0.07)]">
-        <div className="flex items-center gap-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#8A7351]">TELAtop</p>
-          <span className="telatop-pulse h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#CDB38A]" />
-          <p className="text-[10px] font-medium text-[#8A7351]">{unresolvedCount} unresolved</p>
+      <div className="mt-7 overflow-hidden rounded-[14px] bg-[linear-gradient(160deg,#FAF7F1_0%,#EEE3CC_100%)] px-4 py-5 shadow-[0_2px_10px_rgba(17,17,17,0.07)]">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <p className="text-[10px] font-medium tracking-[0.06em] text-[#8A7351]">TELAtop</p>
+            <span className="telatop-pulse h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#CDB38A]" />
+          </div>
+          <p className="text-[10px] font-medium text-[#A89880]">{unresolvedCount} unresolved</p>
         </div>
-        <p className="mt-2 text-[12px] font-semibold leading-snug text-[#171411]">{autoscan.currentTruth}</p>
-        <p className="mt-1 text-[11px] leading-relaxed text-[#6E6A63]">{autoscan.mattersNow}</p>
+        <p className="mt-3 text-[12px] font-semibold leading-snug text-[#171411]">{autoscan.currentTruth}</p>
+        <p className="mt-1.5 text-[11px] leading-relaxed text-[#6E6A63]">{autoscan.mattersNow}</p>
         {onNextMovementTap ? (
           <button
             type="button"
             onClick={onNextMovementTap}
-            className="mt-1.5 text-left text-[11px] leading-snug text-[#8A7351] transition-colors hover:text-[#6F541A]"
+            className="mt-2 text-left text-[11px] leading-snug text-[#8A7351] transition-colors hover:text-[#6F541A]"
           >
             {autoscan.nextMovement}
           </button>
         ) : (
-          <p className="mt-1.5 text-[11px] leading-snug text-[#8A7351]">{autoscan.nextMovement}</p>
+          <p className="mt-2 text-[11px] leading-snug text-[#8A7351]">{autoscan.nextMovement}</p>
         )}
       </div>
       <style jsx>{`
