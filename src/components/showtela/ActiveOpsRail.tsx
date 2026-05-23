@@ -102,64 +102,25 @@ export function ActiveOpsRail({
           const unresolved = p.unresolvedCount ?? 0
           const role = p.latest ?? ''
           const hasUnresolved = unresolved > 0
-          const pressure = unresolved >= 2 ? 'high' : unresolved === 1 ? 'medium' : 'low'
-          const hasPressure = hasUnresolved
-          const cardShadow = hasUnresolved
-            ? '0 0 0 1.5px rgba(216,167,66,0.42), 0 12px 44px rgba(0,0,0,0.30)'
-            : '0 12px 44px rgba(0,0,0,0.22)'
-
-          const handleTap = () => onPersonTap?.(p.name, role)
+          const ringBg = unresolved >= 2
+            ? 'linear-gradient(135deg, #7A6451 0%, #C7A77A 100%)'
+            : hasUnresolved
+              ? 'linear-gradient(135deg, #B89A52 0%, #D8C080 100%)'
+              : 'linear-gradient(135deg, #D8CCB8 0%, #F5ECE0 100%)'
 
           return (
-            <div
+            <button
               key={p.id}
-              role="button"
-              tabIndex={0}
-              className="relative flex-shrink-0 cursor-pointer overflow-hidden"
-              style={{ width: '136px', height: '192px', borderRadius: '20px', boxShadow: cardShadow }}
-              onClick={handleTap}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault()
-                  handleTap()
-                }
-              }}
+              className="flex w-[84px] flex-shrink-0 flex-col items-center gap-1.5 p-0"
+              onClick={() => onPersonTap?.(p.name, role)}
             >
-              {img ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={img} alt="" className="absolute inset-0 h-full w-full object-cover" />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'linear-gradient(160deg, #2A2520, #1A1712)' }}>
-                  <span className="text-[44px] font-semibold text-[#F8E1B0]">{p.name.slice(0, 1)}</span>
-                </div>
-              )}
-
-              {hasPressure && (
-                <div
-                  className="absolute inset-0"
-                  style={{ background: pressure === 'high' ? 'rgba(196,96,16,0.18)' : 'rgba(196,136,16,0.10)' }}
-                />
-              )}
-
-              <div
-                className="absolute inset-0"
-                style={{ background: 'linear-gradient(to top, rgba(8,6,4,0.95) 0%, rgba(8,6,4,0.54) 40%, transparent 100%)' }}
-              />
-
-              {pressure === 'high' && (
-                <div
-                  className="absolute inset-x-0 bottom-0"
-                  style={{ height: '72px', background: 'linear-gradient(to top, rgba(186,108,18,0.28) 0%, transparent 100%)' }}
-                />
-              )}
-
-              <div className="absolute bottom-0 left-0 right-0 px-3.5 pb-3.5">
-                <p className="text-[15px] font-semibold leading-tight text-white">{p.name.split(' ')[0]}</p>
-                {role && (
-                  <p className="mt-1 line-clamp-1 text-[10.5px] leading-tight text-white/65">{role}</p>
-                )}
-              </div>
-            </div>
+              <CircleShell background={ringBg}>
+                {img
+                  ? <img src={img} alt={p.name} className="h-full w-full object-cover" />
+                  : <div className="flex h-full w-full items-center justify-center text-[22px] font-semibold text-[#6F541A]">{p.name.slice(0, 1)}</div>}
+              </CircleShell>
+              <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{p.name.split(' ')[0]}</p>
+            </button>
           )
         })}
 
