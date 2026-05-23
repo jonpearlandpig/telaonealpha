@@ -35,7 +35,7 @@ export function CalendarWeekRail({
           onClick={onOpenCalendar}
           className="min-h-[36px] rounded-full bg-[#17130F] px-3.5 text-[11px] font-semibold text-[#F7E8C2] shadow-[0_10px_24px_rgba(17,17,17,0.12)]"
         >
-          Open
+          Enter Week
         </button>
       </div>
 
@@ -62,7 +62,7 @@ export function CalendarWeekRail({
               key={day.key}
               type="button"
               onClick={onOpenCalendar}
-              className="min-h-[184px] w-[138px] flex-shrink-0 snap-start rounded-[22px] border px-3 py-3 text-left shadow-[0_10px_28px_rgba(27,22,16,0.07)]"
+              className={`min-h-[184px] w-[138px] flex-shrink-0 snap-start rounded-[22px] border px-3 py-3 text-left shadow-[0_10px_28px_rgba(27,22,16,0.07)] transition-[box-shadow,transform] duration-300 ${day.state === 'critical' ? 'animate-pulse' : ''}`}
               style={{ backgroundColor: style.bg, borderColor: style.border }}
             >
               <div className="flex items-start justify-between">
@@ -70,7 +70,18 @@ export function CalendarWeekRail({
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ color: style.text }}>{day.label}</p>
                   <p className="mt-0.5 text-[26px] font-semibold leading-none text-[#16130F]">{day.dateLabel}</p>
                 </div>
-                <span className="mt-1 h-2.5 w-2.5 rounded-full" style={{ backgroundColor: style.accent, boxShadow: day.state === 'pressure' || day.state === 'critical' ? `0 0 16px ${style.accent}` : undefined }} />
+                <span
+                  className="mt-1 h-2.5 w-2.5 rounded-full"
+                  style={{
+                    backgroundColor: style.accent,
+                    boxShadow:
+                      day.state === 'critical'
+                        ? `0 0 18px ${style.accent}, 0 0 34px rgba(200,91,74,0.18)`
+                        : day.state === 'pressure' || hasUnresolved
+                          ? `0 0 16px ${style.accent}`
+                          : undefined,
+                  }}
+                />
               </div>
 
               <div className="mt-4">

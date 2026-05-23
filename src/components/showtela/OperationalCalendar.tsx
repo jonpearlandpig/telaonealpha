@@ -3,16 +3,22 @@
 import { useMemo, useState } from 'react'
 import type { OperationalCalendarEvent } from '@/lib/showtela/calendar'
 import { getWeekDays, getUnresolvedCount } from '@/lib/showtela/calendar'
+import { buildContinuityMemory, deriveOperationalLineage, derivePressureEvolution, deriveStateTransitions } from '@/lib/showtela/lineage'
 import { buildPredictionSummary } from '@/lib/showtela/prediction'
 import { buildReasoningSummary } from '@/lib/showtela/reasoning'
 import { CalendarEventCard } from './CalendarEventCard'
+import { ContinuityMemoryPanel } from './ContinuityMemoryPanel'
 import { ContinuityDriftCard } from './ContinuityDriftCard'
 import { ContinuityWatchPanel } from './ContinuityWatchPanel'
 import { DepartmentLoadCard } from './DepartmentLoadCard'
 import { DependencyChainCard } from './DependencyChainCard'
+import { OperationalLineageCard } from './OperationalLineageCard'
 import { OperationalPressureCard } from './OperationalPressureCard'
 import { OperationalPredictionCard } from './OperationalPredictionCard'
 import { OperationalRiskTimeline } from './OperationalRiskTimeline'
+import { OperationalTimelineEvent } from './OperationalTimelineEvent'
+import { PressureEvolutionCard } from './PressureEvolutionCard'
+import { StateTransitionCard } from './StateTransitionCard'
 import { TelaCalendarActionPanel } from './TelaCalendarActionPanel'
 import { TelaReasoningPanel } from './TelaReasoningPanel'
 
@@ -49,6 +55,13 @@ export function OperationalCalendar({
   const prediction = useMemo(
     () => buildPredictionSummary(events, selectedDay?.key ?? selectedDayKey),
     [events, selectedDay?.key, selectedDayKey],
+  )
+  const memory = useMemo(() => buildContinuityMemory(events, prediction.dependencies), [events, prediction.dependencies])
+  const lineage = useMemo(() => deriveOperationalLineage(reasoningScope, reasoning.dependencies), [reasoningScope, reasoning.dependencies])
+  const transitions = useMemo(() => deriveStateTransitions(reasoningScope), [reasoningScope])
+  const pressureEvolution = useMemo(
+    () => derivePressureEvolution(events, selectedDay?.key ?? selectedDayKey, prediction.dependencies),
+    [events, prediction.dependencies, selectedDay?.key, selectedDayKey],
   )
   const unresolvedCount = getUnresolvedCount(events)
   const pressureEvents = events.filter((event) => ['pressure', 'critical', 'needs_decision', 'tela_ready'].includes(event.pressureState))
@@ -169,6 +182,34 @@ export function OperationalCalendar({
 
       <section className="px-5 pt-4">
         <OperationalRiskTimeline events={events} predictions={prediction.predictions} />
+      </section>
+
+      <section className="px-5 pt-4">
+        <ContinuityMemoryPanel memory={memory} />
+      </section>
+
+      <section className="px-5 pt-4">
+        <PressureEvolutionCard evolution={pressureEvolution} />
+      </section>
+
+      <section className="px-5 pt-4">
+        <OperationalLineageCard event={lineage[0]} />
+      </section>
+
+      <section className="px-5 pt-4">
+        <StateTransitionCard transition={transitions[0]} />
+      </section>
+
+      <section className="px-5 pt-5">
+        <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5E5348]">Operational Memory Timeline</h2>
+        <div className="flex flex-col gap-2">
+          {lineage.slice(0, 4).map((event) => (
+            <OperationalTimelineEvent key={event.id} event={event} />
+          ))}
+          {lineage.length === 0 && (
+            <p className="rounded-[18px] bg-[#FFFDF8] px-3 py-3 text-[12px] text-[#8B847B]">No derived operational memory movement yet.</p>
+          )}
+        </div>
       </section>
 
       {prediction.departmentLoad.slice(0, 3).map((load) => (
