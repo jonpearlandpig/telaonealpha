@@ -272,7 +272,15 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
         </div>
       )}
 
-      {tab === 'messages' && <TelaTalk autoscan={autoscan} />}
+      {tab === 'messages' && (
+        <TelaTalk
+          autoscan={autoscan}
+          feed={feed}
+          operations={operations}
+          unresolvedItems={unresolvedItemsState}
+          calendarEvents={calendarEvents}
+        />
+      )}
 
       {tab === 'calendar' && (
         <OperationalCalendar events={calendarEvents} baseDate={calendarBaseDate} onOpenVoice={() => openVoice(user?.name)} />
