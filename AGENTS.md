@@ -51,3 +51,68 @@ No gate may be skipped for architecture-affecting changes.
 ### Deployment Review Discipline
 - Verify deployment stability, local-first survivability, and configuration continuity.
 - Reject deployment mutations that compromise operational identity or continuity restoration.
+
+## Codex Skill Layers
+
+These repo-native skill layers turn Codex into a continuity-native operational runtime co-builder for TELAOne and ShowTELA.
+
+### Canonical Skill Docs
+
+- `docs/skills/runtime-restraint.md`
+- `docs/skills/continuity-engineering.md`
+- `docs/skills/mobile-performance.md`
+- `docs/skills/execution-prioritization.md`
+- `docs/skills/live-operations-ux.md`
+- `docs/skills/operational-feed-design.md`
+- `docs/skills/showtela-mobile-3d.md`
+- `docs/skills/social-operations-design.md`
+- `docs/skills/event-native-architecture.md`
+- `docs/skills/tela-governance.md`
+- `docs/skills/continuity-recovery.md`
+- `docs/skills/voice-execution.md`
+- `docs/skills/tela-presence.md`
+
+### Implementation Order
+
+Phase 1 — Substrate Protection
+
+1. Runtime Restraint
+2. Continuity Engineering
+3. Mobile Performance
+4. Execution Prioritization
+
+Phase 2 — Product Experience
+
+5. Live Operations UX
+6. Operational Feed Design
+7. ShowTELA Mobile Design + 3D
+8. Social Operations Design
+
+Phase 3 — Runtime Intelligence
+
+9. Event-Native Architecture
+10. TELA Governance
+11. Continuity Recovery
+12. Voice Execution
+13. TELA Presence
+
+### Codex Operating Rule
+
+When in conflict, prioritize:
+
+`continuity > stability > mobile fluency > operational clarity > governance > polish > novelty`
+
+### PR Review Gate
+
+Every Codex-generated PR must answer:
+
+1. Does this preserve continuity?
+2. Does this protect auth, persistence, hydration, and routing?
+3. Does this avoid unnecessary rewrites?
+4. Does this improve mobile operational fluency?
+5. Does this preserve event lineage or prepare for it?
+6. Does this avoid dashboard drift?
+7. Does this respect governance and provenance?
+8. Does this keep TELA calm, useful, and persistent?
+9. Does this create visual value without performance risk?
+10. Does this move ShowTELA closer to a working operational runtime?
