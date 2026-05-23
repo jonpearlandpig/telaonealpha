@@ -10,10 +10,12 @@ export function ShowTelaHeader({
   userName,
   unresolvedCount,
   autoscan,
+  onNextMovementTap,
 }: {
   userName?: string
   unresolvedCount: number
   autoscan: AutoscanSignal
+  onNextMovementTap?: () => void
 }) {
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
@@ -60,7 +62,17 @@ export function ShowTelaHeader({
             </div>
             <p className="mt-1 text-[12px] font-semibold leading-snug text-[#171411]">{autoscan.currentTruth}</p>
             <p className="mt-1 text-[10px] leading-snug text-[#6E6A63]">{autoscan.mattersNow}</p>
-            <p className="mt-1 text-[10px] leading-snug text-[#8A7351]">{autoscan.nextMovement}</p>
+            {onNextMovementTap ? (
+              <button
+                type="button"
+                onClick={onNextMovementTap}
+                className="mt-1 text-left text-[10px] leading-snug text-[#8A7351] transition-colors hover:text-[#6F541A]"
+              >
+                {autoscan.nextMovement}
+              </button>
+            ) : (
+              <p className="mt-1 text-[10px] leading-snug text-[#8A7351]">{autoscan.nextMovement}</p>
+            )}
           </div>
         </div>
       </div>

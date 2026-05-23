@@ -15,7 +15,7 @@ import { OperationSheet } from './sheets/OperationSheet'
 import { UnresolvedSheet } from './sheets/UnresolvedSheet'
 import { PearlDropVoice } from './PearlDropVoice'
 import { TelaTalk } from './TelaTalk'
-import type { ShowTelaViewModel } from './types'
+import type { OperationEntity, ShowTelaViewModel, UnresolvedItem, UnresolvedPressure } from './types'
 import type { ContinuityEvent } from '@/lib/showtela/types'
 
 type Tab = 'home' | 'play' | 'messages' | 'calendar' | 'profile'
@@ -61,6 +61,59 @@ function formatTimelineTime(iso?: string) {
   }
 }
 
+function matchesOperation(operationName: string | undefined, candidate: string) {
+  if (!operationName) return false
+  const left = operationName.toLowerCase().trim()
+  const right = candidate.toLowerCase().trim()
+  return left.includes(right) || right.includes(left)
+}
+
+function scoreOperation(item: OperationEntity, unresolvedItems: UnresolvedItem[]) {
+  const matched = unresolvedItems.filter((entry) => matchesOperation(entry.operation, item.label || item.name))
+  const blockedCount = matched.filter((entry) => entry.blocking).length
+  const highSeverityCount = matched.filter((entry) => (entry.severity ?? '').toLowerCase() === 'high').length
+  return blockedCount * 100 + highSeverityCount * 25 + matched.length * 10 + (item.unresolvedCount ?? 0)
+}
+
+function sortOperations(items: OperationEntity[], unresolvedItems: UnresolvedItem[]) {
+  return [...items].sort((a, b) => scoreOperation(b, unresolvedItems) - scoreOperation(a, unresolvedItems))
+}
+
+function derivePressure(unresolvedItems: UnresolvedItem[]): UnresolvedPressure {
+  const overdueCount = unresolvedItems.filter((item) => (item.severity ?? '').toLowerCase() === 'high' || (item.aging ?? 0) >= 3).length
+  const blockedCount = unresolvedItems.filter((item) => item.blocking).length
+  const pendingApprovals = unresolvedItems.filter((item) => !item.blocking && (item.severity ?? '').toLowerCase() === 'medium').length
+
+  return {
+    unresolvedCount: unresolvedItems.length,
+    overdueCount,
+    blockedCount,
+    pendingApprovals,
+  }
+}
+
+function buildResolutionEvent(name: string, detail?: { movement: string; unresolvedTitles: string[] }): ContinuityEvent {
+  const timestamp = new Date().toISOString()
+  const normalizedName = name.trim()
+  const headline = `${normalizedName} stabilized`
+  const body = detail?.movement
+    ? `${detail.movement}${detail.unresolvedTitles.length ? ` after ${detail.unresolvedTitles[0].toLowerCase()}` : ''}.`
+    : `${normalizedName} is operationally clear for now.`
+
+  return {
+    id: `local-resolution-${Date.now()}`,
+    headline,
+    body,
+    timestamp,
+    tags: ['RESOLUTION', normalizedName.toUpperCase()],
+    owner: { id: 'tela', name: 'TELA' },
+    pressure: 'low',
+    isNew: true,
+    linkedEntities: [normalizedName],
+    unresolvedDependencies: [],
+  }
+}
+
 export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { name: string; email: string; image: string } }) {
   const initialSurface = getInitialSurfaceState()
   const [tab, setTab] = useState<Tab>(initialSurface.tab)
@@ -81,12 +134,14 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
       pressure: (item.pressure as 'low' | 'medium' | 'high' | undefined) ?? (item.unresolved ? 'high' : 'low'),
     })),
   )
+  const [operations, setOperations] = useState<OperationEntity[]>(() => sortOperations(vm.crusadeOperations, vm.unresolved ?? []))
+  const [unresolvedItemsState, setUnresolvedItemsState] = useState<UnresolvedItem[]>(vm.unresolved ?? [])
   const [sheet, setSheet] = useState<Sheet>(null)
-  const unresolvedItems = vm.unresolved ?? []
   const openVoice = (person?: string) => { setTaggedPerson(person); setShowVoice(true) }
   const openIngest = (mode?: ContinuityIngestionMode | null) => { setIngestMode(mode ?? null); setShowIngest(true) }
   const latestTimeline = vm.runtimeTimeline?.[0]
-  const priorityOperation = [...vm.crusadeOperations].sort((a, b) => (b.unresolvedCount ?? 0) - (a.unresolvedCount ?? 0))[0]
+  const unresolvedPressure = derivePressure(unresolvedItemsState)
+  const priorityOperation = operations[0]
   const recentFeedItem = feed[0]
   const activeOperators = vm.activeOps.map((item) => item.name)
   const userFirstName = user?.name?.split(' ')[0]?.toLowerCase()
@@ -132,14 +187,36 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
     activeOperators: activeOperators.slice(0, 6),
   }
 
+  function handleResolveOperation(name: string, detail?: { movement: string; unresolvedTitles: string[] }) {
+    setUnresolvedItemsState((current) => {
+      const next = current.filter((entry) => !matchesOperation(entry.operation, name))
+      setOperations((ops) => {
+        const updated = ops.map((item) =>
+          item.label === name || item.name === name
+            ? { ...item, unresolvedCount: 0, latest: 'Operationally clear.' }
+            : {
+                ...item,
+                unresolvedCount: next.filter((entry) => matchesOperation(entry.operation, item.label || item.name)).length,
+              },
+        )
+        const target = updated.find((item) => item.label === name || item.name === name)
+        const ordered = sortOperations(updated.filter((item) => item !== target), next)
+        return target ? [...ordered, target] : ordered
+      })
+      return next
+    })
+    setFeed((current) => [buildResolutionEvent(name, detail), ...current])
+  }
+
   return (
     <main style={{ backgroundColor: '#F8F6F2', color: '#141210' }} className="relative mx-auto min-h-screen w-full max-w-sm pb-36">
       {tab === 'home' && (
         <>
           <ShowTelaHeader
             userName={user?.name}
-            unresolvedCount={vm.unresolvedPressure.unresolvedCount}
+            unresolvedCount={unresolvedPressure.unresolvedCount}
             autoscan={autoscan}
+            onNextMovementTap={priorityOperation ? () => setSheet({ type: 'operation', name: priorityOperation.label }) : undefined}
           />
           <ActiveOpsRail
             userName={user?.name}
@@ -151,8 +228,8 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
             onAddContinuity={() => openIngest(null)}
           />
           <FluencyPartnersRail items={vm.fluencyPartners.map((item) => ({ id: item.id, name: item.name, label: item.name, unresolvedCount: item.unresolvedCount ?? 0, image: item.image, latest: item.latest }))} onPersonTap={(name, role) => setSheet({ type: 'person', name, role })} />
-          <CrusadeOperationsRail items={vm.crusadeOperations} unresolvedItems={vm.unresolved} onOperationTap={(name) => setSheet({ type: 'operation', name })} />
-          <UnresolvedPressureCard pressure={vm.unresolvedPressure} onOpen={() => setSheet({ type: 'unresolved' })} />
+          <CrusadeOperationsRail items={operations} unresolvedItems={unresolvedItemsState} onOperationTap={(name) => setSheet({ type: 'operation', name })} />
+          <UnresolvedPressureCard pressure={unresolvedPressure} onOpen={() => setSheet({ type: 'unresolved' })} />
           <ContinuityFeed feed={feed} onFeedTap={(item) => setSheet({ type: 'feed', item })} />
         </>
       )}
@@ -268,8 +345,8 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
       )}
       <PersonSheet open={sheet?.type === 'person'} name={sheet?.type === 'person' ? sheet.name : ''} role={sheet?.type === 'person' ? sheet.role : undefined} onClose={() => setSheet(null)} />
       <FeedSheet open={sheet?.type === 'feed'} item={sheet?.type === 'feed' ? sheet.item : null} onClose={() => setSheet(null)} />
-      <OperationSheet open={sheet?.type === 'operation'} name={sheet?.type === 'operation' ? sheet.name : ''} onClose={() => setSheet(null)} />
-      <UnresolvedSheet open={sheet?.type === 'unresolved'} items={unresolvedItems} onClose={() => setSheet(null)} />
+      <OperationSheet open={sheet?.type === 'operation'} name={sheet?.type === 'operation' ? sheet.name : ''} onClose={() => setSheet(null)} onResolve={handleResolveOperation} />
+      <UnresolvedSheet open={sheet?.type === 'unresolved'} items={unresolvedItemsState} onClose={() => setSheet(null)} />
     </main>
   )
 }

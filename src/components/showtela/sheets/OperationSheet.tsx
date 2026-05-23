@@ -13,7 +13,17 @@ async function fetchOperationData(name: string) {
   return res.json() as Promise<{ unresolved: UnresolvedItem[]; movement: string; status: string; pressure: string }>
 }
 
-export function OperationSheet({ name, open, onClose }: { name: string; open: boolean; onClose: () => void }) {
+export function OperationSheet({
+  name,
+  open,
+  onClose,
+  onResolve,
+}: {
+  name: string
+  open: boolean
+  onClose: () => void
+  onResolve?: (name: string, detail?: { movement: string; unresolvedTitles: string[] }) => void
+}) {
   const [data, setData] = useState<{ unresolved: UnresolvedItem[]; movement: string; status: string; pressure: string } | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -39,13 +49,30 @@ export function OperationSheet({ name, open, onClose }: { name: string; open: bo
       {loading && <p className="py-8 text-center text-[13px] text-[#8B847B]">Loading...</p>}
       {!loading && data && (
         <>
-          <div className="mb-4 flex items-center gap-3">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
             {data.status && (
               <span className="rounded-full px-3 py-1 text-[11px] font-semibold" style={{ backgroundColor: `${STATUS_COLOR[data.status] ?? '#4ADE80'}22`, color: STATUS_COLOR[data.status] ?? '#4ADE80' }}>
                 {data.status}
               </span>
             )}
             {data.movement && <p className="text-[12px] text-[#8B847B]">{data.movement}</p>}
+            </div>
+            {onResolve && data.unresolved.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  onResolve(name, {
+                    movement: data.movement,
+                    unresolvedTitles: data.unresolved.map((item) => item.title),
+                  })
+                  onClose()
+                }}
+                className="rounded-full border border-[#D9CEBD] bg-[#F4EFE6] px-3 py-1.5 text-[11px] font-medium text-[#6B5D4B]"
+              >
+                Mark stabilized
+              </button>
+            )}
           </div>
           {data.unresolved.length > 0 ? (
             <div>
