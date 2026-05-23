@@ -45,9 +45,5 @@ export default async function ShowTelaHome() {
       })
   }
 
-  return (
-    <main className='mx-auto min-h-screen max-w-md bg-[#F8F6F2] pb-28 text-[#13110D]'>
-      <ShowTelaRuntime vm={vm} user={user} />
-    </main>
-  )
+  return <ShowTelaRuntime vm={vm} user={user} />
 }

@@ -1,6 +1,6 @@
 import { sendMessage, type Update } from './bot'
 import { formatWorking, formatResult, formatStatus, formatError } from './formatter'
-import { executeInstruction, type RuntimeProvider } from '../runtime/executor'
+import { executeInstruction, cancelActiveExecution, type RuntimeProvider } from '../runtime/executor'
 import { gatherContext } from '../runtime/contextGatherer'
 import { isAllowedSender, requiresApproval, isForbidden } from '../safety/validator'
 import { logExecution, makeEventId } from '../logs/executionLog'
@@ -42,6 +42,12 @@ export async function handleUpdate(update: Update): Promise<void> {
 
   if (!isAllowedSender(userId)) {
     console.warn('[handler] rejected sender:', userId)
+    return
+  }
+
+  if (text === '/stop' || text.toUpperCase() === 'STOP') {
+    cancelActiveExecution()
+    await sendMessage(chatId, '[operator] Active execution cancelled.')
     return
   }
 

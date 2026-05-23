@@ -19,7 +19,7 @@ export function ContinuityFeed(props: Props) {
   return (
     <section className="px-5 pb-32">
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5E5348]">Continuity Feed</h2>
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5E5348]">Dispatches</h2>
       </div>
       <div className="divide-y divide-[#EDE8E1]">
         {feed.map((item) => (
@@ -29,8 +29,8 @@ export function ContinuityFeed(props: Props) {
         ))}
         {feed.length === 0 && (
           <div className="rounded-[18px] border border-dashed border-[#D4C9B4] px-4 py-8 text-center">
-            <p className="text-[13px] font-medium text-[#8B847B]">No live continuity events yet.</p>
-            <p className="mt-1 text-[11px] text-[#A89880]">Authenticated operational updates will appear here.</p>
+            <p className="text-[13px] font-medium text-[#8B847B]">No dispatches yet.</p>
+            <p className="mt-1 text-[11px] text-[#A89880]">Dispatches will arrive as operations move.</p>
           </div>
         )}
       </div>

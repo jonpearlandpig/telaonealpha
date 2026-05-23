@@ -60,16 +60,16 @@ export function ActiveOpsRail({
   const firstName = userName?.split(' ')[0] ?? 'You'
 
   return (
-    <section className="px-5 pb-5 pt-1">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5E5348]">Anchors</h2>
+    <section className="px-5 pb-9 pt-6">
+      <div className="mb-5 flex items-center justify-between">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5E5348]">Anchors</h2>
         <button className="text-[11px] font-medium text-[#C89B2F]">View all</button>
       </div>
-      <div className="flex gap-4 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex gap-5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div
           role="button"
           tabIndex={0}
-          className="flex w-[84px] flex-shrink-0 flex-col items-center gap-1.5 p-0"
+          className="flex w-[84px] flex-shrink-0 flex-col items-center gap-3 p-0"
           onClick={onProfileTap}
           onKeyDown={(event) => {
             if (event.key === 'Enter' || event.key === ' ') {
@@ -98,7 +98,7 @@ export function ActiveOpsRail({
           <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{firstName}</p>
         </div>
 
-        <button className="flex w-[84px] flex-shrink-0 flex-col items-center gap-1.5 p-0" onClick={onTelaTap}>
+        <button className="flex w-[84px] flex-shrink-0 flex-col items-center gap-3 p-0" onClick={onTelaTap}>
           <CircleShell background="linear-gradient(140deg, #11100D 0%, #2B2218 48%, #7A5A25 100%)" tone="dark">
             <div className="relative h-full w-full">
               <img src="/showtela/crusade-anchor.jpg" alt="Crusade" className="h-full w-full object-cover" />
@@ -113,31 +113,25 @@ export function ActiveOpsRail({
           const unresolved = p.unresolvedCount ?? 0
           const role = p.latest ?? ''
           const hasUnresolved = unresolved > 0
-          const handleTap = () => onPersonTap?.(p.name, role)
+          const ringBg = unresolved >= 2
+            ? 'linear-gradient(135deg, #7A6451 0%, #C7A77A 100%)'
+            : hasUnresolved
+              ? 'linear-gradient(135deg, #B89A52 0%, #D8C080 100%)'
+              : 'linear-gradient(135deg, #D8CCB8 0%, #F5ECE0 100%)'
 
           return (
-            <div
+            <button
               key={p.id}
-              role="button"
-              tabIndex={0}
-              className="flex w-[80px] flex-shrink-0 flex-col items-center gap-1.5 p-0"
-              onClick={handleTap}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault()
-                  handleTap()
-                }
-              }}
+              className="flex w-[84px] flex-shrink-0 flex-col items-center gap-3 p-0"
+              onClick={() => onPersonTap?.(p.name, role)}
             >
-              <div className="relative">
-                <CircleShell background={hasUnresolved ? 'linear-gradient(135deg, #7A6451 0%, #C7A77A 100%)' : 'linear-gradient(135deg, #D8CCB8 0%, #F5ECE0 100%)'}>
-                  {img
-                    ? <img src={img} alt={p.name} className="h-full w-full object-cover" />
-                    : <div className="flex h-full w-full items-center justify-center text-[22px] font-semibold text-[#6F541A]">{p.name.slice(0, 1)}</div>}
-                </CircleShell>
-              </div>
+              <CircleShell background={ringBg}>
+                {img
+                  ? <img src={img} alt={p.name} className="h-full w-full object-cover" />
+                  : <div className="flex h-full w-full items-center justify-center text-[22px] font-semibold text-[#6F541A]">{p.name.slice(0, 1)}</div>}
+              </CircleShell>
               <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{p.name.split(' ')[0]}</p>
-            </div>
+            </button>
           )
         })}
 

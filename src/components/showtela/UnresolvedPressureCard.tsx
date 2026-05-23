@@ -17,14 +17,14 @@ export function UnresolvedPressureCard({ pressure, onOpen }: { pressure: Unresol
               <span className="text-[16px]">⚡</span>
             </div>
             <div>
-              <p className="text-[14px] font-semibold text-[#F6EEDB]">{total} item{total !== 1 ? 's' : ''} need attention</p>
+              <p className="text-[14px] font-semibold text-[#F6EEDB]">{total} unresolved</p>
               <p className="text-[11px] text-[#B8A88A]">
-                {high > 0 ? `${high} high` : ''}{high > 0 && medium > 0 ? ' · ' : ''}{medium > 0 ? `${medium} medium pressure` : ''}{high === 0 && medium === 0 ? 'Review continuity' : ''}
+                {high > 0 ? `${high} critical` : ''}{high > 0 && medium > 0 ? ' · ' : ''}{medium > 0 ? `${medium} elevated` : ''}{high === 0 && medium === 0 ? 'Needs attention' : ''}
               </p>
             </div>
           </div>
           <button onClick={onOpen} className="flex items-center gap-1 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-medium text-[#F6EEDB] backdrop-blur">
-            Open ›
+            Surface ›
           </button>
         </div>
       </article>
