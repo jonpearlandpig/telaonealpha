@@ -32,14 +32,13 @@ function OperationCard({ item, matchedItems, onTap }: {
 }) {
   const image = resolveImage(item)
   const unresolved = item.unresolvedCount ?? 0
-  const dotColor = unresolved >= 2 ? '#F87171' : unresolved === 1 ? '#F59E0B' : '#4ADE80'
-  const statusLabel = unresolved > 0 ? `${unresolved} open` : 'clear'
   const displayName = item.label || item.name
   const movement = item.latest ?? ''
 
   // Layer 3: most consequential unresolved item for this operation
   const firstBlocker = matchedItems.find(u => u.blocking)
   const topItem = firstBlocker ?? matchedItems[0] ?? null
+  const stateLabel = firstBlocker ? 'blocked' : unresolved > 1 ? 'elevated' : unresolved === 1 ? 'unresolved' : null
 
   // Layer 4: next irreversible operational movement
   const actionLabel = firstBlocker
@@ -54,43 +53,27 @@ function OperationCard({ item, matchedItems, onTap }: {
     <button
       onClick={onTap}
       className="relative w-full overflow-hidden rounded-[22px] text-left"
-      style={{ height: '230px', boxShadow: '0 10px 48px rgba(0,0,0,0.30)' }}
+      style={{ height: '230px', boxShadow: unresolved > 0 ? '0 10px 48px rgba(0,0,0,0.30)' : '0 10px 42px rgba(17,17,17,0.18)' }}
     >
-      {/* Background image — full bleed, operational place-memory */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={image} alt="" className="absolute inset-0 h-full w-full object-cover" />
-
-      {/* Cinematic gradient — dark zone sized to contain all four layers */}
       <div
         className="absolute inset-0"
-        style={{ background: 'linear-gradient(to top, rgba(8,6,4,0.94) 0%, rgba(8,6,4,0.74) 50%, rgba(8,6,4,0.18) 68%, transparent 100%)' }}
+        style={{ background: unresolved > 0 ? 'linear-gradient(to top, rgba(8,6,4,0.94) 0%, rgba(8,6,4,0.74) 50%, rgba(8,6,4,0.18) 68%, transparent 100%)' : 'linear-gradient(to top, rgba(8,6,4,0.88) 0%, rgba(8,6,4,0.62) 46%, rgba(8,6,4,0.12) 68%, transparent 100%)' }}
       />
-
-      {/* Layer 2 signal — status pill, top right */}
-      <div className="absolute right-4 top-4">
-        <span className="flex items-center gap-1.5 rounded-full bg-black/28 px-2.5 py-1 backdrop-blur-[6px]">
-          <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ backgroundColor: dotColor }} />
-          <span className="text-[10px] font-medium leading-none text-white/78">{statusLabel}</span>
-        </span>
-      </div>
-
-      {/* Content zone — four-layer operational intelligence */}
+      {stateLabel && (
+        <div className="absolute right-5 top-4">
+          <span className={`text-[10px] font-medium uppercase tracking-[0.16em] ${firstBlocker ? 'text-[#D7A29A]' : 'text-white/46'}`}>{stateLabel}</span>
+        </div>
+      )}
       <div className="absolute bottom-0 left-0 right-0 px-5 pb-5">
-
-        {/* Layer 2: Primary operational state */}
         <h3 className="text-[26px] font-semibold leading-tight tracking-[-0.4px] text-white">{displayName}</h3>
         {movement && (
           <p className="mt-1.5 line-clamp-1 text-[13px] leading-snug text-white/68">{movement}</p>
         )}
-
-        {/* Layer 3 + 4: Secondary intelligence and action pathway */}
         {showIntelLayer && (
           <div className={`mt-3 flex items-center gap-3 ${topItem ? 'justify-between' : 'justify-end'}`}>
             {topItem && (
               <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                {topItem.blocking && (
-                  <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#F87171]" />
-                )}
                 <span className="line-clamp-1 text-[11px] leading-none text-white/50">{topItem.title}</span>
               </div>
             )}

@@ -85,7 +85,6 @@ export function ActiveOpsRail({
             </button>
           </div>
           <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{firstName}</p>
-          <p className="text-center text-[10px] leading-tight text-[#6E6A63]">Personal anchor</p>
         </button>
 
         <button className="flex w-[84px] flex-shrink-0 flex-col items-center gap-1.5 p-0" onClick={onTelaTap}>
@@ -95,8 +94,7 @@ export function ActiveOpsRail({
               <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(17,16,13,0.08)_0%,rgba(17,16,13,0.32)_100%)]" />
             </div>
           </CircleShell>
-          <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">SHOWTELA</p>
-          <p className="min-h-[12px] text-center text-[10px] leading-tight text-transparent">.</p>
+          <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">CRUSADE</p>
         </button>
 
         {items.map((p) => {
@@ -126,10 +124,8 @@ export function ActiveOpsRail({
                     ? <img src={img} alt={p.name} className="h-full w-full object-cover" />
                     : <div className="flex h-full w-full items-center justify-center text-[22px] font-semibold text-[#6F541A]">{p.name.slice(0, 1)}</div>}
                 </CircleShell>
-                {hasUnresolved && <span className="absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full border-2 border-[#F8F6F2] bg-[#C89B2F]" />}
               </div>
               <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{p.name.split(' ')[0]}</p>
-              <p className="text-center text-[10px] leading-tight text-[#6E6A63]">{role}</p>
             </div>
           )
         })}

@@ -32,7 +32,6 @@ export function ShowTelaHeader({
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M8 2a4 4 0 00-4 4v3l-1 1.5h10L12 9V6a4 4 0 00-4-4zM6.5 13a1.5 1.5 0 003 0" stroke="#141210" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full border border-[#F8F6F2] bg-[#C89B2F]" />
         </button>
       </div>
 
@@ -41,15 +40,15 @@ export function ShowTelaHeader({
         <p className="mt-1 text-[15px] leading-snug text-[#6E6A63]">Here&apos;s what&apos;s live on the Crusade.</p>
       </div>
 
-      <div className="mt-4 rounded-[20px] border border-[#E8DECF] bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(246,241,233,0.96)_100%)] px-3.5 py-2.5 shadow-[0_6px_16px_rgba(17,17,17,0.03)]">
+      <div className="mt-5 bg-[linear-gradient(180deg,rgba(255,255,255,0.16)_0%,rgba(246,241,233,0.52)_100%)] px-1 py-1">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8A7351]">TELAtop</p>
               <span className="telatop-pulse h-1.5 w-1.5 rounded-full bg-[#CDB38A]" />
-              <p className="text-[10px] font-medium text-[#8A7351]">{unresolvedCount} in view</p>
+              <p className="text-[10px] font-medium text-[#8A7351]">{unresolvedCount} unresolved</p>
             </div>
-            <div className="mt-1.5 overflow-hidden rounded-full border border-[#E6DCCF] bg-[#F7F2EA]/90 px-2 py-1">
+            <div className="mt-1.5 overflow-hidden px-1 py-0.5">
               <div className="telatop-ticker-track flex min-w-max items-center gap-3 whitespace-nowrap text-[9px] font-medium uppercase tracking-[0.16em] text-[#9D8561]">
                 {[...tickerItems, ...tickerItems].map((item, index) => (
                   <div key={`${item}-${index}`} className="flex items-center gap-3">

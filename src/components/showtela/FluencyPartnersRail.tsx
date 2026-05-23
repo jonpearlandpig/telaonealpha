@@ -1,6 +1,5 @@
+import { useState } from 'react'
 import type { PersonEntity } from '@/lib/showtela/types'
-
-const STATUS_COLOR: Record<string, string> = { low: '#4ADE80', medium: '#F59E0B', high: '#F87171' }
 
 function abbreviate(role: string): string {
   const map: Record<string, string> = {
@@ -26,6 +25,7 @@ export function FluencyPartnersRail(
     | { people: PersonEntity[]; onPersonTap?: (name: string, role?: string) => void }
     | { items: Array<{ id: string; label?: string; name?: string; unresolvedCount: number; image: string; latest?: string }>; onPersonTap?: (name: string, role?: string) => void }
 ) {
+  const [expanded, setExpanded] = useState(false)
   const onPersonTap = props.onPersonTap
   const people = 'people' in props ? props.people
     : props.items.map((i) => ({
@@ -38,17 +38,47 @@ export function FluencyPartnersRail(
 
   const overflow = people.length > 6 ? people.length - 6 : 0
   const visible = people.slice(0, 6)
+  const preview = people.slice(0, 4)
 
   return (
     <section className="px-5 pb-5">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5E5348]">Fluency Partners</h2>
-        <button className="text-[11px] font-medium text-[#C89B2F]">View all</button>
+        <button className="text-[11px] font-medium text-[#C89B2F]" onClick={() => setExpanded((value) => !value)}>
+          {expanded ? 'Minimize' : 'Open'}
+        </button>
       </div>
+      {!expanded ? (
+        <button
+          className="flex w-full items-center justify-between rounded-[18px] bg-white/72 px-4 py-3 text-left shadow-[0_10px_24px_rgba(17,17,17,0.04)]"
+          onClick={() => setExpanded(true)}
+        >
+          <div className="flex -space-x-2">
+            {preview.map((p) => {
+              const img = ('avatar' in p && p.avatar) ? p.avatar : undefined
+              const role = ('role' in p && p.role) ? p.role : ''
+              const hasName = !!p.name && p.name !== role
+              const initial = hasName ? p.name.slice(0, 1) : abbreviate(role).slice(0, 2)
+
+              return (
+                <div key={p.id} className="h-8 w-8 overflow-hidden rounded-full border border-[#F8F6F2] bg-[#1A1712] shadow-[0_2px_8px_rgba(0,0,0,0.12)]">
+                  {img
+                    ? <img src={img} alt={p.name} className="h-full w-full object-cover object-center" />
+                    : <div className="flex h-full w-full items-center justify-center font-semibold text-[#F6DEAF]" style={{ fontSize: hasName ? '11px' : '8px' }}>{initial}</div>}
+                </div>
+              )
+            })}
+          </div>
+          <div className="min-w-0 flex-1 px-3">
+            <p className="text-[12px] font-medium text-[#171411]">{people.length} partner{people.length === 1 ? '' : 's'} in continuity</p>
+            <p className="mt-0.5 text-[10px] text-[#8B847B]">Open when you need field context.</p>
+          </div>
+          <span className="text-[12px] font-medium text-[#8A7351]">Open</span>
+        </button>
+      ) : (
       <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {visible.map((p) => {
           const img = ('avatar' in p && p.avatar) ? p.avatar : undefined
-          const pressure = ('pressure' in p && p.pressure) ? p.pressure as string : 'low'
           const role = ('role' in p && p.role) ? p.role : ''
           const hasName = !!p.name && p.name !== role
           const displayName = hasName ? p.name.split(' ')[0] : abbreviate(role)
@@ -56,14 +86,11 @@ export function FluencyPartnersRail(
 
           return (
             <button key={p.id} className="flex w-[48px] flex-shrink-0 flex-col items-center gap-1 p-0" onClick={() => onPersonTap?.(p.name || role, role)}>
-              <div className="relative">
-                <div className="h-[32px] w-[32px] overflow-hidden rounded-full border-[1.5px] border-[#1A1712] bg-[#1A1712] shadow-[0_2px_8px_rgba(0,0,0,0.20)]">
-                  {img
-                    ? <img src={img} alt={p.name} className="h-full w-full object-cover object-center" />
-                    : <div className="flex h-full w-full items-center justify-center font-semibold text-[#F6DEAF]" style={{ fontSize: hasName ? '12px' : '8px' }}>{initial}</div>
-                  }
-                </div>
-                <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-[#F8F6F2]" style={{ backgroundColor: STATUS_COLOR[pressure] ?? '#4ADE80' }} />
+              <div className="h-[32px] w-[32px] overflow-hidden rounded-full border-[1.5px] border-[#1A1712] bg-[#1A1712] shadow-[0_2px_8px_rgba(0,0,0,0.20)]">
+                {img
+                  ? <img src={img} alt={p.name} className="h-full w-full object-cover object-center" />
+                  : <div className="flex h-full w-full items-center justify-center font-semibold text-[#F6DEAF]" style={{ fontSize: hasName ? '12px' : '8px' }}>{initial}</div>
+                }
               </div>
               <p className="text-center text-[9px] font-semibold leading-tight text-[#141210]">{displayName}</p>
               <p className="text-center text-[8px] leading-tight text-[#6E6A63]">{role}</p>
@@ -84,6 +111,7 @@ export function FluencyPartnersRail(
           </div>
         )}
       </div>
+      )}
     </section>
   )
 }
