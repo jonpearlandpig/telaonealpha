@@ -1,12 +1,15 @@
 'use client'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ContinuityIngest } from '@/components/runtime/continuity-ingest'
 import { normalizeContinuityIngestion, type ContinuityIngestionMode } from '@/lib/continuity/normalize-ingestion'
+import { buildOperationalCalendarEvents } from '@/lib/showtela/calendar'
 import { ActiveOpsRail } from './ActiveOpsRail'
 import { BottomDock } from './BottomDock'
+import { CalendarWeekRail } from './CalendarWeekRail'
 import { ContinuityFeed } from './ContinuityFeed'
 import { CrusadeOperationsRail } from './CrusadeOperationsRail'
 import { FluencyPartnersRail } from './FluencyPartnersRail'
+import { OperationalCalendar } from './OperationalCalendar'
 import { ShowTelaHeader } from './ShowTelaHeader'
 import { UnresolvedPressureCard } from './UnresolvedPressureCard'
 import { PersonSheet } from './sheets/PersonSheet'
@@ -15,7 +18,6 @@ import { OperationSheet } from './sheets/OperationSheet'
 import { UnresolvedSheet } from './sheets/UnresolvedSheet'
 import { PearlDropVoice } from './PearlDropVoice'
 import { TelaTalk } from './TelaTalk'
-import { OperationalCalendar } from './OperationalCalendar'
 import type { OperationEntity, ShowTelaViewModel, UnresolvedItem, UnresolvedPressure } from './types'
 import type { ContinuityEvent } from '@/lib/showtela/types'
 
@@ -144,7 +146,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
   const unresolvedPressure = derivePressure(unresolvedItemsState)
   const priorityOperation = operations[0]
   const recentFeedItem = feed[0]
-  const activeOperators = vm.activeOps.map((item) => item.name)
+  const activeOperators = useMemo(() => vm.activeOps.map((item) => item.name), [vm.activeOps])
   const userFirstName = user?.name?.split(' ')[0]?.toLowerCase()
   const visibleActiveOps = vm.activeOps.filter((item) => {
     if (!userFirstName) return true
@@ -188,6 +190,24 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
     activeOperators: activeOperators.slice(0, 6),
   }
 
+  const calendarBaseDate = useMemo(() => {
+    const anchor = latestTimeline?.timestamp || recentFeedItem?.timestamp
+    return anchor ? new Date(anchor) : new Date()
+  }, [latestTimeline?.timestamp, recentFeedItem?.timestamp])
+
+  const calendarEvents = useMemo(
+    () => buildOperationalCalendarEvents({
+      feed,
+      operations,
+      unresolvedItems: unresolvedItemsState,
+      runtimeTimeline: vm.runtimeTimeline,
+      people: activeOperators,
+      source: vm.source,
+      baseDate: calendarBaseDate,
+    }),
+    [activeOperators, calendarBaseDate, feed, operations, unresolvedItemsState, vm.runtimeTimeline, vm.source],
+  )
+
   function handleResolveOperation(name: string, detail?: { movement: string; unresolvedTitles: string[] }) {
     setUnresolvedItemsState((current) => {
       const next = current.filter((entry) => !matchesOperation(entry.operation, name))
@@ -229,6 +249,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
             onAddContinuity={() => openIngest(null)}
           />
           <FluencyPartnersRail items={vm.fluencyPartners.map((item) => ({ id: item.id, name: item.name, label: item.name, unresolvedCount: item.unresolvedCount ?? 0, image: item.image, latest: item.latest }))} onPersonTap={(name, role) => setSheet({ type: 'person', name, role })} />
+          <CalendarWeekRail events={calendarEvents} baseDate={calendarBaseDate} onOpenCalendar={() => setTab('calendar')} />
           <CrusadeOperationsRail items={operations} unresolvedItems={unresolvedItemsState} onOperationTap={(name) => setSheet({ type: 'operation', name })} />
           <UnresolvedPressureCard pressure={unresolvedPressure} onOpen={() => setSheet({ type: 'unresolved' })} />
           <ContinuityFeed feed={feed} onFeedTap={(item) => setSheet({ type: 'feed', item })} />
@@ -254,7 +275,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
       {tab === 'messages' && <TelaTalk autoscan={autoscan} />}
 
       {tab === 'calendar' && (
-        <OperationalCalendar feed={feed} onEventTap={(item) => setSheet({ type: 'feed', item })} />
+        <OperationalCalendar events={calendarEvents} baseDate={calendarBaseDate} onOpenVoice={() => openVoice(user?.name)} />
       )}
 
       {tab === 'profile' && (
