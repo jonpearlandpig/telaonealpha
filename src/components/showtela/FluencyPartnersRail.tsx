@@ -27,6 +27,8 @@ export function FluencyPartnersRail(
     | { people: PersonEntity[]; onPersonTap?: (name: string, role?: string) => void }
     | { items: Array<{ id: string; label?: string; name?: string; unresolvedCount: number; image: string; latest?: string }>; onPersonTap?: (name: string, role?: string) => void }
 ) {
+  const [expanded, setExpanded] = useState(false)
+
   const onPersonTap = props.onPersonTap
   const people = 'people' in props ? props.people
     : props.items.map((i) => ({
@@ -41,6 +43,7 @@ export function FluencyPartnersRail(
 
   const overflow = people.length > 6 ? people.length - 6 : 0
   const visible = people.slice(0, 6)
+  const activeCount = people.length
 
   if (!expanded) {
     return (
@@ -57,6 +60,7 @@ export function FluencyPartnersRail(
   }
 
   return (
+<<<<<<< HEAD
     <section className="pb-5 pt-1">
       <button
         className="flex w-full items-center justify-between px-5"
@@ -80,6 +84,40 @@ export function FluencyPartnersRail(
             : pressure === 'medium'
               ? 'linear-gradient(135deg, #B89A52 0%, #D8C080 100%)'
               : 'rgba(180,168,148,0.45)'
+=======
+    <section>
+      {/* Collapsed row — always visible, tap to toggle */}
+      <button
+        className="flex w-full items-center justify-between px-5 py-3"
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+      >
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8B847B]">Open Fluency Partners</p>
+        <p className="text-[10px] font-medium uppercase tracking-[0.10em] text-[#8B847B]">
+          {activeCount > 0 ? `${activeCount} Active` : 'Open'}
+        </p>
+      </button>
+
+      {/* Divider */}
+      <div className="mx-5 h-px bg-[rgba(180,168,148,0.25)]" />
+
+      {/* Expanded rail — only rendered when expanded */}
+      {expanded && (
+        <div className="mt-4 flex gap-4 overflow-x-auto pl-5 pr-4 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {visible.map((p) => {
+            const img = ('avatar' in p && p.avatar) ? p.avatar : undefined
+            const role = ('role' in p && p.role) ? p.role : ''
+            const unresolved = p.unresolvedCount ?? 0
+            const hasName = !!p.name && p.name !== role
+            const displayName = hasName ? p.name.split(' ')[0] : abbreviate(role)
+            const initial = hasName ? p.name.slice(0, 1) : abbreviate(role).slice(0, 2)
+            const pressure = ('pressure' in p && p.pressure) ? p.pressure : unresolved >= 2 ? 'high' : unresolved === 1 ? 'medium' : 'low'
+            const ringBg = pressure === 'high'
+              ? 'linear-gradient(135deg, #8A6040 0%, #C4946A 100%)'
+              : pressure === 'medium'
+                ? 'linear-gradient(135deg, #B89A52 0%, #D8C080 100%)'
+                : 'rgba(180,168,148,0.45)'
+>>>>>>> e3ee332 (Fluency Partners hard collapse — constitutional default closed state)
 
           return (
             <button
@@ -119,10 +157,10 @@ export function FluencyPartnersRail(
           </div>
         )}
 
+<<<<<<< HEAD
         {people.length === 0 && (
           <p className="min-w-[200px] py-3 text-[12px] text-[#8B847B]">No fluency partners yet.</p>
         )}
       </div>
-    </section>
-  )
+    </section>  )
 }
