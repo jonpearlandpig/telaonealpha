@@ -42,13 +42,7 @@ export function FluencyPartnersRail(
   return (
     <section className="px-5 pb-5">
       <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5E5348]">Fluency Partners</h2>
-          <span className="flex items-center gap-1 rounded-full bg-[#1A1712] px-2 py-0.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#4ADE80]" />
-            <span className="text-[10px] font-medium text-[#E5DBC8]">{people.length} active</span>
-          </span>
-        </div>
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5E5348]">Fluency Partners</h2>
         <button className="text-[11px] font-medium text-[#C89B2F]">View all</button>
       </div>
       <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

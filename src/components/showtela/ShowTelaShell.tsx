@@ -149,7 +149,6 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
             onProfileTap={() => setTab('profile')}
             onTelaTap={() => setTab('messages')}
             onPersonTap={(name, role) => setSheet({ type: 'person', name, role })}
-            onPearlDrop={(name) => openVoice(name)}
             onAddContinuity={() => openIngest(null)}
           />
           <FluencyPartnersRail items={vm.fluencyPartners.map((item) => ({ id: item.id, name: item.name, label: item.name, unresolvedCount: item.unresolvedCount ?? 0, image: item.image, latest: item.latest }))} onPersonTap={(name, role) => setSheet({ type: 'person', name, role })} />

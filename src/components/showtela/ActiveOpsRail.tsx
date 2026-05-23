@@ -48,7 +48,6 @@ export function ActiveOpsRail({
   onProfileTap,
   onTelaTap,
   onPersonTap,
-  onPearlDrop,
   onAddContinuity,
 }: {
   userName?: string
@@ -58,7 +57,6 @@ export function ActiveOpsRail({
   onProfileTap?: () => void
   onTelaTap?: () => void
   onPersonTap?: (name: string, role?: string) => void
-  onPearlDrop?: (personName: string) => void
   onAddContinuity?: () => void
 }) {
   const firstName = userName?.split(' ')[0] ?? 'You'
@@ -66,13 +64,7 @@ export function ActiveOpsRail({
   return (
     <section className="px-5 pb-5 pt-1">
       <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5E5348]">Persistent Presence</h2>
-          <span className="flex items-center gap-1 rounded-full bg-[#1A1712] px-2 py-0.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#4ADE80]" />
-            <span className="text-[10px] font-medium text-[#E5DBC8]">{items.length + 2} active now</span>
-          </span>
-        </div>
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5E5348]">Anchors</h2>
         <button className="text-[11px] font-medium text-[#C89B2F]">View all</button>
       </div>
       <div className="flex gap-4 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -83,9 +75,16 @@ export function ActiveOpsRail({
                 ? <img src={facePhoto(userImage)} alt={userName ?? 'You'} className="h-full w-full object-cover" />
                 : <div className="flex h-full w-full items-center justify-center bg-[#1A1712] text-[22px] font-semibold text-[#F8E1B0]">{firstName.slice(0, 1)}</div>}
             </CircleShell>
-            <span className="absolute bottom-1 right-1 rounded-full border border-[#F8F6F2] bg-[#F4EFE6] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#6B5D4B]">
-              You
-            </span>
+            <button
+              onClick={(event) => {
+                event.stopPropagation()
+                onAddContinuity?.()
+              }}
+              className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#F8F6F2] bg-[#141210] shadow-[0_2px_8px_rgba(0,0,0,0.24)]"
+              aria-label="Add continuity"
+            >
+              <span className="text-[14px] font-semibold leading-none text-white">+</span>
+            </button>
           </div>
           <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{firstName}</p>
           <p className="text-center text-[10px] leading-tight text-[#6E6A63]">Personal anchor</p>
@@ -134,13 +133,6 @@ export function ActiveOpsRail({
                     : <div className="flex h-full w-full items-center justify-center text-[22px] font-semibold text-[#6F541A]">{p.name.slice(0, 1)}</div>}
                 </CircleShell>
                 <span className={`absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full border-2 border-[#F8F6F2] ${hasUnresolved ? 'bg-[#C89B2F]' : 'bg-[#6FAE7B]'}`} />
-                <button
-                  onClick={(event) => { event.stopPropagation(); onPearlDrop?.(p.name) }}
-                  className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#F8F6F2] bg-[#141210] shadow-[0_2px_8px_rgba(0,0,0,0.30)]"
-                  aria-label={`Add continuity for ${p.name}`}
-                >
-                  <span className="text-[14px] font-semibold leading-none text-white">+</span>
-                </button>
               </div>
               <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{p.name.split(' ')[0]}</p>
               <p className="text-center text-[10px] leading-tight text-[#6E6A63]">{role}</p>
@@ -153,16 +145,7 @@ export function ActiveOpsRail({
             <p className="text-[13px] font-medium text-[#8B847B]">No active operators yet.</p>
           </div>
         )}
-
-        <button className="flex w-[80px] flex-shrink-0 flex-col items-center gap-1.5 p-0" onClick={onAddContinuity}>
-          <div className="flex h-[78px] w-[78px] items-center justify-center rounded-full border border-dashed border-[#C89B2F]/40 bg-[linear-gradient(180deg,#F7F3EC_0%,#EEE5D7_100%)] shadow-[0_8px_20px_rgba(17,17,17,0.04)]">
-            <span className="text-[26px] font-thin text-[#7E6B52]">+</span>
-          </div>
-          <p className="text-center text-[12px] font-medium text-[#6E6A63]">Add</p>
-          <p className="text-center text-[10px] leading-tight text-[#8B847B]">Continuity</p>
-        </button>
       </div>
-      <p className="mt-3 text-[11px] leading-relaxed text-[#8B847B]">Order is fixed: personal continuity anchor first, TELA second, then active operators.</p>
     </section>
   )
 }

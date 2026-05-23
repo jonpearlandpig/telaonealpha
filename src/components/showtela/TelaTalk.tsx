@@ -22,28 +22,28 @@ export function TelaTalk({
 }) {
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#F6F2EA_0%,#EFE6D7_100%)] px-5 pb-32 pt-14">
-      <div className="rounded-[30px] border border-[#2A231A] bg-[radial-gradient(circle_at_top,#372C1E_0%,#17130F_68%)] p-5 text-[#F5EEDC] shadow-[0_24px_56px_rgba(20,18,16,0.22)]">
+      <div className="rounded-[28px] border border-[#2A231A] bg-[radial-gradient(circle_at_top,#372C1E_0%,#17130F_68%)] p-4 text-[#F5EEDC] shadow-[0_20px_44px_rgba(20,18,16,0.18)]">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#D7BC7F]">TELA</p>
-            <h1 className="mt-2 text-[28px] font-semibold tracking-[-0.04em]">Persistent Operational Presence</h1>
+            <h1 className="mt-1.5 text-[24px] font-semibold tracking-[-0.04em]">Persistent Operational Presence</h1>
           </div>
           <div className="rounded-full border border-[#5A4725] bg-[#221B13] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#DABD79]">
             Crusade
           </div>
         </div>
-        <div className="mt-5 space-y-4">
+        <div className="mt-4 space-y-3">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#C8B28A]">Current Operational Truth</p>
-            <p className="mt-1 text-[19px] font-semibold leading-tight">{autoscan.currentTruth}</p>
+            <p className="mt-1 text-[17px] font-semibold leading-tight">{autoscan.currentTruth}</p>
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#C8B28A]">What Matters Now</p>
-            <p className="mt-1 text-[14px] leading-relaxed text-[#DDD1BB]">{autoscan.mattersNow}</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-[#DDD1BB]">{autoscan.mattersNow}</p>
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#C8B28A]">Next Meaningful Movement</p>
-            <p className="mt-1 text-[14px] leading-relaxed text-[#DDD1BB]">{autoscan.nextMovement}</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-[#DDD1BB]">{autoscan.nextMovement}</p>
           </div>
         </div>
       </div>
@@ -52,13 +52,7 @@ export function TelaTalk({
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8A7351]">Field Scan</p>
-            <p className="mt-1 text-[14px] font-semibold text-[#171411]">Ambient intelligence without chat.</p>
-          </div>
-          <div className="rounded-full border border-[#D7CCBC] bg-[#F4EFE6] px-2.5 py-1">
-            <span className="flex items-center gap-1 text-[11px] font-medium text-[#6B5D4B]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#6FAE7B]" />
-              autoscan live
-            </span>
+            <p className="mt-1 text-[14px] font-semibold text-[#171411]">Ambient intelligence across the field.</p>
           </div>
         </div>
         {autoscan.latestChange && (
