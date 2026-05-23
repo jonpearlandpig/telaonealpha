@@ -122,15 +122,11 @@ export function OperationalCalendar({
 
   return (
     <div className="min-h-screen bg-[#F8F6F2] pb-8">
-      <header className="bg-[#F8F6F2] px-5 pb-2 pt-14">
+      <header className="bg-[#F8F6F2] px-5 pb-1 pt-14">
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Calendar</p>
-        <h1 className="mt-1 text-[24px] font-semibold leading-tight text-[#141210]">Quietly keeping you oriented</h1>
-        <p className="mt-2 max-w-[32ch] text-[14px] leading-relaxed text-[#6B5D4B]">
-          One calm briefing at a time. The deeper reasoning layer stays available when you want it.
-        </p>
       </header>
 
-      <section className="pt-4">
+      <section className="pt-2">
         <div className="mb-3 flex items-center justify-between px-5">
           <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7C705F]">This Week</h2>
           <button
