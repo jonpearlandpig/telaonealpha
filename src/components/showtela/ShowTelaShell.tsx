@@ -144,7 +144,6 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
           <ActiveOpsRail
             userName={user?.name}
             userImage={user?.image}
-            telaLabel={priorityOperation?.label ?? 'Stable'}
             items={visibleActiveOps.map((item) => ({ id: item.id, name: item.name, latest: item.latest, unresolvedCount: item.unresolvedCount ?? 0, image: item.image, updatesCount: 0 }))}
             onProfileTap={() => setTab('profile')}
             onTelaTap={() => setTab('messages')}

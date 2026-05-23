@@ -43,7 +43,6 @@ function CircleShell({
 export function ActiveOpsRail({
   userName,
   userImage,
-  telaLabel,
   items,
   onProfileTap,
   onTelaTap,
@@ -52,7 +51,6 @@ export function ActiveOpsRail({
 }: {
   userName?: string
   userImage?: string
-  telaLabel: string
   items: ActiveRailItem[]
   onProfileTap?: () => void
   onTelaTap?: () => void
@@ -101,8 +99,8 @@ export function ActiveOpsRail({
               Crusade
             </span>
           </div>
-          <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">TELA</p>
-          <p className="text-center text-[10px] leading-tight text-[#6E6A63]">{telaLabel}</p>
+          <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">SHOWTELA</p>
+          <p className="min-h-[12px] text-center text-[10px] leading-tight text-transparent">.</p>
         </button>
 
         {items.map((p) => {
