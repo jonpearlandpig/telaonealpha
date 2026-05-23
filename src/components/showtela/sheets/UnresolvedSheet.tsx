@@ -13,11 +13,11 @@ export function UnresolvedSheet({ items, open, onClose }: { items: UnresolvedIte
   })
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Unresolved Pressure">
+    <BottomSheet open={open} onClose={onClose} title="Open Pressure">
       {sorted.length === 0 ? (
         <div className="flex items-center gap-3 rounded-[14px] bg-[#F0FFF4] px-4 py-3">
-          <span className="text-[18px]">✅</span>
-          <p className="text-[13px] font-medium text-[#166534]">Nothing unresolved right now.</p>
+          <span className="h-2 w-2 flex-shrink-0 rounded-full bg-[#4ADE80]" />
+          <p className="text-[13px] font-medium text-[#166534]">All clear — nothing unresolved.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -32,7 +32,7 @@ export function UnresolvedSheet({ items, open, onClose }: { items: UnresolvedIte
                     {u.blocking && <span className="rounded-full bg-[#FEE2E2] px-2 py-0.5 text-[10px] font-semibold text-[#991B1B]">Blocking</span>}
                     {u.aging ? <span className="text-[10px] text-[#8B847B]">{u.aging}d</span> : null}
                   </div>
-                  {u.owner && <p className="mt-1 text-[11px] text-[#8B847B]">Owner: {u.owner}</p>}
+                  {u.owner && <p className="mt-1 text-[11px] text-[#8B847B]">{u.owner}</p>}
                 </div>
               </div>
             </div>

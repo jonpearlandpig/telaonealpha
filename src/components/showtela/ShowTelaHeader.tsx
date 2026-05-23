@@ -39,7 +39,7 @@ export function ShowTelaHeader({
 
       <div>
         <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.6px] text-[#141210]">{greeting}, {firstName}.</h1>
-        <p className="mt-1 text-[15px] leading-snug text-[#6E6A63]">Here&apos;s what&apos;s live on the Crusade.</p>
+        <p className="mt-1 text-[15px] leading-snug text-[#6E6A63]">Operations are live.</p>
       </div>
 
       <div className="mt-5 bg-[linear-gradient(180deg,rgba(255,255,255,0.16)_0%,rgba(246,241,233,0.52)_100%)] px-1 py-1">

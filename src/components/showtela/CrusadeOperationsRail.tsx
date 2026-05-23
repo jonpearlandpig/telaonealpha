@@ -44,7 +44,7 @@ function OperationCard({ item, matchedItems, onTap }: {
   const actionLabel = firstBlocker
     ? 'Resolve blocker'
     : unresolved > 0
-      ? `Review ${unresolved > 1 ? `${unresolved} open` : 'open item'}`
+      ? 'Address open items'
       : null
 
   const showIntelLayer = topItem !== null || actionLabel !== null
@@ -96,7 +96,8 @@ export function CrusadeOperationsRail({ items, unresolvedItems, onOperationTap }
     return (
       <section className="px-5 pb-6">
         <div className="rounded-[20px] border border-dashed border-[#D4C9B4] px-4 py-8 text-center">
-          <p className="text-[13px] font-medium text-[#8B847B]">No operations yet.</p>
+          <p className="text-[13px] font-medium text-[#8B847B]">No active operations.</p>
+          <p className="mt-1 text-[11px] text-[#A89880]">Operations will appear when the Crusade activates.</p>
         </div>
       </section>
     )
@@ -106,7 +107,7 @@ export function CrusadeOperationsRail({ items, unresolvedItems, onOperationTap }
     <section className="px-5 pb-6">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5E5348]">Operations</h2>
-        <button className="text-[11px] font-medium text-[#C89B2F]">View all</button>
+        <button className="text-[11px] font-medium text-[#C89B2F]">All rooms</button>
       </div>
       <div className="flex flex-col gap-3.5">
         {items.map((item) => {

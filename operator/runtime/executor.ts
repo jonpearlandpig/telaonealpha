@@ -198,12 +198,22 @@ async function runInTmux(provider: RuntimeProvider, prompt: string): Promise<{
     } catch { /* outFile not yet written */ }
   }
 
-  // Timeout — kill the session and clean up.
+  // Timeout — kill session and any orphaned grandchild processes by wrap-file name.
   try { execSync(`tmux kill-session -t ${sessionName} 2>/dev/null`, { stdio: 'ignore' }) } catch {}
+  try { execSync(`pkill -f 'tela-wrap-${ts}' 2>/dev/null`, { stdio: 'ignore' }) } catch {}
+  try { execSync(`pkill -f 'tela-run-${ts}' 2>/dev/null`, { stdio: 'ignore' }) } catch {}
   try { fs.unlinkSync(outFile) } catch {}
   try { fs.unlinkSync(runFile) } catch {}
   try { fs.unlinkSync(promptFile) } catch {}
   return { output: '', timedOut: true, error: null }
+}
+
+export function cancelActiveExecution(): void {
+  try { execSync('tmux kill-session -t claude 2>/dev/null', { stdio: 'ignore' }) } catch {}
+  try { execSync('tmux kill-session -t codex 2>/dev/null', { stdio: 'ignore' }) } catch {}
+  try { execSync("pkill -f 'tela-wrap-' 2>/dev/null", { stdio: 'ignore' }) } catch {}
+  try { execSync("pkill -f 'tela-run-' 2>/dev/null", { stdio: 'ignore' }) } catch {}
+  console.log('[executor] active execution cancelled')
 }
 
 export async function executeInstruction(

@@ -46,7 +46,7 @@ export function OperationSheet({
 
   return (
     <BottomSheet open={open} onClose={onClose} title={name}>
-      {loading && <p className="py-8 text-center text-[13px] text-[#8B847B]">Loading...</p>}
+      {loading && <p className="py-8 text-center text-[13px] text-[#8B847B]">Surfacing operation…</p>}
       {!loading && data && (
         <>
           <div className="mb-4 flex items-center justify-between gap-3">
@@ -76,7 +76,7 @@ export function OperationSheet({
           </div>
           {data.unresolved.length > 0 ? (
             <div>
-              <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5E5348]">Open Items</h3>
+              <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5E5348]">Unresolved</h3>
               <div className="flex flex-col gap-2">
                 {data.unresolved.map((u) => (
                   <div key={u.id} className="flex items-start gap-3 rounded-[14px] bg-white px-4 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
@@ -93,8 +93,8 @@ export function OperationSheet({
             </div>
           ) : (
             <div className="flex items-center gap-3 rounded-[14px] bg-[#F0FFF4] px-4 py-3">
-              <span className="text-[18px]">✅</span>
-              <p className="text-[13px] font-medium text-[#166534]">All clear — no open items</p>
+              <span className="h-2 w-2 flex-shrink-0 rounded-full bg-[#4ADE80]" />
+              <p className="text-[13px] font-medium text-[#166534]">All clear — operation is resolved</p>
             </div>
           )}
         </>

@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "operator": "tsx operator/index.ts"
+    "operator": "tsx --env-file .env.local operator/index.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.2",

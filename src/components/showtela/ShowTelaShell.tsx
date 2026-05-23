@@ -15,6 +15,7 @@ import { OperationSheet } from './sheets/OperationSheet'
 import { UnresolvedSheet } from './sheets/UnresolvedSheet'
 import { PearlDropVoice } from './PearlDropVoice'
 import { TelaTalk } from './TelaTalk'
+import { OperationalCalendar } from './OperationalCalendar'
 import type { OperationEntity, ShowTelaViewModel, UnresolvedItem, UnresolvedPressure } from './types'
 import type { ContinuityEvent } from '@/lib/showtela/types'
 
@@ -253,37 +254,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
       {tab === 'messages' && <TelaTalk autoscan={autoscan} />}
 
       {tab === 'calendar' && (
-        <div style={{ backgroundColor: '#F8F6F2', minHeight: '100vh' }}>
-          <div className="border-b border-[#EAE4DA] px-5 pb-4 pt-14">
-            <h1 className="text-xl font-semibold text-[#141210]">Operational Calendar</h1>
-            <p className="mt-0.5 text-[12px] text-[#8B847B]">Forward continuity view</p>
-          </div>
-          <div className="flex flex-col gap-3 px-5 pt-6">
-            {feed.filter((item) => item.timestamp).slice(0, 10).map((item) => {
-              const date = item.timestamp ? new Date(item.timestamp) : null
-              const dateStr = date ? date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : ''
-              const pulseColor = item.pressure === 'high' ? '#F87171' : item.pressure === 'medium' ? '#F59E0B' : '#4ADE80'
-              return (
-                <button key={item.id} onClick={() => setSheet({ type: 'feed', item })} className="flex w-full items-start gap-3 rounded-2xl bg-white px-4 py-3 text-left shadow-sm">
-                  <div className="mt-0.5 flex-shrink-0">
-                    <span className="block h-2 w-2 rounded-full" style={{ backgroundColor: pulseColor }} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="mb-0.5 text-[10px] font-medium text-[#A89880]">{dateStr}</p>
-                    <p className="line-clamp-1 text-[13px] font-semibold text-[#141210]">{item.headline}</p>
-                    <p className="mt-0.5 text-[11px] text-[#8B847B]">{item.owner?.name}</p>
-                  </div>
-                </button>
-              )
-            })}
-            {feed.length === 0 && (
-              <div className="pt-12 text-center">
-                <p className="text-[13px] text-[#8B847B]">No continuity events yet.</p>
-                <p className="mt-1 text-[11px] text-[#A89880]">Events will appear as operations update.</p>
-              </div>
-            )}
-          </div>
-        </div>
+        <OperationalCalendar feed={feed} onEventTap={(item) => setSheet({ type: 'feed', item })} />
       )}
 
       {tab === 'profile' && (

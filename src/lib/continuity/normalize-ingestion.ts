@@ -1,4 +1,6 @@
 import type { ContinuityEvent } from '@/lib/showtela/types'
+import { createAuthorshipTrace } from '@/lib/showtela/telauthorium'
+import { createLineageRef } from '@/lib/showtela/penAndSword'
 
 export type ContinuityIngestionMode =
   | 'voice-note'
@@ -97,5 +99,11 @@ export function normalizeContinuityIngestion(
         notes: body || undefined,
       },
     },
+    authorshipTrace: createAuthorshipTrace({
+      author: owner,
+      surface: input.mode === 'voice-note' ? 'voice' : 'ingest',
+      capturedAt: timestamp,
+    }),
+    lineageRef: createLineageRef({}),
   }
 }

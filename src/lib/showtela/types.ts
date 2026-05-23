@@ -1,5 +1,22 @@
 export type PressureLevel = 'low' | 'medium' | 'high'
 
+export type AuthorshipSurface = 'telegram' | 'voice' | 'ingest' | 'runtime' | 'notion' | 'api'
+
+export type AuthorshipTrace = {
+  author: string
+  surface: AuthorshipSurface
+  capturedAt: string
+  modifiedBy?: string
+  modifiedAt?: string
+}
+
+export type LineageRef = {
+  lineageId: string
+  parentId?: string
+  chain: readonly string[]
+  capturedAt: string
+}
+
 export type DataSource = 'supabase' | 'notion' | 'empty'
 
 export type DiagnosticState =
@@ -71,6 +88,8 @@ export type ContinuityEvent = {
       notes?: string
     }
   }
+  authorshipTrace?: AuthorshipTrace
+  lineageRef?: LineageRef
 }
 
 export type MediaMemoryType = 'image' | 'pdf' | 'stage_plot' | 'screenshot' | 'bus_schedule' | 'venue_packet' | 'contract' | 'voice_memo'
