@@ -1,23 +1,8 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { EventFeed } from '@/components/constitutional/EventFeed'
 import type { OperationalCalendarEvent, OperationalWeekDay } from '@/lib/showtela/calendar'
-import { buildContinuityMemory, deriveOperationalLineage, derivePressureEvolution, deriveStateTransitions } from '@/lib/showtela/lineage'
-import { buildPredictionSummary } from '@/lib/showtela/prediction'
 import { buildReasoningSummary } from '@/lib/showtela/reasoning'
-import { ContinuityMemoryPanel } from './ContinuityMemoryPanel'
-import { ContinuityDriftCard } from './ContinuityDriftCard'
-import { ContinuityWatchPanel } from './ContinuityWatchPanel'
-import { DepartmentLoadCard } from './DepartmentLoadCard'
-import { DependencyChainCard } from './DependencyChainCard'
-import { OperationalLineageCard } from './OperationalLineageCard'
-import { OperationalPressureCard } from './OperationalPressureCard'
-import { OperationalPredictionCard } from './OperationalPredictionCard'
-import { OperationalRiskTimeline } from './OperationalRiskTimeline'
-import { OperationalTimelineEvent } from './OperationalTimelineEvent'
-import { PressureEvolutionCard } from './PressureEvolutionCard'
-import { StateTransitionCard } from './StateTransitionCard'
 import { TelaCalendarActionPanel } from './TelaCalendarActionPanel'
 import { TelaReasoningPanel } from './TelaReasoningPanel'
 import { BottomSheet } from './sheets/BottomSheet'
@@ -26,10 +11,10 @@ import { getWeekDays } from '@/lib/showtela/calendar'
 const STATE_LABELS: Record<string, string> = {
   calm: 'Calm',
   active: 'Active',
-  pressure: 'Attention Needed',
+  pressure: 'Needs A Check',
   critical: 'Attention Needed',
   waiting: 'Watching',
-  needs_decision: 'Attention Needed',
+  needs_decision: 'Needs Review',
   tela_ready: 'Active',
 }
 
@@ -67,14 +52,14 @@ function buildDaySummary(event?: OperationalCalendarEvent, unresolvedCount = 0) 
 
 function buildChangeSummary(event?: OperationalCalendarEvent) {
   if (!event) return 'Nothing material has shifted since the last update.'
-  if (event.continuityState === 'fresh') return 'Fresh context came in for this plan.'
+  if (event.continuityState === 'fresh') return 'A fresh update came in and the plan still looks intact.'
   if (event.unresolvedCount > 0) return 'One open detail is still shaping the day.'
   if (event.people.length === 0) return 'Ownership still needs to be made explicit.'
   return 'The plan is holding without a major shift.'
 }
 
 function buildNextAction(event?: OperationalCalendarEvent, fallback?: string) {
-  if (fallback) return fallback
+  if (fallback) return fallback.replace('Clarify ', 'Confirm ').replace(' before it becomes the pacing constraint.', ' before the day tightens.')
   if (!event) return 'Stay with the current plan and check again later.'
   if (event.unresolvedCount > 0 || ['critical', 'needs_decision', 'pressure'].includes(event.pressureState)) {
     return `Confirm the open detail around ${event.title.toLowerCase()}.`
@@ -89,6 +74,21 @@ function buildWeekRailLine(day: OperationalWeekDay) {
   if (day.nextEvent?.continuityState === 'fresh') return 'Fresh update'
   if (day.events.length === 0) return 'Quiet day'
   return day.nextEvent?.title ?? 'Holding steady'
+}
+
+function buildTimingLine(event?: OperationalCalendarEvent, day?: OperationalWeekDay) {
+  if (!event?.timestamp) return day?.fullLabel ?? 'Timing is still open.'
+  const date = new Date(event.timestamp)
+  const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).replace(' AM', 'A').replace(' PM', 'P')
+  return `${day?.fullLabel ?? date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} at ${time}`
+}
+
+function buildStillOpenLine(event?: OperationalCalendarEvent) {
+  if (!event) return 'Nothing is asking for extra care right now.'
+  if (event.unresolvedCount > 0) return `${event.unresolvedCount} detail${event.unresolvedCount === 1 ? '' : 's'} still need confirmation.`
+  if (event.people.length === 0) return 'A clear owner still needs to be named.'
+  if (event.continuityState === 'stale') return 'This would benefit from a fresh update before tomorrow.'
+  return 'Nothing here looks like it is slipping.'
 }
 
 export function OperationalCalendar({
@@ -112,31 +112,13 @@ export function OperationalCalendar({
     () => buildReasoningSummary(reasoningScope, selectedDay?.key ?? selectedDayKey),
     [reasoningScope, selectedDay?.key, selectedDayKey],
   )
-  const prediction = useMemo(
-    () => buildPredictionSummary(events, selectedDay?.key ?? selectedDayKey),
-    [events, selectedDay?.key, selectedDayKey],
-  )
-  const memory = useMemo(() => buildContinuityMemory(events, prediction.dependencies), [events, prediction.dependencies])
-  const lineage = useMemo(() => deriveOperationalLineage(reasoningScope, reasoning.dependencies), [reasoningScope, reasoning.dependencies])
-  const transitions = useMemo(() => deriveStateTransitions(reasoningScope), [reasoningScope])
-  const pressureEvolution = useMemo(
-    () => derivePressureEvolution(events, selectedDay?.key ?? selectedDayKey, prediction.dependencies),
-    [events, prediction.dependencies, selectedDay?.key, selectedDayKey],
-  )
-  const pressureEvents = events.filter((event) => ['pressure', 'critical', 'needs_decision', 'tela_ready'].includes(event.pressureState))
-  const recentChanges = events
-    .filter((event) => event.continuityState === 'fresh' || event.sourceEntityId)
-    .slice(0, 4)
   const briefingEvent = selectedDay?.nextEvent ?? selectedEvent
   const focusEvent = reasoning.highestPressureEvent ?? briefingEvent
   const dayState = focusEvent?.pressureState ?? selectedDay?.state ?? 'calm'
   const dayTone = STATE_TONES[dayState] ?? STATE_TONES.calm
   const daySummary = buildDaySummary(focusEvent, selectedDay?.unresolvedCount ?? 0)
   const changeSummary = buildChangeSummary(focusEvent)
-  const nextActionText = buildNextAction(
-    focusEvent,
-    prediction.predictions[0]?.recommendedFocus ?? reasoning.recommendedFocus,
-  )
+  const nextActionText = buildNextAction(focusEvent, reasoning.recommendedFocus)
 
   return (
     <div className="min-h-screen bg-[#F8F6F2] pb-8">
@@ -206,13 +188,24 @@ export function OperationalCalendar({
             <p className="mt-2 text-[14px] leading-relaxed text-[#3E352C]">{nextActionText}</p>
           </div>
 
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="rounded-[18px] bg-white/65 px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9A7C46]">Timing</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-[#4F463D]">{buildTimingLine(focusEvent, selectedDay)}</p>
+            </div>
+            <div className="rounded-[18px] bg-white/65 px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9A7C46]">Status</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-[#4F463D]">{buildStillOpenLine(focusEvent)}</p>
+            </div>
+          </div>
+
           <div className="mt-5 flex items-center justify-between gap-3">
             <button
               type="button"
               onClick={() => setShowTelaWhy(true)}
               className="min-h-[40px] rounded-full bg-white/76 px-4 text-[12px] font-semibold text-[#7A6643]"
             >
-              More
+              TELAwhy
             </button>
             <div className="flex min-w-0 items-center gap-2">
               <div className="h-2 w-2 flex-shrink-0 rounded-full" style={{ backgroundColor: dayTone.accent }} />
@@ -222,56 +215,29 @@ export function OperationalCalendar({
         </div>
       </section>
 
-      <BottomSheet open={showTelaWhy} onClose={() => setShowTelaWhy(false)} title={`${selectedDay?.fullLabel ?? 'Calendar'} Context`}>
+      <BottomSheet open={showTelaWhy} onClose={() => setShowTelaWhy(false)} title="TELAwhy">
         <div className="space-y-4">
           <div className="rounded-[20px] border border-[#E5D8C7] bg-[#FFFDF8] px-4 py-4 shadow-[0_10px_26px_rgba(27,22,16,0.05)]">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Context</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Quiet context</p>
             <p className="mt-2 text-[14px] leading-relaxed text-[#3E352C]">
-              Reasoning, prediction, continuity drift, lineage, and escalation stay here when you want more detail without crowding the main briefing.
+              Depth stays here when you want it. The main calendar stays focused on what matters today, what may slip, and what to do next.
             </p>
           </div>
 
           <TelaCalendarActionPanel selectedEvent={selectedEvent} />
-          <TelaReasoningPanel summary={reasoning} />
-          <OperationalPressureCard reason={reasoning.pressureReasons[0]} />
-          <ContinuityDriftCard drift={reasoning.drift} />
-          <DependencyChainCard dependency={reasoning.keyDependency} events={reasoningScope} />
-          <ContinuityWatchPanel watch={prediction.watch} />
-          <OperationalPredictionCard prediction={prediction.predictions[0]} events={events} />
-          <OperationalRiskTimeline events={events} predictions={prediction.predictions} />
-          <ContinuityMemoryPanel memory={memory} />
-          <EventFeed events={[]} />
-          <PressureEvolutionCard evolution={pressureEvolution} />
-          <OperationalLineageCard event={lineage[0]} />
-          <StateTransitionCard transition={transitions[0]} />
-
-          <section>
-            <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5E5348]">Operational Memory Timeline</h2>
-            <div className="flex flex-col gap-2">
-              {lineage.slice(0, 4).map((event) => (
-                <OperationalTimelineEvent key={event.id} event={event} />
-              ))}
-              {lineage.length === 0 && (
-                <p className="rounded-[18px] bg-[#FFFDF8] px-3 py-3 text-[12px] text-[#8B847B]">No derived operational memory movement yet.</p>
-              )}
-            </div>
-          </section>
-
-          {prediction.departmentLoad.slice(0, 3).map((load) => (
-            <DepartmentLoadCard key={load.department} load={load} />
-          ))}
+          <TelaReasoningPanel selectedEvent={selectedEvent} summary={reasoning} />
 
           <section>
             <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5E5348]">What Still Needs Care</h2>
             <div className="flex flex-col gap-2">
-              {pressureEvents.slice(0, 4).map((event) => (
+              {selectedEvents.slice(0, 4).map((event) => (
                 <div key={event.id} className="rounded-[18px] bg-[#FFFDF8] px-3 py-3 shadow-[0_8px_20px_rgba(27,22,16,0.05)]">
                   <p className="text-[12px] font-semibold text-[#17130F]">{event.title}</p>
-                  <p className="mt-1 text-[11px] leading-snug text-[#6B5D4B]">{event.telaHint}</p>
+                  <p className="mt-1 text-[11px] leading-snug text-[#6B5D4B]">{event.telaHint ?? buildOperationalSentence(event)}</p>
                 </div>
               ))}
-              {pressureEvents.length === 0 && (
-                <p className="rounded-[18px] bg-[#FFFDF8] px-3 py-3 text-[12px] text-[#8B847B]">No immediate dependency needs extra care right now.</p>
+              {selectedEvents.length === 0 && (
+                <p className="rounded-[18px] bg-[#FFFDF8] px-3 py-3 text-[12px] text-[#8B847B]">Nothing extra needs care on this day right now.</p>
               )}
             </div>
           </section>
@@ -279,20 +245,16 @@ export function OperationalCalendar({
           <section className="rounded-[22px] border border-[#E4D8C9] bg-[#FFFDF8] px-4 py-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">What Changed</p>
             <div className="mt-3 flex flex-col gap-2">
-              {recentChanges.map((event) => (
+              {selectedEvents.slice(0, 4).map((event) => (
                 <div key={event.id} className="border-t border-[#EEE5D8] pt-2 first:border-t-0 first:pt-0">
                   <p className="line-clamp-1 text-[12px] font-semibold text-[#17130F]">{event.title}</p>
-                  <p className="mt-0.5 text-[10px] text-[#8B847B]">{event.lineagePlaceholder ?? 'Lineage placeholder prepared.'}</p>
+                  <p className="mt-0.5 text-[10px] text-[#8B847B]">{event.summary ?? 'No new shift has been written yet.'}</p>
                 </div>
               ))}
+              {selectedEvents.length === 0 && (
+                <p className="text-[12px] text-[#8B847B]">No day-specific change is in view yet.</p>
+              )}
             </div>
-          </section>
-
-          <section className="rounded-[22px] border border-[#D8C7A6] bg-[#F4ECDD] px-4 py-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8A6725]">Lineage</p>
-            <p className="mt-1 text-[12px] leading-relaxed text-[#5B4D3D]">
-              Calendar lineage is prepared for Notion, Google Calendar, manual entries, TELA-created actions, and system-generated events. This pass does not write persistence.
-            </p>
           </section>
         </div>
       </BottomSheet>

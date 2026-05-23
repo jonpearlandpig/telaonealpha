@@ -2,17 +2,11 @@ import type { OperationalCalendarEvent } from '@/lib/showtela/calendar'
 
 const ACTIONS = [
   'Ask TELA',
-  'Explain Why',
-  'Summarize Continuity',
+  'Resolve with Team',
+  'Notify Participants',
+  'Open Messages',
   'Schedule Follow-up',
-  'Email Participants',
-  'Prepare Digest',
-  'Route to Department',
-  'Mark Unresolved',
-  'Escalate',
-  'Create Update',
-  'Create Lineage Event',
-  'Create Linked Note',
+  'View Full Context',
 ]
 
 export function TelaCalendarActionPanel({ selectedEvent }: { selectedEvent?: OperationalCalendarEvent }) {
@@ -21,7 +15,7 @@ export function TelaCalendarActionPanel({ selectedEvent }: { selectedEvent?: Ope
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Helpful Actions</p>
-          <h2 className="mt-1 text-[17px] font-semibold leading-tight">Gentle follow-ups for this day</h2>
+          <h2 className="mt-1 text-[17px] font-semibold leading-tight">Small next steps for this moment</h2>
         </div>
         <span className="rounded-full bg-[#F3EADB] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8A6725]">
           Ready
@@ -30,8 +24,8 @@ export function TelaCalendarActionPanel({ selectedEvent }: { selectedEvent?: Ope
 
       <p className="mt-2 text-[12px] leading-relaxed text-[#6B5D4B]">
         {selectedEvent
-          ? `These follow-ups stay scoped to ${selectedEvent.title}. Automation is not wired yet.`
-          : 'These follow-ups become more specific once a calendar item is selected. Automation is not wired yet.'}
+          ? `These stay centered on ${selectedEvent.title}.`
+          : 'These become more specific once a calendar item is selected.'}
       </p>
 
       <div className="mt-4 grid grid-cols-2 gap-2">
@@ -49,9 +43,9 @@ export function TelaCalendarActionPanel({ selectedEvent }: { selectedEvent?: Ope
       </div>
 
       <div className="mt-4 rounded-[16px] border border-[#E7DCCB] bg-[#FCF6EC] px-3 py-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9A7C46]">Why This Is Here</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9A7C46]">Pacing</p>
         <p className="mt-1 text-[12px] leading-relaxed text-[#6B5D4B]">
-          Explain Why stays available for future TELA reasoning across timing, people, dependency, and lineage.
+          Keep the next choice small. Deeper system detail belongs in TELAchat, not here.
         </p>
       </div>
     </section>

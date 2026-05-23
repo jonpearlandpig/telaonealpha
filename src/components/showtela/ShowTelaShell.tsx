@@ -318,9 +318,9 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
               <p className="mt-1 text-[12px] leading-relaxed text-[#6B5D4B]">Stage files and photos as traced continuity objects.</p>
             </button>
             <button onClick={() => setTab('calendar')} className="rounded-[22px] bg-white px-4 py-4 text-left shadow-[0_12px_24px_rgba(17,17,17,0.06)]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9A7C46]">History</p>
-              <p className="mt-2 text-[15px] font-semibold text-[#171411]">Continuity Calendar</p>
-              <p className="mt-1 text-[12px] leading-relaxed text-[#6B5D4B]">Review recent continuity objects and linked operational movement in time order.</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9A7C46]">Calendar</p>
+              <p className="mt-2 text-[15px] font-semibold text-[#171411]">Today At A Glance</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-[#6B5D4B]">See what matters today, what may slip, and the next move.</p>
             </button>
           </div>
           <a href="/api/auth/signout" className="mt-4 flex items-center justify-between rounded-2xl bg-white px-4 py-3.5 shadow-sm">
