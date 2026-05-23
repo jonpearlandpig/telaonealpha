@@ -23,6 +23,9 @@ export function ShowTelaHeader({
 
   return (
     <header className="px-5 pb-8 pt-[58px]">
+      <div style={{ background: '#FF0000', color: '#FFFFFF', fontSize: '16px', fontWeight: 'bold', padding: '12px 16px', marginBottom: '12px' }}>
+        PRODUCTION TRACE — abd1781 — IF YOU SEE THIS THE DEPLOYMENT IS LIVE
+      </div>
       <div className="mb-5 flex items-center justify-between">
         <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#C89B2F]">Crusade: The Musical</p>
         <button className="relative flex h-9 w-9 items-center justify-center rounded-full bg-black/[0.04]">
