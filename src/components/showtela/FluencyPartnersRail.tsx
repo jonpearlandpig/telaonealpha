@@ -60,7 +60,6 @@ export function FluencyPartnersRail(
   }
 
   return (
-<<<<<<< HEAD
     <section className="pb-5 pt-1">
       <button
         className="flex w-full items-center justify-between px-5"
@@ -84,7 +83,7 @@ export function FluencyPartnersRail(
             : pressure === 'medium'
               ? 'linear-gradient(135deg, #B89A52 0%, #D8C080 100%)'
               : 'rgba(180,168,148,0.45)'
-=======
+
     <section>
       {/* Collapsed row — always visible, tap to toggle */}
       <button
@@ -117,7 +116,6 @@ export function FluencyPartnersRail(
               : pressure === 'medium'
                 ? 'linear-gradient(135deg, #B89A52 0%, #D8C080 100%)'
                 : 'rgba(180,168,148,0.45)'
->>>>>>> e3ee332 (Fluency Partners hard collapse — constitutional default closed state)
 
           return (
             <button
