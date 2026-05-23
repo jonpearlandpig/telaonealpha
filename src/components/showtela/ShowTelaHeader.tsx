@@ -20,6 +20,14 @@ export function ShowTelaHeader({
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
   const firstName = userName?.split(' ')[0] ?? 'there'
+  const tickerItems = [
+    autoscan.currentTruth,
+    autoscan.mattersNow,
+    autoscan.nextMovement,
+    unresolvedCount > 0 ? `${unresolvedCount} unresolved movement${unresolvedCount === 1 ? '' : 's'} still open` : 'continuity field calm',
+    'governance movement holding steady',
+  ].filter(Boolean)
+  const tickerText = tickerItems.join('  /  ')
 
   return (
     <header className="px-5 pb-8 pt-[58px]">
@@ -58,6 +66,12 @@ export function ShowTelaHeader({
         ) : (
           <p className="mt-2 text-[11px] leading-snug text-[#8A7351]">{autoscan.nextMovement}</p>
         )}
+        <div className="mt-4 overflow-hidden border-t border-[#D8CAB4]/70 pt-3">
+          <div className="telatop-ticker flex w-max whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9A825F]">
+            <span className="pr-10">{tickerText}</span>
+            <span className="pr-10" aria-hidden="true">{tickerText}</span>
+          </div>
+        </div>
       </div>
       <style jsx>{`
         .telatop-pulse {
@@ -76,6 +90,19 @@ export function ShowTelaHeader({
             opacity: 1;
             transform: scale(1.05);
             box-shadow: 0 0 0 4px rgba(205, 179, 138, 0);
+          }
+        }
+
+        .telatop-ticker {
+          animation: telatopTicker 42s linear infinite;
+        }
+
+        @keyframes telatopTicker {
+          0% {
+            transform: translate3d(0, 0, 0);
+          }
+          100% {
+            transform: translate3d(-50%, 0, 0);
           }
         }
       `}</style>
