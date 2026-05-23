@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import type { PersonEntity } from '@/lib/showtela/types'
 
 function abbreviate(role: string): string {
@@ -27,7 +26,6 @@ export function FluencyPartnersRail(
     | { people: PersonEntity[]; onPersonTap?: (name: string, role?: string) => void }
     | { items: Array<{ id: string; label?: string; name?: string; unresolvedCount: number; image: string; latest?: string }>; onPersonTap?: (name: string, role?: string) => void }
 ) {
-  const [expanded, setExpanded] = useState(false)
   const onPersonTap = props.onPersonTap
   const people = 'people' in props ? props.people
     : props.items.map((i) => ({
@@ -42,26 +40,12 @@ export function FluencyPartnersRail(
   const visible = people.slice(0, 6)
 
   return (
-    <section className={expanded ? 'pb-10 pt-1' : 'pb-5 pt-1'}>
+    <section className="pb-5 pt-1">
       <div className="flex items-center justify-between px-5">
-        <button
-          className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5E5348]"
-          onClick={() => setExpanded(true)}
-        >
-          {expanded ? 'Fluency Partners' : 'Open Fluency Partners'}
-        </button>
-        {expanded && (
-          <button
-            className="text-[11px] font-medium text-[#C89B2F]"
-            onClick={() => setExpanded(false)}
-          >
-            Minimize
-          </button>
-        )}
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5E5348]">Open Fluency Partners</p>
       </div>
 
-      {expanded && (
-        <div className="mt-5 flex gap-5 overflow-x-auto pl-5 pr-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mt-4 flex gap-4 overflow-x-auto pl-5 pr-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {visible.map((p) => {
             const img = ('avatar' in p && p.avatar) ? p.avatar : undefined
             const role = ('role' in p && p.role) ? p.role : ''
@@ -79,11 +63,11 @@ export function FluencyPartnersRail(
             return (
               <button
                 key={p.id}
-                className="flex w-[70px] flex-shrink-0 flex-col items-center gap-2.5 p-0"
+                className="flex w-[62px] flex-shrink-0 flex-col items-center gap-2 p-0"
                 onClick={() => onPersonTap?.(p.name || role, role)}
               >
                 <div
-                  className="flex h-[58px] w-[58px] items-center justify-center rounded-full p-[2px] shadow-[0_6px_18px_rgba(17,17,17,0.08)]"
+                  className="flex h-[52px] w-[52px] items-center justify-center rounded-full p-[2px] shadow-[0_6px_14px_rgba(17,17,17,0.06)]"
                   style={{ background: ringBg }}
                 >
                   <div className="h-full w-full overflow-hidden rounded-full" style={{ background: '#F2EDE4' }}>
@@ -114,13 +98,10 @@ export function FluencyPartnersRail(
             </div>
           )}
 
-          {people.length === 0 && (
-            <div className="rounded-[18px] border border-dashed border-[#D4C9B4] px-4 py-4 text-center" style={{ minWidth: '200px' }}>
-              <p className="text-[13px] font-medium text-[#8B847B]">No fluency partners yet.</p>
-            </div>
-          )}
+        {people.length === 0 && (
+          <p className="min-w-[200px] py-3 text-[12px] text-[#8B847B]">No fluency partners yet.</p>
+        )}
         </div>
-      )}
     </section>
   )
 }

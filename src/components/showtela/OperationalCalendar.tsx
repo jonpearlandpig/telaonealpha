@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { EventFeed } from '@/components/constitutional/EventFeed'
 import type { OperationalCalendarEvent } from '@/lib/showtela/calendar'
 import { getWeekDays, getUnresolvedCount } from '@/lib/showtela/calendar'
 import { buildContinuityMemory, deriveOperationalLineage, derivePressureEvolution, deriveStateTransitions } from '@/lib/showtela/lineage'
@@ -186,6 +187,10 @@ export function OperationalCalendar({
 
       <section className="px-5 pt-4">
         <ContinuityMemoryPanel memory={memory} />
+      </section>
+
+      <section className="px-5 pt-4">
+        <EventFeed events={[]} />
       </section>
 
       <section className="px-5 pt-4">

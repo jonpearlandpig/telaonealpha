@@ -21,35 +21,12 @@ export function CalendarWeekRail({
   onOpenCalendar?: () => void
 }) {
   const days = getWeekDays(baseDate, events)
-  const activeCount = events.length
 
   return (
     <section className="pb-6">
-      <div className="mb-3 flex items-center justify-between px-5">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8A7351]">Calendar Pulse</p>
-          <h2 className="mt-0.5 text-[18px] font-semibold leading-tight text-[#17130F]">Operational week</h2>
-        </div>
-        <button
-          type="button"
-          onClick={onOpenCalendar}
-          className="min-h-[36px] rounded-full bg-[#17130F] px-3.5 text-[11px] font-semibold text-[#F7E8C2] shadow-[0_10px_24px_rgba(17,17,17,0.12)]"
-        >
-          Enter Week
-        </button>
+      <div className="mb-3 px-5">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8A7351]">CRUSADE CALENDAR</p>
       </div>
-
-      <button
-        type="button"
-        onClick={onOpenCalendar}
-        className="mx-5 mb-3 flex w-[calc(100%-2.5rem)] items-center justify-between rounded-[20px] border border-[#E3D6C4] bg-[#FFFDF8] px-4 py-3 text-left shadow-[0_10px_24px_rgba(27,22,16,0.05)]"
-      >
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9A7C46]">Temporal Awareness</p>
-          <p className="mt-1 text-[13px] leading-snug text-[#5E5348]">{activeCount} derived operational moment{activeCount === 1 ? '' : 's'} across continuity, pressure, and unresolved state.</p>
-        </div>
-        <span className="ml-3 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[#F0E5D3] text-[18px] leading-none text-[#8A6725]">&gt;</span>
-      </button>
 
       <div className="flex snap-x gap-3 overflow-x-auto px-5 pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {days.map((day) => {
