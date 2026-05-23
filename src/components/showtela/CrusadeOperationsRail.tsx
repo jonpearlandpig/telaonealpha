@@ -105,8 +105,8 @@ export function CrusadeOperationsRail({ items, unresolvedItems, onOperationTap }
 
   return (
     <section className="px-5 pb-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5E5348]">Operations</h2>
+      <div className="mb-5 flex items-center justify-between">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5E5348]">Operations</h2>
         <button className="text-[11px] font-medium text-[#C89B2F]">All rooms</button>
       </div>
       <div className="flex flex-col gap-3.5">

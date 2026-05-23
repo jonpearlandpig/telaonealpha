@@ -22,7 +22,7 @@ export function ShowTelaHeader({
   const firstName = userName?.split(' ')[0] ?? 'there'
 
   return (
-    <header className="px-5 pb-6 pt-[58px]">
+    <header className="px-5 pb-8 pt-[58px]">
       <div className="mb-5 flex items-center justify-between">
         <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#C89B2F]">Crusade: The Musical</p>
         <button className="relative flex h-9 w-9 items-center justify-center rounded-full bg-black/[0.04]">
@@ -37,7 +37,7 @@ export function ShowTelaHeader({
         <p className="mt-1 text-[15px] leading-snug text-[#6E6A63]">Operations are live.</p>
       </div>
 
-      <div className="mt-5 overflow-hidden rounded-[14px] bg-[linear-gradient(160deg,#FAF7F1_0%,#EEE3CC_100%)] px-4 py-3.5 shadow-[0_2px_10px_rgba(17,17,17,0.07)]">
+      <div className="mt-6 overflow-hidden rounded-[14px] bg-[linear-gradient(160deg,#FAF7F1_0%,#EEE3CC_100%)] px-4 py-4 shadow-[0_2px_10px_rgba(17,17,17,0.07)]">
         <div className="flex items-center gap-2">
           <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#8A7351]">TELAtop</p>
           <span className="telatop-pulse h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#CDB38A]" />

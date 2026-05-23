@@ -60,13 +60,13 @@ export function ActiveOpsRail({
   const firstName = userName?.split(' ')[0] ?? 'You'
 
   return (
-    <section className="px-5 pb-5 pt-1">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5E5348]">Anchors</h2>
+    <section className="px-5 pb-9 pt-6">
+      <div className="mb-5 flex items-center justify-between">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5E5348]">Anchors</h2>
         <button className="text-[11px] font-medium text-[#C89B2F]">View all</button>
       </div>
-      <div className="flex gap-4 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <button className="flex w-[84px] flex-shrink-0 flex-col items-center gap-1.5 p-0" onClick={onProfileTap}>
+      <div className="flex gap-5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <button className="flex w-[84px] flex-shrink-0 flex-col items-center gap-3 p-0" onClick={onProfileTap}>
           <div className="relative">
             <CircleShell background="linear-gradient(135deg, #D5C4A2 0%, #F6E9C9 55%, #C8A25A 100%)">
               {userImage
@@ -87,7 +87,7 @@ export function ActiveOpsRail({
           <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{firstName}</p>
         </button>
 
-        <button className="flex w-[84px] flex-shrink-0 flex-col items-center gap-1.5 p-0" onClick={onTelaTap}>
+        <button className="flex w-[84px] flex-shrink-0 flex-col items-center gap-3 p-0" onClick={onTelaTap}>
           <CircleShell background="linear-gradient(140deg, #11100D 0%, #2B2218 48%, #7A5A25 100%)" tone="dark">
             <div className="relative h-full w-full">
               <img src="/showtela/crusade-anchor.jpg" alt="Crusade" className="h-full w-full object-cover" />
@@ -111,7 +111,7 @@ export function ActiveOpsRail({
           return (
             <button
               key={p.id}
-              className="flex w-[84px] flex-shrink-0 flex-col items-center gap-1.5 p-0"
+              className="flex w-[84px] flex-shrink-0 flex-col items-center gap-3 p-0"
               onClick={() => onPersonTap?.(p.name, role)}
             >
               <CircleShell background={ringBg}>

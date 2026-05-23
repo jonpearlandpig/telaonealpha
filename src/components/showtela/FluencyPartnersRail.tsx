@@ -38,9 +38,9 @@ export function FluencyPartnersRail(
   const visible = people.slice(0, 6)
 
   return (
-    <section className="pb-6">
-      <div className="mb-3 flex items-center justify-between px-5">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5E5348]">Fluency Partners</h2>
+    <section className="pb-10 pt-1">
+      <div className="mb-5 flex items-center justify-between px-5">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5E5348]">Fluency Partners</h2>
         <button className="text-[11px] font-medium text-[#C89B2F]">View all</button>
       </div>
       <div className="flex gap-5 overflow-x-auto pl-5 pr-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -61,11 +61,11 @@ export function FluencyPartnersRail(
           return (
             <button
               key={p.id}
-              className="flex w-[60px] flex-shrink-0 flex-col items-center gap-1.5 p-0"
+              className="flex w-[70px] flex-shrink-0 flex-col items-center gap-2.5 p-0"
               onClick={() => onPersonTap?.(p.name || role, role)}
             >
               <div
-                className="flex h-[52px] w-[52px] items-center justify-center rounded-full p-[2px] shadow-[0_6px_18px_rgba(17,17,17,0.08)]"
+                className="flex h-[58px] w-[58px] items-center justify-center rounded-full p-[2px] shadow-[0_6px_18px_rgba(17,17,17,0.08)]"
                 style={{ background: ringBg }}
               >
                 <div className="h-full w-full overflow-hidden rounded-full" style={{ background: '#F2EDE4' }}>
@@ -85,9 +85,9 @@ export function FluencyPartnersRail(
         })}
 
         {overflow > 0 && (
-          <div className="flex w-[60px] flex-shrink-0 flex-col items-center gap-1.5">
+          <div className="flex w-[70px] flex-shrink-0 flex-col items-center gap-2.5">
             <div
-              className="flex h-[52px] w-[52px] items-center justify-center rounded-full"
+              className="flex h-[58px] w-[58px] items-center justify-center rounded-full"
               style={{ border: '1.5px dashed rgba(180,168,148,0.55)', background: '#F0EBE1' }}
             >
               <span className="text-[13px] font-semibold text-[#5E5348]">+{overflow}</span>
