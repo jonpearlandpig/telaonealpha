@@ -94,11 +94,7 @@ function toSnapshotRow(db: SnapshotDbRow): DurableSnapshotRow {
 export async function upsertArtifactRow(row: DurableArtifactRow): Promise<DurableArtifactRow> {
   console.log('[supabase:queries:upsertArtifactRow] id:', row.id, 'workspace:', row.workspaceId)
   const db = getSupabaseServerClient()
-  // Only include the 7 base columns that are guaranteed to exist in the schema.
-  // Optional columns (file_name, mime_type, lineage_id, artifact_group_id) are
-  // already serialized inside payload and are omitted here to avoid columns= URL
-  // parameter referencing columns that may not exist in the deployed table.
-  const { error } = await db.from('durable_artifacts').upsert([{
+  const { error } = await db.from('durable_artifacts').insert([{
     id: row.id,
     workspace_id: row.workspaceId,
     thread_id: row.threadId,
@@ -106,7 +102,7 @@ export async function upsertArtifactRow(row: DurableArtifactRow): Promise<Durabl
     created_at: row.createdAt,
     updated_at: row.updatedAt,
     provenance: row.provenance,
-  }], { onConflict: 'id' })
+  }])
   if (error) {
     console.error('[supabase:queries:upsertArtifactRow] failed', {
       message: error.message,

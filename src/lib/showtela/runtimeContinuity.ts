@@ -425,12 +425,16 @@ export async function ingestShowTelaContinuity(input: {
   })
   const entities = extractContinuityEntities(event, artifact)
 
-  // Persist artifact first — this is the critical path for cache hydration.
-  await persistDurableContinuity(SHOWTELA_WORKSPACE_ID, {
-    artifacts: [artifact],
-    entities: [],
-    snapshots: [],
-  })
+  // Artifact persistence is non-fatal — cache hydration proceeds regardless.
+  try {
+    await persistDurableContinuity(SHOWTELA_WORKSPACE_ID, {
+      artifacts: [artifact],
+      entities: [],
+      snapshots: [],
+    })
+  } catch (err) {
+    console.error('[TELA:TRACE] artifact persistence non-fatal error — ingest continues:', String(err))
+  }
 
   // Entity persistence is secondary telemetry. Failures must not abort the ingest.
   try {
