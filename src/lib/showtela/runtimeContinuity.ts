@@ -6,6 +6,7 @@ import type { ConstitutionalEvent } from '@/lib/constitutional/types'
 import { extractEntities, type EntityRecord, type EntityType } from '@/lib/entities/entityEngine'
 import { persistDurableContinuity } from '@/lib/runtime/durableMemory'
 import { deterministicSnapshotId, type ContinuitySnapshot } from '@/lib/runtime/continuitySnapshots'
+import { createRuntimeSnapshotMeta, replaceHomeWithDirectoryIngest } from './runtimeSnapshot'
 import { threadContinuity } from './threadContinuity'
 import type { ContinuityEvent, OperationEntity, PersonEntity, RuntimeTimelineItem, ShowTelaHomeData } from './types'
 
@@ -299,26 +300,6 @@ function extractDirectoryData(
   return { newPeople: people, newOperations: operations }
 }
 
-function mergeDirectoryIntoHome(
-  data: ShowTelaHomeData,
-  newPeople: PersonEntity[],
-  newOperations: OperationEntity[],
-): ShowTelaHomeData {
-  const existingNames = new Set(data.activeOps.map(p => p.name.toLowerCase()))
-  const uniquePeople = newPeople.filter(p => !existingNames.has(p.name.toLowerCase()))
-
-  const existingOps = new Set(data.operations.map(o => o.title.toLowerCase()))
-  const uniqueOps = newOperations.filter(o => !existingOps.has(o.title.toLowerCase()))
-
-  return {
-    ...data,
-    activeOps: [...data.activeOps, ...uniquePeople].slice(0, 20),
-    operations: [...data.operations, ...uniqueOps],
-    source: 'supabase',
-    diagnosticState: 'persistence-connected',
-  }
-}
-
 export async function ingestShowTelaContinuity(input: {
   baseData: ShowTelaHomeData
   payload: ContinuityIngestionInput
@@ -380,6 +361,14 @@ export async function ingestShowTelaContinuity(input: {
     fileContents,
   })
   const entities = extractContinuityEntities(event, artifact)
+  const snapshotId = deterministicSnapshotId(SHOWTELA_RUNTIME_THREAD_ID, event.timestamp ?? artifact.createdAt)
+  const runtimeSnapshotMeta = createRuntimeSnapshotMeta({
+    snapshotId,
+    workspaceId: SHOWTELA_WORKSPACE_ID,
+    updatedAt: timestamp,
+    overwriteMode: newPeople.length > 0 ? 'replace' : 'merge',
+    sourceIngest: newPeople.length > 0 ? 'directory' : 'continuity',
+  })
 
   // Artifact persistence is non-fatal — cache hydration proceeds regardless.
   try {
@@ -405,13 +394,28 @@ export async function ingestShowTelaContinuity(input: {
 
   const feedMerged = mergeContinuityIntoShowTelaHome(input.baseData, [event])
   const mergedData: ShowTelaHomeData = newPeople.length > 0
-    ? mergeDirectoryIntoHome(feedMerged, newPeople, newOperations)
-    : { ...feedMerged, source: 'supabase', diagnosticState: 'persistence-connected' }
+    ? replaceHomeWithDirectoryIngest({
+        base: input.baseData,
+        event,
+        people: newPeople,
+        operations: newOperations,
+        meta: runtimeSnapshotMeta,
+      })
+    : {
+        ...feedMerged,
+        source: 'supabase',
+        diagnosticState: 'persistence-connected',
+        runtimeSnapshotMeta,
+      }
   console.log('[TELA:TRACE] mergedData', {
     source: mergedData.source,
     activeOpsCount: mergedData.activeOps.length,
     operationsCount: mergedData.operations.length,
     feedCount: mergedData.continuityFeed.length,
+    snapshotId: mergedData.runtimeSnapshotMeta?.snapshotId ?? null,
+    workspaceId: mergedData.runtimeSnapshotMeta?.workspaceId ?? null,
+    updatedAt: mergedData.runtimeSnapshotMeta?.updatedAt ?? null,
+    overwriteMode: mergedData.runtimeSnapshotMeta?.overwriteMode ?? null,
   })
 
   const snapshot = createShowTelaDurableSnapshot({

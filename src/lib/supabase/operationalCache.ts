@@ -29,7 +29,7 @@ export async function readShowTelaCache(): Promise<ShowTelaHomeData | null> {
 
   try {
     const parsed = JSON.parse(row.payload) as ShowTelaHomeData
-    console.log('[operationalCache] readShowTelaCache hit — activeOps:', parsed.activeOps?.length ?? 0, 'ops:', parsed.operations?.length ?? 0, 'feed:', parsed.continuityFeed?.length ?? 0)
+    console.log('[operationalCache] readShowTelaCache hit — activeOps:', parsed.activeOps?.length ?? 0, 'ops:', parsed.operations?.length ?? 0, 'feed:', parsed.continuityFeed?.length ?? 0, 'snapshotId:', parsed.runtimeSnapshotMeta?.snapshotId ?? null, 'workspace:', parsed.runtimeSnapshotMeta?.workspaceId ?? null, 'updatedAt:', parsed.runtimeSnapshotMeta?.updatedAt ?? row.updated_at ?? null, 'overwriteMode:', parsed.runtimeSnapshotMeta?.overwriteMode ?? null)
     return parsed
   } catch {
     console.error('[operationalCache] readShowTelaCache payload is not valid JSON')

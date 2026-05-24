@@ -136,6 +136,7 @@ export type ShowTelaHomeData = {
   source?: DataSource
   diagnosticState?: DiagnosticState
   hydration?: ShowTelaHydrationSummary
+  runtimeSnapshotMeta?: ShowTelaRuntimeSnapshotMeta
 }
 
 export type ShowTelaHydrationSummary = {
@@ -154,6 +155,15 @@ export type ShowTelaHydrationSummary = {
   durableArtifactsCompatible?: boolean
   missingRequiredEnv?: string[]
   invalidDatabaseIds?: string[]
+}
+
+export type ShowTelaRuntimeSnapshotMeta = {
+  snapshotId: string
+  workspaceId: string
+  updatedAt: string
+  canonical: boolean
+  overwriteMode: 'merge' | 'replace'
+  sourceIngest: 'continuity' | 'directory'
 }
 
 export type RuntimeTimelineItem = {

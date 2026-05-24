@@ -20,6 +20,7 @@ export async function GET() {
       activeOps?: unknown[]
       operations?: unknown[]
       source?: unknown
+      runtimeSnapshotMeta?: unknown
     }
 
     return NextResponse.json({
@@ -28,6 +29,8 @@ export async function GET() {
       activeOpsCount: Array.isArray(parsed.activeOps) ? parsed.activeOps.length : 0,
       operationsCount: Array.isArray(parsed.operations) ? parsed.operations.length : 0,
       source: typeof parsed.source === 'string' ? parsed.source : null,
+      updatedAt: row.updated_at ?? null,
+      runtimeSnapshotMeta: parsed.runtimeSnapshotMeta ?? null,
     }, { headers: { 'Cache-Control': 'no-store' } })
   } catch {
     return NextResponse.json({
