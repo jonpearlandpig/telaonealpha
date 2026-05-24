@@ -115,7 +115,7 @@ export async function getArtifacts() {
 
 export async function probeShowTelaNotionDatabases(): Promise<ShowTelaNotionProbe[]> {
   return Promise.all(
-    (['people', 'operations', 'continuity', 'unresolved', 'artifacts'] as const).map(async (key) => {
+    (['people', 'operations', 'continuity', 'unresolved'] as const).map(async (key) => {
       const definition = SHOWTELA_DATABASES[key]
       const resolved = resolveShowTelaDatabase(key)
       const base = {

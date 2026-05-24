@@ -1,5 +1,5 @@
-import { getArtifacts, getContinuityEvents, getOperations, getPeople, getUnresolved, probeShowTelaNotionDatabases } from './notion'
-import { mapArtifact, mapContinuityEvent, mapOperation, mapPerson, mapUnresolved } from './notionMappers'
+import { getContinuityEvents, getOperations, getPeople, getUnresolved, probeShowTelaNotionDatabases } from './notion'
+import { mapContinuityEvent, mapOperation, mapPerson, mapUnresolved } from './notionMappers'
 import { calculatePressure } from './pressure'
 import { assertShowTelaStartupEnv, getShowTelaEnvStatus, logShowTelaEnvStatus } from './env'
 import { threadContinuity } from './threadContinuity'
@@ -52,8 +52,8 @@ async function fetchFromNotion(): Promise<ShowTelaHomeData | null> {
   assertShowTelaStartupEnv('showtela:startup')
   logShowTelaEnvStatus('showtela:fetchFromNotion')
 
-  const [peopleRaw, operationsRaw, eventsRaw, unresolvedRaw, artifactsRaw] = await Promise.all([
-    getPeople(), getOperations(), getContinuityEvents(), getUnresolved(), getArtifacts(),
+  const [peopleRaw, operationsRaw, eventsRaw, unresolvedRaw] = await Promise.all([
+    getPeople(), getOperations(), getContinuityEvents(), getUnresolved(),
   ])
 
   const counts = {
@@ -61,7 +61,6 @@ async function fetchFromNotion(): Promise<ShowTelaHomeData | null> {
     ops: operationsRaw.length,
     events: eventsRaw.length,
     unresolved: unresolvedRaw.length,
-    artifacts: artifactsRaw.length,
   }
   console.log('[showtela:fetchFromNotion] row counts:', counts)
   const probes = await probeShowTelaNotionDatabases()
@@ -83,8 +82,6 @@ async function fetchFromNotion(): Promise<ShowTelaHomeData | null> {
   const personById = new Map(people.map(p => [p.id, p]))
   const unresolved = unresolvedRaw.map(mapUnresolved)
   const operations = validOperationsRaw.map(mapOperation)
-  const artifacts = artifactsRaw.map(mapArtifact)
-  const artifactByEvent = new Map(artifacts.filter(a => a.eventId).map(a => [a.eventId as string, a]))
 
   const lastSeenTimestamp = process.env.SHOWTELA_LAST_SEEN_TIMESTAMP
     ? new Date(process.env.SHOWTELA_LAST_SEEN_TIMESTAMP).getTime()
@@ -94,17 +91,12 @@ async function fetchFromNotion(): Promise<ShowTelaHomeData | null> {
     validEventsRaw
       .map(event => {
         const mapped = mapContinuityEvent(event, personById)
-        const artifact = artifactByEvent.get(mapped.id)
-        // Normalization Pass 1 — body cleanup and unresolved marker extraction.
-        // cleanBody removes whitespace artifacts without altering operational meaning.
-        // extractUnresolvedMarkers reads the cleaned body; does not modify it.
         const body = cleanBody(mapped.body)
         const unresolvedMarkers = extractUnresolvedMarkers(body)
         return {
           ...mapped,
           body,
           unresolvedMarkers: unresolvedMarkers.length ? unresolvedMarkers : undefined,
-          image: mapped.image ?? artifact?.image,
           isNew: new Date(mapped.timestamp ?? 0).getTime() > lastSeenTimestamp,
         }
       })
@@ -143,7 +135,7 @@ async function fetchFromNotion(): Promise<ShowTelaHomeData | null> {
         operations: operationsRaw.length,
         continuity: eventsRaw.length,
         unresolved: unresolvedRaw.length,
-        artifacts: artifactsRaw.length,
+        artifacts: 0,
       },
       cacheSource: 'notion',
     }),
