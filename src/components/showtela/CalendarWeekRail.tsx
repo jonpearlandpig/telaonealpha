@@ -37,7 +37,7 @@ export function CalendarWeekRail({
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8A7351]">Calendar</p>
       </div>
 
-      {isEmpty ? (
+      {isEmpty || events.length === 0 ? (
         <div className="mx-5 rounded-[20px] border border-dashed border-[#D4C9B4] px-5 py-7 text-center">
           <p className="text-[13px] font-medium text-[#8B847B]">No operational dates detected.</p>
         </div>

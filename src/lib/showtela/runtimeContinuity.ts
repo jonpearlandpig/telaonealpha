@@ -334,7 +334,7 @@ function extractDirectoryData(
           title: dept,
           status: 'active',
           unresolvedCount: 0,
-          latestMovement: `Populated from ${file.name}`,
+          latestMovement: 'Anchored from crew directory',
         })
       }
     }
@@ -376,9 +376,22 @@ export async function ingestShowTelaContinuity(input: {
     .filter(f => f.content.trim().length > 0)
     .map(f => f.content.trim())
 
-  const headlineSeed = input.payload.headline?.trim() || input.payload.body?.trim() || 'continuity'
+  // Parse crew directories FIRST so the dispatch headline reflects what was extracted
+  const { newPeople, newOperations } = extractDirectoryData(input.payload.assetContents ?? [])
+  const primaryFileName = input.payload.assetNames?.[0] ?? ''
+  const basePayload: ContinuityIngestionInput = newPeople.length > 0
+    ? {
+        ...input.payload,
+        headline: input.payload.headline?.trim()
+          || (primaryFileName ? primaryFileName.replace(/\.[^.]+$/, '') : 'Crew directory') + ' ingested',
+        body: input.payload.body?.trim()
+          || `${newPeople.length} ${newPeople.length === 1 ? 'person' : 'people'} and ${newOperations.length} department${newOperations.length === 1 ? '' : 's'} extracted. Operational graph updated.`,
+      }
+    : input.payload
+
+  const headlineSeed = basePayload.headline?.trim() || basePayload.body?.trim() || 'continuity'
   const ocid = createContinuityOcid(headlineSeed, timestamp)
-  const event = normalizeContinuityIngestion(input.payload, {
+  const event = normalizeContinuityIngestion(basePayload, {
     author: input.submittedBy,
     continuityObjectId: ocid,
     eventId: ocid,
@@ -404,9 +417,6 @@ export async function ingestShowTelaContinuity(input: {
     entities,
     snapshots: [],
   })
-
-  // Parse crew directories from uploaded markdown/text files
-  const { newPeople, newOperations } = extractDirectoryData(input.payload.assetContents ?? [])
 
   const feedMerged = mergeContinuityIntoShowTelaHome(input.baseData, [event])
   const mergedData: ShowTelaHomeData = newPeople.length > 0

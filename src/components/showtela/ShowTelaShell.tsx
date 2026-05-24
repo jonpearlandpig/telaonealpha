@@ -155,7 +155,9 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
 
   const autoscan = {
     currentTruth: priorityOperation
-      ? `${priorityOperation.label} currently carries the highest unresolved operational pressure.`
+      ? (priorityOperation.unresolvedCount ?? 0) > 0
+        ? `${priorityOperation.label} currently carries the highest unresolved operational pressure.`
+        : `${priorityOperation.label} is operational. Field is clear.`
       : 'Operational pressure is evenly distributed across the field.',
     mattersNow: latestTimeline
       ? `${latestTimeline.summary} stabilized most recently${latestTimeline.timestamp ? ` at ${formatTimelineTime(latestTimeline.timestamp)}` : ''}${latestTimeline.actor ? ` through ${latestTimeline.actor}` : ''}.`
