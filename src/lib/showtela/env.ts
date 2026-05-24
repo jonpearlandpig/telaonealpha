@@ -1,3 +1,5 @@
+import { resolveSupabaseServiceRoleKey, resolveSupabaseUrl } from '@/lib/supabase/env'
+
 type DatabaseKey = 'people' | 'operations' | 'continuity' | 'unresolved' | 'artifacts' | 'inbox'
 
 type DatabaseDefinition = {
@@ -84,8 +86,8 @@ export function getShowTelaEnvStatus() {
   return {
     required: {
       NOTION_API_KEY: Boolean(process.env.NOTION_API_KEY),
-      SUPABASE_URL: Boolean(process.env.SUPABASE_URL),
-      SUPABASE_SERVICE_ROLE_KEY: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+      SUPABASE_URL: Boolean(resolveSupabaseUrl().value),
+      SUPABASE_SERVICE_ROLE_KEY: Boolean(resolveSupabaseServiceRoleKey().value),
     },
     databases,
     missingRequired: [

@@ -85,12 +85,13 @@ export function ShowTelaRuntime({ vm: initialVm, user }: { vm: ShowTelaViewModel
       })
       setVm(prev => ({
         ...prev,
-        activeOps: fresh.activeOps?.length ? fresh.activeOps : prev.activeOps,
-        fluencyPartners: fresh.fluencyPartners?.length ? fresh.fluencyPartners : prev.fluencyPartners,
-        crusadeOperations: fresh.crusadeOperations?.length ? fresh.crusadeOperations : prev.crusadeOperations,
+        activeOps: fresh.activeOps ?? prev.activeOps,
+        fluencyPartners: fresh.fluencyPartners ?? prev.fluencyPartners,
+        crusadeOperations: fresh.crusadeOperations ?? prev.crusadeOperations,
         unresolvedPressure: fresh.unresolvedPressure ?? prev.unresolvedPressure,
         unresolved: fresh.unresolved ?? prev.unresolved,
-        feed: fresh.feed?.length ? fresh.feed : prev.feed,
+        feed: fresh.feed ?? prev.feed,
+        runtimeTimeline: fresh.runtimeTimeline ?? prev.runtimeTimeline,
         source: fresh.source,
         diagnosticState: fresh.diagnosticState,
         hydration: fresh.hydration ?? prev.hydration,

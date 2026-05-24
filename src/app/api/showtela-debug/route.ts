@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { getShowTelaEnvStatus, isLikelyNotionDatabaseId, resolveShowTelaDatabase } from '@/lib/showtela/env'
+import { resolveSupabaseServiceRoleKey, resolveSupabaseUrl } from '@/lib/supabase/env'
 
 export const dynamic = 'force-dynamic'
 
@@ -78,14 +79,18 @@ async function probeNotionDB(label: string, envKey: string, dbId: string | undef
 
 export async function GET() {
   const e = process.env
+  const supabaseUrl = resolveSupabaseUrl()
+  const supabaseServiceRoleKey = resolveSupabaseServiceRoleKey()
   const showTelaEnv = getShowTelaEnvStatus()
 
   // Env inventory
   const envInventory = {
     NOTION_API_KEY: !!e.NOTION_API_KEY,
     NOTION_API_KEY_PREFIX: e.NOTION_API_KEY ? `${e.NOTION_API_KEY.slice(0, 10)}…` : null,
-    SUPABASE_URL: !!e.SUPABASE_URL,
-    SUPABASE_SERVICE_ROLE_KEY: !!e.SUPABASE_SERVICE_ROLE_KEY,
+    SUPABASE_URL: !!supabaseUrl.value,
+    SUPABASE_URL_KEY: supabaseUrl.value ? supabaseUrl.key : null,
+    SUPABASE_SERVICE_ROLE_KEY: !!supabaseServiceRoleKey.value,
+    SUPABASE_SERVICE_ROLE_KEY_NAME: supabaseServiceRoleKey.value ? supabaseServiceRoleKey.key : null,
     databases: {
       people: resolveShowTelaDatabase('people'),
       operations: resolveShowTelaDatabase('operations'),
@@ -121,7 +126,7 @@ export async function GET() {
 
   async function probeSupabaseTable(table: string): Promise<SupabaseProbeResult> {
     const path = `durable table: ${table}`
-    if (!e.SUPABASE_URL || !e.SUPABASE_SERVICE_ROLE_KEY) return { status: 'missing_env', error: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY', path }
+    if (!supabaseUrl.value || !supabaseServiceRoleKey.value) return { status: 'missing_env', error: 'Missing Supabase env vars', path }
     try {
       const db = getSupabaseServerClient()
       const { data, error } = await db.from(table).select('id').limit(1)
@@ -132,12 +137,12 @@ export async function GET() {
 
   async function probeSupabaseRpc(rpcName: string): Promise<SupabaseProbeResult> {
     const path = `rpc: ${rpcName}`
-    if (!e.SUPABASE_URL || !e.SUPABASE_SERVICE_ROLE_KEY) return { status: 'missing_env', error: 'Missing env vars', path }
-    const url = `${e.SUPABASE_URL}/rest/v1/rpc/${rpcName}`
+    if (!supabaseUrl.value || !supabaseServiceRoleKey.value) return { status: 'missing_env', error: 'Missing env vars', path }
+    const url = `${supabaseUrl.value}/rest/v1/rpc/${rpcName}`
     try {
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', apikey: e.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${e.SUPABASE_SERVICE_ROLE_KEY}` },
+        headers: { 'Content-Type': 'application/json', apikey: supabaseServiceRoleKey.value, Authorization: `Bearer ${supabaseServiceRoleKey.value}` },
         body: JSON.stringify({ workspace_id: 'debug-probe' }),
         cache: 'no-store',
       })
@@ -150,11 +155,11 @@ export async function GET() {
 
   async function probeSupabaseRestTable(tableName: string): Promise<SupabaseProbeResult> {
     const path = `rest table: ${tableName}`
-    if (!e.SUPABASE_URL || !e.SUPABASE_SERVICE_ROLE_KEY) return { status: 'missing_env', error: 'Missing env vars', path }
-    const url = `${e.SUPABASE_URL}/rest/v1/${tableName}?limit=1`
+    if (!supabaseUrl.value || !supabaseServiceRoleKey.value) return { status: 'missing_env', error: 'Missing env vars', path }
+    const url = `${supabaseUrl.value}/rest/v1/${tableName}?limit=1`
     try {
       const res = await fetch(url, {
-        headers: { apikey: e.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${e.SUPABASE_SERVICE_ROLE_KEY}` },
+        headers: { apikey: supabaseServiceRoleKey.value, Authorization: `Bearer ${supabaseServiceRoleKey.value}` },
         cache: 'no-store',
       })
       const body = await res.text().catch(() => '')
@@ -182,7 +187,7 @@ export async function GET() {
     probeSupabaseRestTable('operational_memory'),
   ])
 
-  const supabaseStatus = (!e.SUPABASE_URL || !e.SUPABASE_SERVICE_ROLE_KEY) ? 'missing_env'
+  const supabaseStatus = (!supabaseUrl.value || !supabaseServiceRoleKey.value) ? 'missing_env'
     : [sbArtifacts, sbEntities, sbSnapshots, sbIngestionJobs].every(p => p.status === 'ok') ? 'connected'
     : 'error'
   const supabaseError = [sbArtifacts, sbEntities, sbSnapshots, sbIngestionJobs]

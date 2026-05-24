@@ -14,6 +14,34 @@ type ShowTelaCacheDbRow = {
   updated_at?: string
 }
 
+type SupabaseWriteError = {
+  code?: string
+  message?: string
+  details?: string
+  hint?: string
+}
+
+function isMissingColumnError(error: SupabaseWriteError | null | undefined) {
+  const text = `${error?.message ?? ''} ${error?.details ?? ''} ${error?.hint ?? ''}`
+  return /could not find the .* column|column .* does not exist|schema cache/i.test(text)
+}
+
+async function selectCacheRow(includeUpdatedAt: boolean): Promise<{ row: ShowTelaCacheDbRow | null; error: SupabaseWriteError | null }> {
+  const db = getSupabaseServerClient()
+  const select = includeUpdatedAt ? 'id, workspace_id, payload, updated_at' : 'id, workspace_id, payload'
+  const { data, error } = await db
+    .from('durable_artifacts')
+    .select(select)
+    .eq('id', SHOWTELA_SNAPSHOT_ID)
+    .eq('workspace_id', SHOWTELA_WORKSPACE_ID)
+    .single()
+
+  return {
+    row: (data as ShowTelaCacheDbRow | null) ?? null,
+    error: (error as SupabaseWriteError | null) ?? null,
+  }
+}
+
 export function getShowTelaCacheSchemaCompatibility() {
   return {
     table: 'durable_artifacts',
@@ -38,30 +66,21 @@ export async function readShowTelaCache(): Promise<ShowTelaHomeData | null> {
 }
 
 export async function readShowTelaCacheRow(): Promise<ShowTelaCacheDbRow | null> {
-  const db = getSupabaseServerClient()
-  const { data, error } = await db
-    .from('durable_artifacts')
-    .select('id, workspace_id, payload, updated_at')
-    .eq('id', SHOWTELA_SNAPSHOT_ID)
-    .eq('workspace_id', SHOWTELA_WORKSPACE_ID)
-    .single()
-
-  if (error) {
-    console.error('[operationalCache] readShowTelaCache failed — code:', error.code, 'msg:', error.message)
+  const primary = await selectCacheRow(true)
+  if (!primary.error) return primary.row
+  if (isMissingColumnError(primary.error)) {
+    const fallback = await selectCacheRow(false)
+    if (!fallback.error) return fallback.row
+    console.error('[operationalCache] readShowTelaCache fallback failed — code:', fallback.error?.code, 'msg:', fallback.error?.message)
     return null
   }
-  return (data as ShowTelaCacheDbRow | null) ?? null
+  console.error('[operationalCache] readShowTelaCache failed — code:', primary.error.code, 'msg:', primary.error.message)
+  return null
 }
 
-export async function writeShowTelaCache(data: ShowTelaHomeData): Promise<void> {
+async function upsertRichCacheRow(payloadStr: string, now: string) {
   const db = getSupabaseServerClient()
-  const src: 'notion' | 'supabase' = data.source === 'supabase' ? 'supabase' : 'notion'
-  const payloadStr = JSON.stringify({ ...data, source: src })
-  const now = new Date().toISOString()
-
-  console.log('[operationalCache] writeShowTelaCache — id:', SHOWTELA_SNAPSHOT_ID, 'workspace:', SHOWTELA_WORKSPACE_ID, 'activeOps:', data.activeOps.length, 'ops:', data.operations.length, 'payloadBytes:', payloadStr.length)
-
-  const { error } = await db
+  return db
     .from('durable_artifacts')
     .upsert(
       [{
@@ -87,14 +106,24 @@ export async function writeShowTelaCache(data: ShowTelaHomeData): Promise<void> 
       }],
       { onConflict: 'id' },
     )
+}
 
-  if (error) {
-    throw new Error(
-      `writeShowTelaCache upsert failed — code:${error.code} msg:${error.message} details:${(error as { details?: string }).details ?? ''} hint:${(error as { hint?: string }).hint ?? ''}`,
+async function upsertMinimalCacheRow(payloadStr: string) {
+  const db = getSupabaseServerClient()
+  return db
+    .from('durable_artifacts')
+    .upsert(
+      [{
+        id: SHOWTELA_SNAPSHOT_ID,
+        workspace_id: SHOWTELA_WORKSPACE_ID,
+        payload: payloadStr,
+      }],
+      { onConflict: 'id' },
     )
-  }
+}
 
-  // Immediate read-back: confirm the row is visible and payload is intact.
+async function verifyCachePayload(): Promise<string> {
+  const db = getSupabaseServerClient()
   const { data: verify, error: verifyError } = await db
     .from('durable_artifacts')
     .select('payload')
@@ -106,9 +135,35 @@ export async function writeShowTelaCache(data: ShowTelaHomeData): Promise<void> 
     throw new Error(`writeShowTelaCache verify failed — row not readable after upsert. code:${verifyError?.code ?? 'no-row'}`)
   }
 
+  return verify.payload
+}
+
+export async function writeShowTelaCache(data: ShowTelaHomeData): Promise<void> {
+  const src: 'notion' | 'supabase' = data.source === 'supabase' ? 'supabase' : 'notion'
+  const payloadStr = JSON.stringify({ ...data, source: src })
+  const now = new Date().toISOString()
+
+  console.log('[operationalCache] writeShowTelaCache — id:', SHOWTELA_SNAPSHOT_ID, 'workspace:', SHOWTELA_WORKSPACE_ID, 'activeOps:', data.activeOps.length, 'ops:', data.operations.length, 'payloadBytes:', payloadStr.length)
+
+  let writeMode: 'rich' | 'minimal' = 'rich'
+  const richResult = await upsertRichCacheRow(payloadStr, now)
+  let error = richResult.error as SupabaseWriteError | null
+  if (error && isMissingColumnError(error)) {
+    writeMode = 'minimal'
+    console.warn('[operationalCache] rich cache upsert failed on optional-column schema; retrying minimal payload write')
+    const fallback = await upsertMinimalCacheRow(payloadStr)
+    error = fallback.error as SupabaseWriteError | null
+  }
+
+  if (error) {
+    throw new Error(
+      `writeShowTelaCache upsert failed — code:${error.code} msg:${error.message} details:${(error as { details?: string }).details ?? ''} hint:${(error as { hint?: string }).hint ?? ''}`,
+    )
+  }
+
   let verifiedData: ShowTelaHomeData | null = null
   try {
-    verifiedData = JSON.parse(verify.payload) as ShowTelaHomeData
+    verifiedData = JSON.parse(await verifyCachePayload()) as ShowTelaHomeData
   } catch {
     throw new Error('writeShowTelaCache verify failed — payload not valid JSON after upsert')
   }
@@ -118,7 +173,8 @@ export async function writeShowTelaCache(data: ShowTelaHomeData): Promise<void> 
   const writtenFeed = verifiedData?.continuityFeed?.length ?? 0
 
   console.log('[operationalCache] writeShowTelaCache verified —', {
-    payloadBytes: verify.payload.length,
+    payloadBytes: payloadStr.length,
+    writeMode,
     writtenActiveOps,
     writtenOps,
     writtenFeed,
