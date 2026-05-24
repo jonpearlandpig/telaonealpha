@@ -12,12 +12,14 @@ export function ShowTelaHeader({
   autoscan,
   onNextMovementTap,
   isEmpty,
+  runtimeLabel,
 }: {
   userName?: string
   unresolvedCount: number
   autoscan: AutoscanSignal
   onNextMovementTap?: () => void
   isEmpty?: boolean
+  runtimeLabel?: string
 }) {
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
@@ -35,7 +37,7 @@ export function ShowTelaHeader({
   return (
     <header className="px-5 pb-9 pt-[58px]">
       <div className="mb-10 flex items-center justify-between">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#C89B2F]">Crusade: The Musical</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#C89B2F]">{runtimeLabel ?? 'Operational Runtime'}</p>
         <button className="relative flex h-12 w-12 items-center justify-center rounded-full bg-black/[0.035]">
           <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
             <path d="M8 2a4 4 0 00-4 4v3l-1 1.5h10L12 9V6a4 4 0 00-4-4zM6.5 13a1.5 1.5 0 003 0" stroke="#141210" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>

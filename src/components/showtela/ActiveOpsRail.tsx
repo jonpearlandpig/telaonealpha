@@ -100,15 +100,14 @@ export function ActiveOpsRail({
           <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{firstName}</p>
         </div>
 
-        {!isEmpty && (
+        {!isEmpty && items.length > 0 && (
           <button className="flex w-[84px] flex-shrink-0 flex-col items-center gap-3 p-0" onClick={onTelaTap}>
             <CircleShell background="linear-gradient(140deg, #11100D 0%, #2B2218 48%, #7A5A25 100%)" tone="dark">
-              <div className="relative h-full w-full">
-                <img src="/showtela/crusade-anchor.jpg" alt="Crusade" className="h-full w-full object-cover" />
-                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(17,16,13,0.08)_0%,rgba(17,16,13,0.32)_100%)]" />
+              <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_top,#4A3924_0%,#1B1711_64%,#11100D_100%)] text-[18px] font-semibold text-[#E6D2A8]">
+                T
               </div>
             </CircleShell>
-            <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">CRUSADE</p>
+            <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">TELA</p>
           </button>
         )}
 

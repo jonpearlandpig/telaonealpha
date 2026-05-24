@@ -152,6 +152,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
   })
 
   const isEmpty = vm.source === 'empty' && !activeOpsOverride?.length && !operationsOverride?.length
+  const runtimeLabel = priorityOperation?.label || priorityOperation?.name || feed[0]?.linkedEntities?.[0] || 'Operational Runtime'
   console.log('[TELA:TRACE] isEmpty eval', {
     vmSource: vm.source,
     activeOpsOverrideLength: activeOpsOverride?.length ?? null,
@@ -318,6 +319,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
             autoscan={autoscan}
             onNextMovementTap={priorityOperation ? () => setSheet({ type: 'operation', name: priorityOperation.label }) : undefined}
             isEmpty={isEmpty}
+            runtimeLabel={runtimeLabel}
           />
           <ActiveOpsRail
             userName={user?.name}

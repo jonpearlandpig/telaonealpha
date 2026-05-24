@@ -309,6 +309,8 @@ function inferCanonicalOperationTitle(input: {
     input.payload.operation,
     input.payload.linkedEntity,
     input.payload.headline,
+    input.payload.body,
+    ...(input.payload.tags ?? []),
     ...(input.payload.assetNames ?? []),
     ...input.assetContents.map((asset) => asset.content.split('\n').map((line) => line.trim()).find(Boolean) ?? ''),
   ]
@@ -327,6 +329,26 @@ function inferCanonicalOperationTitle(input: {
   }
 
   return null
+}
+
+function hasCanonicalReplacementSignal(input: {
+  payload: ContinuityIngestionInput
+  fileContents: string[]
+  inferredTitle: string | null
+}): boolean {
+  if (!input.inferredTitle) return false
+  const body = input.payload.body?.trim() ?? ''
+  const text = [body, ...input.fileContents, ...(input.payload.tags ?? []), input.payload.headline ?? '']
+    .join('\n')
+    .toLowerCase()
+
+  if (input.payload.mode === 'upload-files' && input.fileContents.length > 0) return true
+  if (input.payload.mode === 'paste-notes') {
+    if (text.includes('call sheet') || text.includes('schedule') || text.includes('load in') || text.includes('soundcheck')) return true
+    if (/#[\w-]+/.test(body) && body.length > 40) return true
+    if (body.length > 160) return true
+  }
+  return false
 }
 
 function canonicalOperationsFromArtifact(input: {
@@ -366,18 +388,24 @@ export async function ingestShowTelaContinuity(input: {
     firstContentPreview: rawAssets[0]?.content?.slice(0, 500) ?? null,
   })
   const { newPeople, newOperations } = extractDirectoryData(rawAssets)
+  const inferredTitle = inferCanonicalOperationTitle({
+    payload: input.payload,
+    assetContents: rawAssets,
+  })
   const artifactOperations = canonicalOperationsFromArtifact({
     payload: input.payload,
     assetContents: rawAssets,
   })
-  const shouldCanonicalReplace = newPeople.length > 0 || (
-    input.payload.mode === 'upload-files' &&
-    fileContents.length > 0
-  )
+  const shouldCanonicalReplace = newPeople.length > 0 || hasCanonicalReplacementSignal({
+    payload: input.payload,
+    fileContents,
+    inferredTitle,
+  })
   console.log('[TELA:TRACE] extractDirectoryData result', {
     newPeopleCount: newPeople.length,
     newOperationsCount: newOperations.length,
     artifactOperationsCount: artifactOperations.length,
+    inferredTitle,
     firstPerson: newPeople[0]?.name ?? null,
     firstOperation: newOperations[0]?.title ?? null,
     canonicalReplace: shouldCanonicalReplace,
