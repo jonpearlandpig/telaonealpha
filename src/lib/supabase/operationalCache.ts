@@ -83,12 +83,16 @@ export async function writeShowTelaCache(data: ShowTelaHomeData): Promise<void> 
   const src: 'notion' | 'supabase' = data.source === 'supabase' ? 'supabase' : 'notion'
   const snapshotRow = row(SHOWTELA_SNAPSHOT_ID, 'showtela-home', data, src)
 
-  console.log('[TELA:TRACE] writeShowTelaCache writing snapshot', {
-    id: SHOWTELA_SNAPSHOT_ID,
-    source: src,
-    activeOpsCount: data.activeOps.length,
-    operationsCount: data.operations.length,
-    feedCount: data.continuityFeed.length,
+  const payloadJson = snapshotRow.payload
+  console.log('[TELA:TRACE] writeShowTelaCache snapshot row shape', {
+    id: snapshotRow.id,
+    workspace_id: snapshotRow.workspace_id,
+    thread_id: snapshotRow.thread_id,
+    payloadByteLength: payloadJson?.length ?? 0,
+    payloadSourceField: (() => { try { return (JSON.parse(payloadJson ?? '') as { source?: string }).source } catch { return 'PARSE_ERROR' } })(),
+    provenanceKeys: Object.keys(snapshotRow.provenance ?? {}),
+    created_at: snapshotRow.created_at,
+    updated_at: snapshotRow.updated_at,
   })
 
   // Delete any existing snapshot row so the subsequent insert never hits a duplicate key.
@@ -99,7 +103,14 @@ export async function writeShowTelaCache(data: ShowTelaHomeData): Promise<void> 
     .eq('workspace_id', SHOWTELA_WORKSPACE_ID)
 
   if (deleteError) {
-    console.warn('[TELA:TRACE] writeShowTelaCache delete pre-step warn (non-fatal):', deleteError.message)
+    console.error('[TELA:TRACE] writeShowTelaCache DELETE failed', {
+      code: deleteError.code,
+      message: deleteError.message,
+      details: (deleteError as { details?: string }).details ?? null,
+      hint: (deleteError as { hint?: string }).hint ?? null,
+    })
+  } else {
+    console.log('[TELA:TRACE] writeShowTelaCache DELETE OK (pre-insert clear)')
   }
 
   const { error } = await db
@@ -107,9 +118,30 @@ export async function writeShowTelaCache(data: ShowTelaHomeData): Promise<void> 
     .insert([snapshotRow])
 
   if (error) {
-    console.error('[operationalCache] snapshot insert failed:', error.message, '| code:', error.code)
+    console.error('[TELA:TRACE] writeShowTelaCache INSERT failed', {
+      code: error.code,
+      message: error.message,
+      details: (error as { details?: string }).details ?? null,
+      hint: (error as { hint?: string }).hint ?? null,
+    })
     throw new Error(`writeShowTelaCache: ${error.message}`)
   }
+
+  // Verify the row actually landed — confirms RLS or visibility issues immediately.
+  const { data: verifyData, error: verifyError } = await db
+    .from('durable_artifacts')
+    .select('id, workspace_id, thread_id, created_at')
+    .eq('id', SHOWTELA_SNAPSHOT_ID)
+    .eq('workspace_id', SHOWTELA_WORKSPACE_ID)
+    .single()
+
+  console.log('[TELA:TRACE] writeShowTelaCache post-insert SELECT verify', {
+    found: !!verifyData,
+    id: verifyData?.id ?? null,
+    workspace_id: (verifyData as { workspace_id?: string } | null)?.workspace_id ?? null,
+    verifyErrorCode: verifyError?.code ?? null,
+    verifyErrorMessage: verifyError?.message ?? null,
+  })
 
   console.log('[TELA:TRACE] writeShowTelaCache snapshot written OK — activeOps:', data.activeOps.length, 'ops:', data.operations.length)
 }
