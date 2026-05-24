@@ -463,11 +463,15 @@ export async function ingestShowTelaContinuity(input: {
     ocid,
   })
 
-  await persistDurableContinuity(SHOWTELA_WORKSPACE_ID, {
-    artifacts: [],
-    entities: [],
-    snapshots: [snapshot],
-  })
+  try {
+    await persistDurableContinuity(SHOWTELA_WORKSPACE_ID, {
+      artifacts: [],
+      entities: [],
+      snapshots: [snapshot],
+    })
+  } catch (err) {
+    console.error('[TELA:TRACE] snapshot persistence non-fatal error — ingest continues:', String(err))
+  }
 
   return {
     artifact,

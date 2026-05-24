@@ -94,21 +94,27 @@ function toSnapshotRow(db: SnapshotDbRow): DurableSnapshotRow {
 export async function upsertArtifactRow(row: DurableArtifactRow): Promise<DurableArtifactRow> {
   console.log('[supabase:queries:upsertArtifactRow] id:', row.id, 'workspace:', row.workspaceId)
   const db = getSupabaseServerClient()
+  // Only include the 7 base columns that are guaranteed to exist in the schema.
+  // Optional columns (file_name, mime_type, lineage_id, artifact_group_id) are
+  // already serialized inside payload and are omitted here to avoid columns= URL
+  // parameter referencing columns that may not exist in the deployed table.
   const { error } = await db.from('durable_artifacts').upsert([{
     id: row.id,
     workspace_id: row.workspaceId,
     thread_id: row.threadId,
-    file_name: row.fileName,
-    mime_type: row.mimeType,
-    lineage_id: row.lineageId,
-    artifact_group_id: row.artifactGroupId,
     payload: row.payload,
     created_at: row.createdAt,
     updated_at: row.updatedAt,
     provenance: row.provenance,
   }], { onConflict: 'id' })
   if (error) {
-    console.error('[supabase:queries:upsertArtifactRow] failed:', error.message, 'code:', error.code, 'id:', row.id)
+    console.error('[supabase:queries:upsertArtifactRow] failed', {
+      message: error.message,
+      code: error.code,
+      details: (error as { details?: string }).details ?? null,
+      hint: (error as { hint?: string }).hint ?? null,
+      id: row.id,
+    })
     throw new Error(`upsertArtifactRow: ${error.message}`)
   }
   return row
