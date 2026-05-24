@@ -29,8 +29,7 @@ export function ContinuityFeed(props: Props) {
         ))}
         {feed.length === 0 && (
           <div className="rounded-[18px] border border-dashed border-[#D4C9B4] px-4 py-8 text-center">
-            <p className="text-[13px] font-medium text-[#8B847B]">No dispatches yet.</p>
-            <p className="mt-1 text-[11px] text-[#A89880]">Dispatches will arrive as operations move.</p>
+            <p className="text-[13px] font-medium text-[#8B847B]">No continuity has entered the runtime.</p>
           </div>
         )}
       </div>

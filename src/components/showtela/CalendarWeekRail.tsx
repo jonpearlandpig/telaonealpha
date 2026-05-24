@@ -22,10 +22,12 @@ export function CalendarWeekRail({
   events,
   baseDate,
   onOpenCalendar,
+  isEmpty,
 }: {
   events: OperationalCalendarEvent[]
   baseDate?: Date
   onOpenCalendar?: () => void
+  isEmpty?: boolean
 }) {
   const days = getWeekDays(baseDate, events)
 
@@ -35,34 +37,40 @@ export function CalendarWeekRail({
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8A7351]">Calendar</p>
       </div>
 
-      <div className="flex snap-x gap-4 overflow-x-auto px-5 pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {days.map((day) => {
-          const style = STATE_STYLES[day.state]
+      {isEmpty ? (
+        <div className="mx-5 rounded-[20px] border border-dashed border-[#D4C9B4] px-5 py-7 text-center">
+          <p className="text-[13px] font-medium text-[#8B847B]">No operational dates detected.</p>
+        </div>
+      ) : (
+        <div className="flex snap-x gap-4 overflow-x-auto px-5 pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {days.map((day) => {
+            const style = STATE_STYLES[day.state]
 
-          return (
-            <button
-              key={day.key}
-              type="button"
-              onClick={onOpenCalendar}
-              className="min-h-[154px] w-[144px] flex-shrink-0 snap-start rounded-[30px] px-5 py-5 text-left shadow-[0_10px_26px_rgba(27,22,16,0.05)] transition-transform duration-300 active:scale-[0.98]"
-              style={{ backgroundColor: style.bg }}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: style.text }}>{day.label}</p>
-                  <p className="mt-2 text-[30px] font-semibold leading-none text-[#16130F]">{day.dateLabel}</p>
+            return (
+              <button
+                key={day.key}
+                type="button"
+                onClick={onOpenCalendar}
+                className="min-h-[154px] w-[144px] flex-shrink-0 snap-start rounded-[30px] px-5 py-5 text-left shadow-[0_10px_26px_rgba(27,22,16,0.05)] transition-transform duration-300 active:scale-[0.98]"
+                style={{ backgroundColor: style.bg }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: style.text }}>{day.label}</p>
+                    <p className="mt-2 text-[30px] font-semibold leading-none text-[#16130F]">{day.dateLabel}</p>
+                  </div>
+                  <span className="mt-1 h-3 w-3 rounded-full" style={{ backgroundColor: style.accent }} />
                 </div>
-                <span className="mt-1 h-3 w-3 rounded-full" style={{ backgroundColor: style.accent }} />
-              </div>
 
-              <p className="mt-7 text-[12px] font-semibold text-[#2A231B]">{style.label}</p>
-              <p className="mt-3 line-clamp-3 text-[12px] leading-[1.45] text-[#5D5145]">
-                {summaryLine(day)}
-              </p>
-            </button>
-          )
-        })}
-      </div>
+                <p className="mt-7 text-[12px] font-semibold text-[#2A231B]">{style.label}</p>
+                <p className="mt-3 line-clamp-3 text-[12px] leading-[1.45] text-[#5D5145]">
+                  {summaryLine(day)}
+                </p>
+              </button>
+            )
+          })}
+        </div>
+      )}
     </section>
   )
 }

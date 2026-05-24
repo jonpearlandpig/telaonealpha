@@ -39,11 +39,11 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 const THIS_WEEK_PLACEHOLDER = [
-  { day: 'Mon', event: 'Juan Otero call', time: '10:00A' },
-  { day: 'Tue', event: 'Follow-up John Bowers', time: '' },
-  { day: 'Wed', event: 'Tim Womble creative review', time: '2:00P' },
-  { day: 'Thu', event: 'Operator check-in', time: '' },
-  { day: 'Fri', event: 'Weekly review', time: '9:00A' },
+  { day: 'Mon', event: '—', time: '' },
+  { day: 'Tue', event: '—', time: '' },
+  { day: 'Wed', event: '—', time: '' },
+  { day: 'Thu', event: '—', time: '' },
+  { day: 'Fri', event: '—', time: '' },
 ]
 
 function ConversionActCard({ act }: { act: SyncPayload['conversionActs'][0] }) {
@@ -226,12 +226,12 @@ export function ContinuityPanel({ data, pearlItems, onCapturePearl, onRefreshPea
         ) : acts.length === 0 ? (
           <div>
             {/* Placeholder skeleton when no data yet */}
-            {['Tim Womble', 'Juan Otero', 'John Bowers'].map((name, i) => (
-              <div key={name} className="tela-card" style={{ padding: '12px 14px', marginBottom: 8, opacity: 0.4 }}>
+            {(['active', 'warm', 'pending'] as const).map((status, i) => (
+              <div key={i} className="tela-card" style={{ padding: '12px 14px', marginBottom: 8, opacity: 0.4 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <StatusDot status={i === 0 ? 'active' : i === 1 ? 'warm' : 'pending'} size={8} />
+                  <StatusDot status={status} size={8} />
                   <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, fontWeight: 500, color: '#EAE0D2' }}>
-                    {name}
+                    —
                   </span>
                 </div>
                 <p style={{ fontSize: 12, color: 'rgba(234,224,210,0.4)', marginTop: 6, paddingLeft: 18 }}>

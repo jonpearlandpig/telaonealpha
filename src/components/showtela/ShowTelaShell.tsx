@@ -149,6 +149,8 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
     return item.name.toLowerCase() !== userFirstName && !item.name.toLowerCase().includes(userFirstName)
   })
 
+  const isEmpty = vm.source === 'empty'
+
   const autoscan = {
     currentTruth: priorityOperation
       ? `${priorityOperation.label} currently carries the highest unresolved operational pressure.`
@@ -260,6 +262,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
             unresolvedCount={unresolvedPressure.unresolvedCount}
             autoscan={autoscan}
             onNextMovementTap={priorityOperation ? () => setSheet({ type: 'operation', name: priorityOperation.label }) : undefined}
+            isEmpty={isEmpty}
           />
           <ActiveOpsRail
             userName={user?.name}
@@ -269,8 +272,9 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
             onTelaTap={() => setTab('messages')}
             onPersonTap={(name, role) => setSheet({ type: 'person', name, role })}
             onAddContinuity={() => openIngest(null)}
+            isEmpty={isEmpty}
           />
-          <CalendarWeekRail events={calendarEvents} baseDate={calendarBaseDate} onOpenCalendar={() => setTab('calendar')} />
+          <CalendarWeekRail events={calendarEvents} baseDate={calendarBaseDate} onOpenCalendar={() => setTab('calendar')} isEmpty={isEmpty} />
           <CrusadeOperationsRail items={operations} unresolvedItems={unresolvedItemsState} onOperationTap={(name) => setSheet({ type: 'operation', name })} />
           <UnresolvedPressureCard pressure={unresolvedPressure} onOpen={() => setSheet({ type: 'unresolved' })} />
           <ContinuityFeed feed={feed} onFeedTap={(item) => setSheet({ type: 'feed', item })} />
@@ -319,7 +323,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
                   <span className="text-base font-bold text-white">+</span>
                 </button>
               </div>
-              <h2 className="mt-3 text-xl font-semibold text-stone-900">{user?.name ?? 'Jon Hartman'}</h2>
+              <h2 className="mt-3 text-xl font-semibold text-stone-900">{user?.name ?? 'Operator'}</h2>
               <p className="text-sm text-stone-500">Personal continuity anchor</p>
               <p className="mt-2 text-center text-[13px] leading-relaxed text-[#6B5D4B]">Use this surface to contribute notes, voice, artifacts, and personal operational memory without dropping into settings or governance overhead.</p>
             </div>

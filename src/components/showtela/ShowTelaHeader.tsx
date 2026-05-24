@@ -11,15 +11,18 @@ export function ShowTelaHeader({
   unresolvedCount,
   autoscan,
   onNextMovementTap,
+  isEmpty,
 }: {
   userName?: string
   unresolvedCount: number
   autoscan: AutoscanSignal
   onNextMovementTap?: () => void
+  isEmpty?: boolean
 }) {
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
   const firstName = userName?.split(' ')[0] ?? 'there'
+
   const tickerItems = [
     autoscan.currentTruth,
     autoscan.mattersNow,
@@ -42,37 +45,51 @@ export function ShowTelaHeader({
 
       <div>
         <h1 className="text-[40px] font-semibold leading-[0.98] tracking-[-1.8px] text-[#141210]">{greeting}, {firstName}.</h1>
-        <p className="mt-2 text-[17px] leading-snug text-[#6E6A63]">Operations are live.</p>
+        <p className="mt-2 text-[17px] leading-snug text-[#6E6A63]">
+          {isEmpty ? 'Operations are ready.' : 'Operations are live.'}
+        </p>
       </div>
 
-      <div className="mt-8 overflow-hidden rounded-[20px] bg-[linear-gradient(160deg,#FCF9F2_0%,#F1E6D0_100%)] px-7 py-6 shadow-[0_10px_28px_rgba(17,17,17,0.05)]">
-        <div className="flex items-center justify-between">
+      {isEmpty ? (
+        <div className="mt-8 overflow-hidden rounded-[20px] bg-[linear-gradient(160deg,#FCF9F2_0%,#F1E6D0_100%)] px-7 py-6 shadow-[0_10px_28px_rgba(17,17,17,0.05)]">
           <div className="flex items-center gap-1.5">
             <p className="text-[11px] font-medium tracking-[0.06em] text-[#8A7351]">TELAtop</p>
             <span className="telatop-pulse h-2 w-2 flex-shrink-0 rounded-full bg-[#D5C1A1]" />
           </div>
-          <p className="text-[11px] font-medium text-[#A89880]">{unresolvedCount} unresolved</p>
+          <p className="mt-6 max-w-[34ch] text-[15px] font-semibold leading-[1.35] tracking-[-0.2px] text-[#171411]">Awaiting continuity.</p>
+          <p className="mt-4 max-w-[34ch] text-[12px] leading-[1.55] text-[#6E6A63]">Add a call sheet, production document, or operational update to begin runtime hydration.</p>
         </div>
-        <p className="mt-6 max-w-[34ch] text-[15px] font-semibold leading-[1.35] tracking-[-0.2px] text-[#171411]">{autoscan.currentTruth}</p>
-        <p className="mt-4 max-w-[34ch] text-[12px] leading-[1.55] text-[#6E6A63]">{autoscan.mattersNow}</p>
-        {onNextMovementTap ? (
-          <button
-            type="button"
-            onClick={onNextMovementTap}
-            className="mt-4 text-left text-[12px] leading-snug text-[#8A7351] transition-colors hover:text-[#6F541A]"
-          >
-            {autoscan.nextMovement}
-          </button>
-        ) : (
-          <p className="mt-4 text-[12px] leading-snug text-[#8A7351]">{autoscan.nextMovement}</p>
-        )}
-        <div className="mt-7 overflow-hidden border-t border-[#D8CAB4]/70 pt-4">
-          <div className="telatop-ticker flex w-max whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A825F]">
-            <span className="pr-10">{tickerText}</span>
-            <span className="pr-10" aria-hidden="true">{tickerText}</span>
+      ) : (
+        <div className="mt-8 overflow-hidden rounded-[20px] bg-[linear-gradient(160deg,#FCF9F2_0%,#F1E6D0_100%)] px-7 py-6 shadow-[0_10px_28px_rgba(17,17,17,0.05)]">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <p className="text-[11px] font-medium tracking-[0.06em] text-[#8A7351]">TELAtop</p>
+              <span className="telatop-pulse h-2 w-2 flex-shrink-0 rounded-full bg-[#D5C1A1]" />
+            </div>
+            <p className="text-[11px] font-medium text-[#A89880]">{unresolvedCount} unresolved</p>
+          </div>
+          <p className="mt-6 max-w-[34ch] text-[15px] font-semibold leading-[1.35] tracking-[-0.2px] text-[#171411]">{autoscan.currentTruth}</p>
+          <p className="mt-4 max-w-[34ch] text-[12px] leading-[1.55] text-[#6E6A63]">{autoscan.mattersNow}</p>
+          {onNextMovementTap ? (
+            <button
+              type="button"
+              onClick={onNextMovementTap}
+              className="mt-4 text-left text-[12px] leading-snug text-[#8A7351] transition-colors hover:text-[#6F541A]"
+            >
+              {autoscan.nextMovement}
+            </button>
+          ) : (
+            <p className="mt-4 text-[12px] leading-snug text-[#8A7351]">{autoscan.nextMovement}</p>
+          )}
+          <div className="mt-7 overflow-hidden border-t border-[#D8CAB4]/70 pt-4">
+            <div className="telatop-ticker flex w-max whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A825F]">
+              <span className="pr-10">{tickerText}</span>
+              <span className="pr-10" aria-hidden="true">{tickerText}</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
       <style jsx>{`
         .telatop-pulse {
           animation: telatopPulse 2.6s ease-in-out infinite;

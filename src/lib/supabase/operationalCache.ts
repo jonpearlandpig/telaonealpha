@@ -3,16 +3,17 @@ import { SHOWTELA_SNAPSHOT_ID, SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runt
 import type { ShowTelaHomeData } from '@/lib/showtela/types'
 
 // Legacy fixture IDs from mockData.ts. Guards against stale demo snapshots in Supabase.
-// Remove once all caches have been flushed and no mock-sourced records remain.
-const DEMO_PERSON_IDS = new Set(['jon', 'juan', 'mags'])
-const DEMO_EVENT_IDS = new Set(['e1', 'e2'])
+// IDs are long-form prefixed (e.g. 'showtela-person-abc123') in live data; single-word ids
+// like these only appeared in the old mock fixture. Remove once caches are fully flushed.
+const DEMO_PERSON_IDS = new Set(['mock-jon', 'mock-juan', 'mock-mags'])
+const DEMO_EVENT_IDS = new Set(['mock-e1', 'mock-e2'])
 
-function provenance(id: string) {
+function provenance(id: string, sourceType: 'notion' | 'supabase' = 'notion') {
   const now = new Date().toISOString()
-  return { sourceType: 'notion', sourceId: id, truthRank: 0.9, lineageRefs: [id], createdAt: now, updatedAt: now }
+  return { sourceType, sourceId: id, truthRank: 0.9, lineageRefs: [id], createdAt: now, updatedAt: now }
 }
 
-function row(id: string, threadId: string, payload: unknown) {
+function row(id: string, threadId: string, payload: unknown, sourceType: 'notion' | 'supabase' = 'notion') {
   const now = new Date().toISOString()
   return {
     id,
@@ -21,7 +22,7 @@ function row(id: string, threadId: string, payload: unknown) {
     payload: JSON.stringify(payload),
     created_at: now,
     updated_at: now,
-    provenance: provenance(id),
+    provenance: provenance(id, sourceType),
   }
 }
 
@@ -69,14 +70,15 @@ export async function readShowTelaCache(): Promise<ShowTelaHomeData | null> {
 
 export async function writeShowTelaCache(data: ShowTelaHomeData): Promise<void> {
   const db = getSupabaseServerClient()
+  const src: 'notion' | 'supabase' = data.source === 'supabase' ? 'supabase' : 'notion'
 
   const rows = [
-    ...data.activeOps.map(p => row(`showtela-person-${p.id}`, 'showtela-people', p)),
-    ...data.fluencyPartners.map(p => row(`showtela-partner-${p.id}`, 'showtela-people', p)),
-    ...data.operations.map(o => row(`showtela-op-${o.id}`, 'showtela-operations', o)),
-    ...data.unresolved.map(u => row(`showtela-unresolved-${u.id}`, 'showtela-unresolved', u)),
-    ...data.continuityFeed.slice(0, 50).map(e => row(`showtela-event-${e.id}`, 'showtela-events', e)),
-    row(SHOWTELA_SNAPSHOT_ID, 'showtela-home', data),
+    ...data.activeOps.map(p => row(`showtela-person-${p.id}`, 'showtela-people', p, src)),
+    ...data.fluencyPartners.map(p => row(`showtela-partner-${p.id}`, 'showtela-people', p, src)),
+    ...data.operations.map(o => row(`showtela-op-${o.id}`, 'showtela-operations', o, src)),
+    ...data.unresolved.map(u => row(`showtela-unresolved-${u.id}`, 'showtela-unresolved', u, src)),
+    ...data.continuityFeed.slice(0, 50).map(e => row(`showtela-event-${e.id}`, 'showtela-events', e, src)),
+    row(SHOWTELA_SNAPSHOT_ID, 'showtela-home', data, src),
   ]
 
   const { error } = await db

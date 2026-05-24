@@ -48,6 +48,7 @@ export function ActiveOpsRail({
   onTelaTap,
   onPersonTap,
   onAddContinuity,
+  isEmpty,
 }: {
   userName?: string
   userImage?: string
@@ -56,6 +57,7 @@ export function ActiveOpsRail({
   onTelaTap?: () => void
   onPersonTap?: (name: string, role?: string) => void
   onAddContinuity?: () => void
+  isEmpty?: boolean
 }) {
   const firstName = userName?.split(' ')[0] ?? 'You'
 
@@ -63,7 +65,7 @@ export function ActiveOpsRail({
     <section className="px-5 pb-11 pt-6">
       <div className="mb-6 flex items-center justify-between">
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5E5348]">Anchors</h2>
-        <button className="text-[11px] font-semibold text-[#C89B2F]">View all</button>
+        {!isEmpty && <button className="text-[11px] font-semibold text-[#C89B2F]">View all</button>}
       </div>
       <div className="flex gap-6 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div
@@ -98,17 +100,19 @@ export function ActiveOpsRail({
           <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{firstName}</p>
         </div>
 
-        <button className="flex w-[84px] flex-shrink-0 flex-col items-center gap-3 p-0" onClick={onTelaTap}>
-          <CircleShell background="linear-gradient(140deg, #11100D 0%, #2B2218 48%, #7A5A25 100%)" tone="dark">
-            <div className="relative h-full w-full">
-              <img src="/showtela/crusade-anchor.jpg" alt="Crusade" className="h-full w-full object-cover" />
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(17,16,13,0.08)_0%,rgba(17,16,13,0.32)_100%)]" />
-            </div>
-          </CircleShell>
-          <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">CRUSADE</p>
-        </button>
+        {!isEmpty && (
+          <button className="flex w-[84px] flex-shrink-0 flex-col items-center gap-3 p-0" onClick={onTelaTap}>
+            <CircleShell background="linear-gradient(140deg, #11100D 0%, #2B2218 48%, #7A5A25 100%)" tone="dark">
+              <div className="relative h-full w-full">
+                <img src="/showtela/crusade-anchor.jpg" alt="Crusade" className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(17,16,13,0.08)_0%,rgba(17,16,13,0.32)_100%)]" />
+              </div>
+            </CircleShell>
+            <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">CRUSADE</p>
+          </button>
+        )}
 
-        {items.map((p) => {
+        {!isEmpty && items.map((p) => {
           const img = p.image ? facePhoto(p.image) : undefined
           const unresolved = p.unresolvedCount ?? 0
           const role = p.latest ?? ''
@@ -134,12 +138,6 @@ export function ActiveOpsRail({
             </button>
           )
         })}
-
-        {items.length === 0 && (
-          <div className="w-full rounded-[18px] border border-dashed border-[#D4C9B4] px-4 py-5 text-center">
-            <p className="text-[13px] font-medium text-[#8B847B]">No active operators yet.</p>
-          </div>
-        )}
       </div>
     </section>
   )

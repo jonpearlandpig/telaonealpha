@@ -96,8 +96,7 @@ export function CrusadeOperationsRail({ items, unresolvedItems, onOperationTap }
     return (
       <section className="px-5 pb-6">
         <div className="rounded-[20px] border border-dashed border-[#D4C9B4] px-4 py-8 text-center">
-          <p className="text-[13px] font-medium text-[#8B847B]">No active operations.</p>
-          <p className="mt-1 text-[11px] text-[#A89880]">Operations will appear when the Crusade activates.</p>
+          <p className="text-[13px] font-medium text-[#8B847B]">No operational graph detected.</p>
         </div>
       </section>
     )
