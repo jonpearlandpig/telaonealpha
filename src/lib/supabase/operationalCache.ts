@@ -60,6 +60,7 @@ export async function readShowTelaCache(): Promise<ShowTelaHomeData | null> {
     const hasDemoEvent = parsed.continuityFeed?.some((e) => DEMO_EVENT_IDS.has(e.id))
     console.log('[TELA:TRACE] readShowTelaCache parsed snapshot', {
       source,
+      diagnosticState: (parsed as { diagnosticState?: string }).diagnosticState ?? null,
       activeOpsCount: parsed.activeOps?.length ?? 0,
       operationsCount: parsed.operations?.length ?? 0,
       feedCount: parsed.continuityFeed?.length ?? 0,

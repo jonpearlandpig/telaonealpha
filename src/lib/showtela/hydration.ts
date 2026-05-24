@@ -182,16 +182,22 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
   try {
     const data = await fetchFromNotion()
     if (data) {
+      console.log('[TELA:TRACE] getShowTelaHome Notion returned data — source:notion', {
+        activeOpsCount: data.activeOps.length,
+        operationsCount: data.operations.length,
+        feedCount: data.continuityFeed.length,
+      })
       writeShowTelaCache(data)
         .then(() => console.log('[showtela] hydration success: Notion fetched and Supabase cache write completed'))
         .catch(err => console.error('[showtela] cache write failed:', String(err)))
       return { ...data, source: 'notion', diagnosticState: 'persistence-connected' }
     }
+    console.log('[TELA:TRACE] getShowTelaHome Notion returned null — falling to empty state')
   } catch (err) {
-    console.error('[showtela] Notion fetch threw:', String(err))
+    console.error('[TELA:TRACE] getShowTelaHome Notion fetch threw:', String(err))
   }
 
-  console.warn('[showtela] no live ShowTELA data available — serving empty state')
+  console.warn('[TELA:TRACE] getShowTelaHome serving EMPTY STATE — source:empty')
   const empty = emptyShowTelaHomeData()
   return { ...empty, source: 'empty', diagnosticState: 'notion-unavailable', hydration: hydrationSummary(empty, { cacheSource: 'empty' }) }
 }
