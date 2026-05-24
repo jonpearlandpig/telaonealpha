@@ -105,6 +105,20 @@ function buildResolutionEvent(name: string, detail?: { movement: string; unresol
   }
 }
 
+function mapVmFeedItem(item: ShowTelaViewModel['feed'][number]): ContinuityEvent {
+  return {
+    id: item.id,
+    headline: item.title,
+    body: item.summary,
+    timestamp: item.timestamp,
+    image: item.image,
+    tags: item.linkedEntities ?? [],
+    owner: { id: item.owner, name: item.owner },
+    isNew: item.unresolved,
+    pressure: (item.pressure as 'low' | 'medium' | 'high' | undefined) ?? (item.unresolved ? 'high' : 'low'),
+  }
+}
+
 export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { name: string; email: string; image: string } }) {
   const initialSurface = getInitialSurfaceState()
   const [tab, setTab] = useState<Tab>(initialSurface.tab)
@@ -112,26 +126,19 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
   const [showIngest, setShowIngest] = useState(initialSurface.showIngest)
   const [ingestMode, setIngestMode] = useState<ContinuityIngestionMode | null>(initialSurface.ingestMode)
   const [taggedPerson, setTaggedPerson] = useState<string | undefined>(undefined)
-  const [feed, setFeed] = useState<ContinuityEvent[]>(
-    vm.feed.map((item) => ({
-      id: item.id,
-      headline: item.title,
-      body: item.summary,
-      timestamp: item.timestamp,
-      image: item.image,
-      tags: item.linkedEntities ?? [],
-      owner: { id: item.owner, name: item.owner },
-      isNew: item.unresolved,
-      pressure: (item.pressure as 'low' | 'medium' | 'high' | undefined) ?? (item.unresolved ? 'high' : 'low'),
-    })),
-  )
-  const [operations, setOperations] = useState<OperationEntity[]>(vm.crusadeOperations)
-  const [runtimeTimeline, setRuntimeTimeline] = useState(vm.runtimeTimeline)
-  const [unresolvedItemsState, setUnresolvedItemsState] = useState<UnresolvedItem[]>(vm.unresolved ?? [])
+  const [feedOverride, setFeedOverride] = useState<ContinuityEvent[] | null>(null)
+  const [operationsOverride, setOperationsOverride] = useState<OperationEntity[] | null>(null)
+  const [runtimeTimelineOverride, setRuntimeTimelineOverride] = useState<typeof vm.runtimeTimeline | null>(null)
+  const [unresolvedOverride, setUnresolvedOverride] = useState<UnresolvedItem[] | null>(null)
   const [sheet, setSheet] = useState<Sheet>(null)
   const openVoice = (person?: string) => { setTaggedPerson(person); setShowVoice(true) }
   const openIngest = (mode?: ContinuityIngestionMode | null) => { setIngestMode(mode ?? null); setShowIngest(true) }
-  const latestTimeline = vm.runtimeTimeline?.[0]
+  const vmUnresolved = useMemo(() => vm.unresolved ?? [], [vm.unresolved])
+  const feed = feedOverride ?? vm.feed.map(mapVmFeedItem)
+  const operations = operationsOverride ?? vm.crusadeOperations
+  const runtimeTimeline = runtimeTimelineOverride ?? vm.runtimeTimeline
+  const unresolvedItemsState = unresolvedOverride ?? vmUnresolved
+  const latestTimeline = runtimeTimeline?.[0]
   const unresolvedPressure = derivePressure(unresolvedItemsState)
   const priorityOperation = operations[0]
   const recentFeedItem = feed[0]
@@ -212,17 +219,19 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
         error?: string
       }
       if (!res.ok || data.error) throw new Error(data.error ?? `HTTP ${res.status}`)
-      if (data.data?.continuityFeed) setFeed(data.data.continuityFeed)
-      if (data.data?.runtimeTimeline) setRuntimeTimeline(data.data.runtimeTimeline)
+      if (data.data?.continuityFeed) setFeedOverride(data.data.continuityFeed)
+      if (data.data?.runtimeTimeline) setRuntimeTimelineOverride(data.data.runtimeTimeline)
     } catch (err) {
       console.error('[ShowTelaShell] continuity ingest failed:', err)
     }
   }
 
   function handleResolveOperation(name: string, detail?: { movement: string; unresolvedTitles: string[] }) {
-    setUnresolvedItemsState((current) => {
+    setUnresolvedOverride((currentOverride) => {
+      const current = currentOverride ?? vmUnresolved
       const next = current.filter((entry) => !matchesOperation(entry.operation, name))
-      setOperations((ops) => {
+      setOperationsOverride((opsOverride) => {
+        const ops = opsOverride ?? vm.crusadeOperations
         return ops.map((item) =>
           item.label === name || item.name === name
             ? { ...item, unresolvedCount: 0, latest: 'Operationally clear.' }
@@ -234,7 +243,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
       })
       return next
     })
-    setFeed((current) => [buildResolutionEvent(name, detail), ...current])
+    setFeedOverride((currentOverride) => [buildResolutionEvent(name, detail), ...(currentOverride ?? vm.feed.map(mapVmFeedItem))])
   }
 
   return (
