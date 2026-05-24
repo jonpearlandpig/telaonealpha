@@ -7,11 +7,8 @@ import { ActiveOpsRail } from './ActiveOpsRail'
 import { BottomDock } from './BottomDock'
 import { CalendarWeekRail } from './CalendarWeekRail'
 import { ContinuityFeed } from './ContinuityFeed'
-import { CrusadeOperationsRail } from './CrusadeOperationsRail'
-import { FluencyPartnersRail } from './FluencyPartnersRail'
 import { OperationalCalendar } from './OperationalCalendar'
 import { ShowTelaHeader } from './ShowTelaHeader'
-import { UnresolvedPressureCard } from './UnresolvedPressureCard'
 import { PersonSheet } from './sheets/PersonSheet'
 import { FeedSheet } from './sheets/FeedSheet'
 import { OperationSheet } from './sheets/OperationSheet'
@@ -117,6 +114,49 @@ function buildResolutionEvent(name: string, detail?: { movement: string; unresol
   }
 }
 
+function timeAgoCompact(iso?: string) {
+  if (!iso) return 'Time open'
+  try {
+    const diff = Date.now() - new Date(iso).getTime()
+    const minutes = Math.max(0, Math.floor(diff / 60000))
+    if (minutes < 1) return 'Just updated'
+    if (minutes < 60) return `Updated ${minutes}m ago`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `Updated ${hours}h ago`
+    return `Updated ${Math.floor(hours / 24)}d ago`
+  } catch {
+    return 'Update timing unavailable'
+  }
+}
+
+function formatEventTime(iso?: string) {
+  if (!iso) return 'Timing open'
+  try {
+    return new Date(iso).toLocaleString('en-US', {
+      weekday: 'short',
+      hour: 'numeric',
+      minute: '2-digit',
+    }).replace(' AM', 'A').replace(' PM', 'P')
+  } catch {
+    return 'Timing open'
+  }
+}
+
+function deriveTrustSignal(vm: ShowTelaViewModel, recentFeedItem?: ContinuityEvent) {
+  if (recentFeedItem?.blockedBy) return `Blocked by ${recentFeedItem.blockedBy}`
+  if (recentFeedItem?.waitingOn) return `Awaiting ${recentFeedItem.waitingOn}`
+  if (recentFeedItem?.owner?.name) return `Last confirmed by ${recentFeedItem.owner.name}`
+  if (vm.hydration?.connectedToNotion) return 'Synced from venue packet'
+  if (vm.diagnosticState === 'persistence-stale') return 'Freshness review pending'
+  return 'Human verification pending'
+}
+
+function deriveFreshnessSignal(vm: ShowTelaViewModel, recentFeedItem?: ContinuityEvent) {
+  if (recentFeedItem?.timestamp) return timeAgoCompact(recentFeedItem.timestamp)
+  if (vm.hydration?.lastHydratedAt) return timeAgoCompact(vm.hydration.lastHydratedAt)
+  return 'No recent sync'
+}
+
 export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { name: string; email: string; image: string } }) {
   const initialSurface = getInitialSurfaceState()
   const [tab, setTab] = useState<Tab>(initialSurface.tab)
@@ -190,6 +230,13 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
     activeOperators: activeOperators.slice(0, 6),
   }
 
+  const trustSignal = deriveTrustSignal(vm, recentFeedItem)
+  const freshnessSignal = deriveFreshnessSignal(vm, recentFeedItem)
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [tab])
+
   const calendarBaseDate = useMemo(() => {
     const anchor = latestTimeline?.timestamp || recentFeedItem?.timestamp
     return anchor ? new Date(anchor) : new Date()
@@ -207,6 +254,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
     }),
     [activeOperators, calendarBaseDate, feed, operations, unresolvedItemsState, vm.runtimeTimeline, vm.source],
   )
+  const primaryEvent = calendarEvents[0]
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -234,29 +282,104 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
   }
 
   return (
-    <main style={{ backgroundColor: '#F8F6F2', color: '#141210' }} className="relative mx-auto min-h-screen w-full max-w-[430px] pb-36">
+    <main style={{ backgroundColor: '#F8F6F2', color: '#141210' }} className="relative mx-auto min-h-screen w-full max-w-[430px] overflow-hidden pb-36">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(circle_at_top_right,rgba(223,205,172,0.34),transparent_45%),radial-gradient(circle_at_top_left,rgba(255,255,255,0.7),transparent_36%)]" />
       {tab === 'home' && (
         <>
           <ShowTelaHeader
             userName={user?.name}
             unresolvedCount={unresolvedPressure.unresolvedCount}
             autoscan={autoscan}
+            latestUpdateLabel={freshnessSignal}
+            trustSignal={trustSignal}
             onNextMovementTap={priorityOperation ? () => setSheet({ type: 'operation', name: priorityOperation.label }) : undefined}
           />
-          <ActiveOpsRail
-            userName={user?.name}
-            userImage={user?.image}
-            items={visibleActiveOps.map((item) => ({ id: item.id, name: item.name, latest: item.latest, unresolvedCount: item.unresolvedCount ?? 0, image: item.image, updatesCount: 0 }))}
-            onProfileTap={() => setTab('profile')}
-            onTelaTap={() => setTab('messages')}
-            onPersonTap={(name, role) => setSheet({ type: 'person', name, role })}
-            onAddContinuity={() => openIngest(null)}
-          />
-          <FluencyPartnersRail items={vm.fluencyPartners.map((item) => ({ id: item.id, name: item.name, label: item.name, unresolvedCount: item.unresolvedCount ?? 0, image: item.image, latest: item.latest }))} onPersonTap={(name, role) => setSheet({ type: 'person', name, role })} />
-          <CalendarWeekRail events={calendarEvents} baseDate={calendarBaseDate} onOpenCalendar={() => setTab('calendar')} />
-          <CrusadeOperationsRail items={operations} unresolvedItems={unresolvedItemsState} onOperationTap={(name) => setSheet({ type: 'operation', name })} />
-          <UnresolvedPressureCard pressure={unresolvedPressure} onOpen={() => setSheet({ type: 'unresolved' })} />
-          <ContinuityFeed feed={feed} onFeedTap={(item) => setSheet({ type: 'feed', item })} />
+          <section className="px-5 pb-8">
+            <div className="grid grid-cols-[104px,minmax(0,1fr)] gap-4">
+              <div className="pt-1">
+                <ActiveOpsRail
+                  userName={user?.name}
+                  userImage={user?.image}
+                  items={visibleActiveOps.map((item) => ({ id: item.id, name: item.name, latest: item.latest, unresolvedCount: item.unresolvedCount ?? 0, image: item.image, updatesCount: 0 }))}
+                  onProfileTap={() => setTab('profile')}
+                  onTelaTap={() => setTab('messages')}
+                  onPersonTap={(name, role) => setSheet({ type: 'person', name, role })}
+                  onAddContinuity={() => openIngest(null)}
+                />
+              </div>
+
+              <div className="space-y-5">
+                <section className="rounded-[30px] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.82)_0%,rgba(245,239,230,0.96)_100%)] px-4 py-5 shadow-[0_18px_38px_rgba(31,24,18,0.08)] backdrop-blur-[16px]">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8A7351]">Primary Briefing</p>
+                      <h2 className="mt-2 text-[22px] font-semibold leading-tight text-[#171411]">
+                        {priorityOperation?.label ?? primaryEvent?.title ?? 'Field holding steady'}
+                      </h2>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => priorityOperation ? setSheet({ type: 'operation', name: priorityOperation.label }) : setTab('calendar')}
+                      className="rounded-full border border-[#E0D4C4] bg-white/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8A6725]"
+                    >
+                      Open
+                    </button>
+                  </div>
+                  <p className="mt-3 text-[14px] leading-relaxed text-[#5F5348]">
+                    {priorityOperation?.latest || primaryEvent?.summary || autoscan.mattersNow}
+                  </p>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <div className="rounded-[18px] bg-[#F4EEE4] px-3 py-3">
+                      <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#988468]">Next move</p>
+                      <p className="mt-1 text-[12px] leading-snug text-[#211B15]">
+                        {priorityOperation?.latest || autoscan.nextMovement}
+                      </p>
+                    </div>
+                    <div className="rounded-[18px] bg-[#F4EEE4] px-3 py-3">
+                      <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#988468]">Timing</p>
+                      <p className="mt-1 text-[12px] leading-snug text-[#211B15]">
+                        {formatEventTime(primaryEvent?.startTime ?? primaryEvent?.timestamp)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="rounded-full bg-[#EFE6D8] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6B5D4B]">
+                      {trustSignal}
+                    </span>
+                    <span className="rounded-full bg-[#EFE6D8] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6B5D4B]">
+                      {freshnessSignal}
+                    </span>
+                  </div>
+                </section>
+
+                <CalendarWeekRail events={calendarEvents} baseDate={calendarBaseDate} onOpenCalendar={() => setTab('calendar')} />
+              </div>
+            </div>
+          </section>
+
+          <section className="px-5 pb-6">
+            <div className="rounded-[28px] border border-[#E8DECF] bg-white/72 px-4 py-4 shadow-[0_12px_30px_rgba(17,17,17,0.05)]">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8A7351]">Signals</p>
+                  <p className="mt-1 text-[14px] leading-relaxed text-[#201913]">
+                    {primaryEvent?.telaHint ?? 'Open the field only when you need more depth.'}
+                  </p>
+                </div>
+                {unresolvedPressure.unresolvedCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSheet({ type: 'unresolved' })}
+                    className="rounded-full border border-[#DDD0BB] bg-[#F7F1E8] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8A6725]"
+                  >
+                    {unresolvedPressure.unresolvedCount} open
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <ContinuityFeed feed={feed.slice(0, 4)} onFeedTap={(item) => setSheet({ type: 'feed', item })} />
         </>
       )}
 

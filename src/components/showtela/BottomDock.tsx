@@ -1,13 +1,11 @@
 'use client'
-import { useState } from 'react'
 
 type Tab = 'home' | 'play' | 'messages' | 'calendar' | 'profile'
 
 export function BottomDock({ activeTab, onTabChange, userImage, userName }: { activeTab?: Tab; onTabChange?: (tab: Tab) => void; userImage?: string; userName?: string }) {
-  const [tab, setTab] = useState<Tab>(activeTab ?? 'home')
+  const tab = activeTab ?? 'home'
 
   const handleTab = (nextTab: Tab) => {
-    setTab(nextTab)
     onTabChange?.(nextTab)
   }
 

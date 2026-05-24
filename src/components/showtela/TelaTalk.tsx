@@ -112,23 +112,29 @@ export function TelaTalk({
 
   return (
     <div className="min-h-screen bg-[#F6F2EA] px-5 pb-32 pt-14">
-      <div className="rounded-[26px] border border-[#2A231A] bg-[#17130F] p-4 text-[#F5EEDC] shadow-[0_18px_38px_rgba(20,18,16,0.14)]">
+      <div className="rounded-[30px] border border-[#E8DCCB] bg-[linear-gradient(180deg,#FFFFFF_0%,#F4EDE2_100%)] p-4 shadow-[0_18px_38px_rgba(20,18,16,0.08)]">
         <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#D7BC7F]">TELA</p>
-            <h1 className="mt-1.5 text-[23px] font-semibold tracking-[-0.04em]">Persistent thread</h1>
+          <div className="flex items-center gap-3">
+            <div className="relative h-12 w-12 overflow-hidden rounded-full bg-[#18140F]">
+              <img src="/showtela/crusade-anchor.jpg" alt="TELA" className="h-full w-full object-cover" />
+              <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-white bg-[#8EA58E]" />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Messages</p>
+              <h1 className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-[#17130F]">TELA</h1>
+            </div>
           </div>
-          <div className="rounded-full border border-[#5A4725] bg-[#221B13] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#DABD79]">
-            Pinned
+          <div className="rounded-full bg-[#F4E9D6] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8A6725]">
+            Present
           </div>
         </div>
-        <p className="mt-4 text-[13px] leading-relaxed text-[#DDD1BB]">
-          Ask from continuity memory, CST calendar movement, unresolved pressure, operational feed, and constitutional event spine readiness.
+        <p className="mt-4 text-[13px] leading-relaxed text-[#5E5348]">
+          Personal first. Operational when needed.
         </p>
       </div>
 
-      <section className="mt-4 rounded-[24px] border border-[#E3D8C7] bg-white/82 p-4 shadow-[0_14px_34px_rgba(17,17,17,0.05)]">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8A7351]">Ask TELA</p>
+      <section className="mt-4 rounded-[26px] border border-[#E3D8C7] bg-white/82 p-4 shadow-[0_14px_34px_rgba(17,17,17,0.05)]">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8A7351]">Quick asks</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {promptOptions.map((prompt) => (
             <button
@@ -166,16 +172,28 @@ export function TelaTalk({
         {thread.map((message, index) => (
           <div
             key={message.id}
-            className={`rounded-[22px] px-4 py-3 shadow-[0_10px_26px_rgba(17,17,17,0.04)] ${
+            className={`rounded-[24px] px-4 py-3 shadow-[0_10px_26px_rgba(17,17,17,0.04)] ${
               message.role === 'tela'
                 ? 'border border-[#E3D8C7] bg-[#FFFDF8] text-[#171411]'
-                : 'ml-8 bg-[#17130F] text-[#F7E8C2]'
+                : 'ml-8 bg-[#1A1611] text-[#F7E8C2]'
             }`}
           >
             <div className="flex items-center justify-between gap-3">
-              <p className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${message.role === 'tela' ? 'text-[#8A7351]' : 'text-[#D7BC7F]'}`}>
-                {message.role === 'tela' ? 'TELA' : 'You'}
-              </p>
+              <div className="flex items-center gap-2">
+                {message.role === 'tela' ? (
+                  <div className="relative h-8 w-8 overflow-hidden rounded-full bg-[#18140F]">
+                    <img src="/showtela/crusade-anchor.jpg" alt="TELA" className="h-full w-full object-cover" />
+                    <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border border-white bg-[#8EA58E]" />
+                  </div>
+                ) : (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F1E6D4] text-[11px] font-semibold text-[#7D6132]">
+                    You
+                  </div>
+                )}
+                <p className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${message.role === 'tela' ? 'text-[#8A7351]' : 'text-[#D7BC7F]'}`}>
+                  {message.role === 'tela' ? 'TELA' : 'You'}
+                </p>
+              </div>
               {index === 0 && (
                 <span className="rounded-full bg-[#F1E6D4] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-[#7D6132]">
                   Pinned
@@ -187,17 +205,15 @@ export function TelaTalk({
         ))}
       </section>
 
-      <section className="mt-4 rounded-[20px] border border-[#E3D8C7] bg-white/70 px-4 py-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8A7351]">Runtime Sources</p>
+      <section className="mt-4 rounded-[22px] border border-[#E3D8C7] bg-white/70 px-4 py-3">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8A7351]">Thread presence</p>
         <p className="mt-1 text-[12px] leading-relaxed text-[#6B5D4B]">
-          {feed.length} continuity / {calendarEvents.length} calendar / {unresolvedItems.length} unresolved / constitutional spine ready
+          {feed.length} continuity / {calendarEvents.length} calendar / {unresolvedItems.length} unresolved
         </p>
         {autoscan.activeOperators.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {autoscan.activeOperators.map((name) => (
-              <span key={name} className="rounded-full bg-[#F5F0E6] px-2.5 py-1 text-[11px] font-medium text-[#5E5348]">
-                {name}
-              </span>
+              <span key={name} className="rounded-full bg-[#F5F0E6] px-2.5 py-1 text-[11px] font-medium text-[#5E5348]">{name}</span>
             ))}
           </div>
         )}

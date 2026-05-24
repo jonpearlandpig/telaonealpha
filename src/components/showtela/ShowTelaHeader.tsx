@@ -10,102 +10,72 @@ export function ShowTelaHeader({
   userName,
   unresolvedCount,
   autoscan,
+  latestUpdateLabel,
+  trustSignal,
   onNextMovementTap,
 }: {
   userName?: string
   unresolvedCount: number
   autoscan: AutoscanSignal
+  latestUpdateLabel?: string
+  trustSignal?: string
   onNextMovementTap?: () => void
 }) {
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
   const firstName = userName?.split(' ')[0] ?? 'there'
-  const tickerItems = [
-    autoscan.currentTruth,
-    autoscan.mattersNow,
-    autoscan.nextMovement,
-    unresolvedCount > 0 ? `${unresolvedCount} unresolved movement${unresolvedCount === 1 ? '' : 's'} still open` : 'continuity field calm',
-    'governance movement holding steady',
-  ].filter(Boolean)
-  const tickerText = tickerItems.join('  /  ')
 
   return (
-    <header className="px-5 pb-8 pt-[58px]">
-      <div className="mb-5 flex items-center justify-between">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#C89B2F]">Crusade: The Musical</p>
-        <button className="relative flex h-9 w-9 items-center justify-center rounded-full bg-black/[0.04]">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M8 2a4 4 0 00-4 4v3l-1 1.5h10L12 9V6a4 4 0 00-4-4zM6.5 13a1.5 1.5 0 003 0" stroke="#141210" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
+    <header className="relative overflow-hidden px-5 pb-8 pt-[58px]">
+      <div className="pointer-events-none absolute -right-20 top-12 h-56 w-56 rounded-full bg-[#EFE5D3] blur-3xl" />
+      <div className="pointer-events-none absolute left-[-26px] top-24 opacity-[0.2]">
+        <p className="origin-top-left rotate-180 text-[72px] font-semibold uppercase tracking-[0.38em] text-[#B7AA95] [writing-mode:vertical-rl]">
+          Crusade
+        </p>
       </div>
 
-      <div>
-        <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.6px] text-[#141210]">{greeting}, {firstName}.</h1>
-        <p className="mt-1 text-[15px] leading-snug text-[#6E6A63]">Operations are live.</p>
-      </div>
-
-      <div className="mt-7 overflow-hidden rounded-[14px] bg-[linear-gradient(160deg,#FAF7F1_0%,#EEE3CC_100%)] px-4 py-5 shadow-[0_2px_10px_rgba(17,17,17,0.07)]">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <p className="text-[10px] font-medium tracking-[0.06em] text-[#8A7351]">TELAtop</p>
-            <span className="telatop-pulse h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#CDB38A]" />
-          </div>
-          <p className="text-[10px] font-medium text-[#A89880]">{unresolvedCount} unresolved</p>
-        </div>
-        <p className="mt-3 text-[12px] font-semibold leading-snug text-[#171411]">{autoscan.currentTruth}</p>
-        <p className="mt-1.5 text-[11px] leading-relaxed text-[#6E6A63]">{autoscan.mattersNow}</p>
-        {onNextMovementTap ? (
-          <button
-            type="button"
-            onClick={onNextMovementTap}
-            className="mt-2 text-left text-[11px] leading-snug text-[#8A7351] transition-colors hover:text-[#6F541A]"
-          >
-            {autoscan.nextMovement}
-          </button>
-        ) : (
-          <p className="mt-2 text-[11px] leading-snug text-[#8A7351]">{autoscan.nextMovement}</p>
-        )}
-        <div className="mt-4 overflow-hidden border-t border-[#D8CAB4]/70 pt-3">
-          <div className="telatop-ticker flex w-max whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9A825F]">
-            <span className="pr-10">{tickerText}</span>
-            <span className="pr-10" aria-hidden="true">{tickerText}</span>
+      <div className="relative ml-16">
+        <div className="mb-6 flex items-center justify-between">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Home</p>
+          <div className="rounded-full border border-[#E4D8C9] bg-white/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6E6459]">
+            {latestUpdateLabel ?? 'Standing by'}
           </div>
         </div>
+
+        <div>
+          <p className="text-[12px] font-medium text-[#7D7368]">{greeting}, {firstName}.</p>
+          <h1 className="mt-2 max-w-[220px] text-[31px] font-semibold leading-[1.02] tracking-[-0.04em] text-[#171411]">
+            The field is present.
+          </h1>
+          <p className="mt-3 max-w-[240px] text-[14px] leading-relaxed text-[#655A4F]">{autoscan.currentTruth}</p>
+        </div>
+
+        <div className="mt-6 rounded-[28px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.78)_0%,rgba(247,241,232,0.9)_100%)] px-4 py-4 shadow-[0_18px_38px_rgba(31,24,18,0.08)] backdrop-blur-[18px]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8B785C]">Now</p>
+          <p className="mt-2 text-[15px] leading-relaxed text-[#221C16]">{autoscan.mattersNow}</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="rounded-full bg-[#F2ECE3] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6B5D4B]">
+              {unresolvedCount > 0 ? `${unresolvedCount} open` : 'Field calm'}
+            </span>
+            {trustSignal && (
+              <span className="rounded-full bg-[#F2ECE3] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6B5D4B]">
+                {trustSignal}
+              </span>
+            )}
+          </div>
+          {onNextMovementTap ? (
+            <button
+              type="button"
+              onClick={onNextMovementTap}
+              className="mt-4 block text-left text-[12px] font-semibold text-[#8A6725] transition-colors hover:text-[#6F541A]"
+            >
+              {autoscan.nextMovement}
+            </button>
+          ) : (
+            <p className="mt-4 text-[12px] font-semibold text-[#8A6725]">{autoscan.nextMovement}</p>
+          )}
+        </div>
       </div>
-      <style jsx>{`
-        .telatop-pulse {
-          animation: telatopPulse 2.6s ease-in-out infinite;
-          box-shadow: 0 0 0 rgba(205, 179, 138, 0.35);
-        }
-
-        @keyframes telatopPulse {
-          0%,
-          100% {
-            opacity: 0.5;
-            transform: scale(0.9);
-            box-shadow: 0 0 0 0 rgba(205, 179, 138, 0.16);
-          }
-          50% {
-            opacity: 1;
-            transform: scale(1.05);
-            box-shadow: 0 0 0 4px rgba(205, 179, 138, 0);
-          }
-        }
-
-        .telatop-ticker {
-          animation: telatopTicker 42s linear infinite;
-        }
-
-        @keyframes telatopTicker {
-          0% {
-            transform: translate3d(0, 0, 0);
-          }
-          100% {
-            transform: translate3d(-50%, 0, 0);
-          }
-        }
-      `}</style>
     </header>
   )
 }
