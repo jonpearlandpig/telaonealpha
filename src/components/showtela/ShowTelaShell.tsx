@@ -128,6 +128,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
   const [taggedPerson, setTaggedPerson] = useState<string | undefined>(undefined)
   const [feedOverride, setFeedOverride] = useState<ContinuityEvent[] | null>(null)
   const [operationsOverride, setOperationsOverride] = useState<OperationEntity[] | null>(null)
+  const [activeOpsOverride, setActiveOpsOverride] = useState<typeof vm.activeOps | null>(null)
   const [runtimeTimelineOverride, setRuntimeTimelineOverride] = useState<typeof vm.runtimeTimeline | null>(null)
   const [unresolvedOverride, setUnresolvedOverride] = useState<UnresolvedItem[] | null>(null)
   const [sheet, setSheet] = useState<Sheet>(null)
@@ -136,20 +137,21 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
   const vmUnresolved = useMemo(() => vm.unresolved ?? [], [vm.unresolved])
   const feed = feedOverride ?? vm.feed.map(mapVmFeedItem)
   const operations = operationsOverride ?? vm.crusadeOperations
+  const activeOpsData = activeOpsOverride ?? vm.activeOps
   const runtimeTimeline = runtimeTimelineOverride ?? vm.runtimeTimeline
   const unresolvedItemsState = unresolvedOverride ?? vmUnresolved
   const latestTimeline = runtimeTimeline?.[0]
   const unresolvedPressure = derivePressure(unresolvedItemsState)
   const priorityOperation = operations[0]
   const recentFeedItem = feed[0]
-  const activeOperators = useMemo(() => vm.activeOps.map((item) => item.name), [vm.activeOps])
+  const activeOperators = useMemo(() => activeOpsData.map((item) => item.name), [activeOpsData])
   const userFirstName = user?.name?.split(' ')[0]?.toLowerCase()
-  const visibleActiveOps = vm.activeOps.filter((item) => {
+  const visibleActiveOps = activeOpsData.filter((item) => {
     if (!userFirstName) return true
     return item.name.toLowerCase() !== userFirstName && !item.name.toLowerCase().includes(userFirstName)
   })
 
-  const isEmpty = vm.source === 'empty'
+  const isEmpty = vm.source === 'empty' && !activeOpsOverride?.length && !operationsOverride?.length
 
   const autoscan = {
     currentTruth: priorityOperation
@@ -217,12 +219,37 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
         data?: {
           continuityFeed?: ContinuityEvent[]
           runtimeTimeline?: typeof vm.runtimeTimeline
+          activeOps?: Array<{ id: string; name: string; role?: string; avatar?: string; unresolvedCount?: number }>
+          operations?: Array<{ id: string; title: string; latestMovement?: string; unresolvedCount?: number }>
         }
         error?: string
       }
       if (!res.ok || data.error) throw new Error(data.error ?? `HTTP ${res.status}`)
       if (data.data?.continuityFeed) setFeedOverride(data.data.continuityFeed)
       if (data.data?.runtimeTimeline) setRuntimeTimelineOverride(data.data.runtimeTimeline)
+      if (data.data?.activeOps?.length) {
+        setActiveOpsOverride(
+          data.data.activeOps.map(p => ({
+            id: p.id,
+            name: p.name === 'TBD' ? (p.role ?? 'TBD') : p.name,
+            image: p.avatar ?? '',
+            latest: p.role ?? '',
+            unresolvedCount: p.unresolvedCount ?? 0,
+          }))
+        )
+      }
+      if (data.data?.operations?.length) {
+        setOperationsOverride(
+          data.data.operations.map(o => ({
+            id: o.id,
+            name: o.title,
+            label: o.title,
+            image: '',
+            latest: o.latestMovement ?? '',
+            unresolvedCount: o.unresolvedCount ?? 0,
+          }))
+        )
+      }
       return true
     } catch (err) {
       console.error('[ShowTelaShell] continuity ingest failed:', err)
@@ -362,7 +389,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
         <ContinuityIngest
           open={showIngest}
           ownerName={user?.name}
-          people={vm.activeOps.map((item) => ({ id: item.id, label: item.name }))}
+          people={activeOpsData.map((item) => ({ id: item.id, label: item.name }))}
           operations={vm.crusadeOperations.map((item) => ({ id: item.id, label: item.label }))}
           initialMode={ingestMode}
           onClose={() => { setShowIngest(false); setIngestMode(null) }}

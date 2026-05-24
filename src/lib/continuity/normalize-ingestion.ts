@@ -10,6 +10,12 @@ export type ContinuityIngestionMode =
   | 'add-photos'
   | 'add-link'
 
+export type AssetContent = {
+  name: string
+  content: string
+  type: string
+}
+
 export type ContinuityIngestionInput = {
   mode: ContinuityIngestionMode
   headline?: string
@@ -20,6 +26,7 @@ export type ContinuityIngestionInput = {
   tags?: string[]
   linkUrl?: string
   assetNames?: string[]
+  assetContents?: AssetContent[]
 }
 
 type NormalizeContinuityIngestionOptions = {

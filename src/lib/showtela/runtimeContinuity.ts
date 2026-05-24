@@ -1,5 +1,6 @@
 import { deterministicArtifactId, type ArtifactRecord } from '@/lib/artifacts/artifactStore'
 import { normalizeContinuityIngestion, type ContinuityIngestionInput } from '@/lib/continuity/normalize-ingestion'
+import { parseMarkdownDirectory } from '@/lib/continuity/parseMarkdownDirectory'
 import { createConstitutionalEvent } from '@/lib/constitutional/create-event'
 import type { ConstitutionalEvent } from '@/lib/constitutional/types'
 import { extractEntities, type EntityRecord, type EntityType } from '@/lib/entities/entityEngine'
@@ -7,7 +8,7 @@ import { persistDurableContinuity } from '@/lib/runtime/durableMemory'
 import { deterministicSnapshotId, type ContinuitySnapshot } from '@/lib/runtime/continuitySnapshots'
 import { listWorkspaceArtifacts } from '@/lib/supabase/queries'
 import { threadContinuity } from './threadContinuity'
-import type { ContinuityEvent, RuntimeTimelineItem, ShowTelaHomeData } from './types'
+import type { ContinuityEvent, OperationEntity, PersonEntity, RuntimeTimelineItem, ShowTelaHomeData } from './types'
 
 export const SHOWTELA_WORKSPACE_ID = 'tela-showtela'
 export const SHOWTELA_SNAPSHOT_ID = 'showtela-home-snapshot'
@@ -165,12 +166,15 @@ export function createRuntimeContinuityArtifact(input: {
   constitutionalEvent: ConstitutionalEvent | null
   event: ContinuityEvent
   ocid: string
+  fileContents?: string[]
 }): ArtifactRecord {
   const createdAt = input.event.timestamp ?? new Date().toISOString()
   const title = input.event.headline
+  const fileText = input.fileContents?.filter(Boolean).join('\n\n---\n\n') ?? null
   const text = [
     input.event.headline,
     input.event.body ?? null,
+    fileText,
     input.event.owner?.name ? `Owner: ${input.event.owner.name}` : null,
     input.event.linkedEntities?.length ? `Linked Entities: ${input.event.linkedEntities.join(', ')}` : null,
     `OCID: ${input.ocid}`,
@@ -298,6 +302,67 @@ export function createShowTelaDurableSnapshot(input: {
   }
 }
 
+function extractDirectoryData(
+  assetContents: Array<{ name: string; content: string; type: string }>,
+): { newPeople: PersonEntity[]; newOperations: OperationEntity[] } {
+  const people: PersonEntity[] = []
+  const operations: OperationEntity[] = []
+  const seenDepts = new Set<string>()
+
+  for (const file of assetContents) {
+    if (!file.content.trim()) continue
+    const parsed = parseMarkdownDirectory(file.content)
+
+    for (const p of parsed.people) {
+      people.push({
+        id: `dir-${slugify(p.name)}`,
+        name: p.name,
+        role: p.role || p.department || undefined,
+        avatar: '',
+        active: true,
+        partner: false,
+        unresolvedCount: 0,
+      })
+    }
+
+    for (const dept of parsed.departments) {
+      const key = dept.toLowerCase()
+      if (!seenDepts.has(key)) {
+        seenDepts.add(key)
+        operations.push({
+          id: `dept-${slugify(dept)}`,
+          title: dept,
+          status: 'active',
+          unresolvedCount: 0,
+          latestMovement: `Populated from ${file.name}`,
+        })
+      }
+    }
+  }
+
+  return { newPeople: people, newOperations: operations }
+}
+
+function mergeDirectoryIntoHome(
+  data: ShowTelaHomeData,
+  newPeople: PersonEntity[],
+  newOperations: OperationEntity[],
+): ShowTelaHomeData {
+  const existingNames = new Set(data.activeOps.map(p => p.name.toLowerCase()))
+  const uniquePeople = newPeople.filter(p => !existingNames.has(p.name.toLowerCase()))
+
+  const existingOps = new Set(data.operations.map(o => o.title.toLowerCase()))
+  const uniqueOps = newOperations.filter(o => !existingOps.has(o.title.toLowerCase()))
+
+  return {
+    ...data,
+    activeOps: [...data.activeOps, ...uniquePeople].slice(0, 20),
+    operations: [...data.operations, ...uniqueOps],
+    source: 'supabase',
+    diagnosticState: 'persistence-connected',
+  }
+}
+
 export async function ingestShowTelaContinuity(input: {
   baseData: ShowTelaHomeData
   payload: ContinuityIngestionInput
@@ -305,6 +370,12 @@ export async function ingestShowTelaContinuity(input: {
 }) {
   const timestamp = new Date().toISOString()
   const latestLineage = input.baseData.continuityFeed[0]?.lineageRef
+
+  // Extract text from uploaded files for semantic analysis
+  const fileContents = (input.payload.assetContents ?? [])
+    .filter(f => f.content.trim().length > 0)
+    .map(f => f.content.trim())
+
   const headlineSeed = input.payload.headline?.trim() || input.payload.body?.trim() || 'continuity'
   const ocid = createContinuityOcid(headlineSeed, timestamp)
   const event = normalizeContinuityIngestion(input.payload, {
@@ -324,6 +395,7 @@ export async function ingestShowTelaContinuity(input: {
     constitutionalEvent,
     event,
     ocid,
+    fileContents,
   })
   const entities = extractContinuityEntities(event, artifact)
 
@@ -333,7 +405,14 @@ export async function ingestShowTelaContinuity(input: {
     snapshots: [],
   })
 
-  const mergedData = mergeContinuityIntoShowTelaHome(input.baseData, [event])
+  // Parse crew directories from uploaded markdown/text files
+  const { newPeople, newOperations } = extractDirectoryData(input.payload.assetContents ?? [])
+
+  const feedMerged = mergeContinuityIntoShowTelaHome(input.baseData, [event])
+  const mergedData: ShowTelaHomeData = newPeople.length > 0
+    ? mergeDirectoryIntoHome(feedMerged, newPeople, newOperations)
+    : { ...feedMerged, source: 'supabase', diagnosticState: 'persistence-connected' }
+
   const snapshot = createShowTelaDurableSnapshot({
     artifact,
     constitutionalEvent,

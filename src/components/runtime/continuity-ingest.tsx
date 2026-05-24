@@ -54,6 +54,26 @@ export function ContinuityIngest({
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [linkUrl, setLinkUrl] = useState('')
   const [assetNames, setAssetNames] = useState<string[]>([])
+  const [assetContents, setAssetContents] = useState<Array<{ name: string; content: string; type: string }>>([])
+
+  const readFileContents = async (files: File[]) => {
+    const results: Array<{ name: string; content: string; type: string }> = []
+    for (const file of files) {
+      const isText = file.type === 'text/plain' || file.type === 'text/markdown' ||
+        file.name.endsWith('.md') || file.name.endsWith('.txt') || file.name.endsWith('.markdown')
+      if (isText) {
+        try {
+          const content = await file.text()
+          results.push({ name: file.name, content, type: file.type || 'text/plain' })
+        } catch {
+          results.push({ name: file.name, content: '', type: file.type })
+        }
+      } else {
+        results.push({ name: file.name, content: '', type: file.type })
+      }
+    }
+    setAssetContents(results)
+  }
 
   const toggleTag = (tag: string) => {
     setSelectedTags((current) =>
@@ -88,6 +108,7 @@ export function ContinuityIngest({
       tags: selectedTags,
       linkUrl,
       assetNames,
+      assetContents: assetContents.length > 0 ? assetContents : undefined,
     })
     onClose()
   }
@@ -178,7 +199,11 @@ export function ContinuityIngest({
                   type="file"
                   multiple
                   accept={mode === 'add-photos' ? 'image/*' : undefined}
-                  onChange={(event) => setAssetNames(Array.from(event.target.files ?? []).map((file) => file.name))}
+                  onChange={(event) => {
+                    const files = Array.from(event.target.files ?? [])
+                    setAssetNames(files.map(f => f.name))
+                    void readFileContents(files)
+                  }}
                   className="w-full rounded-[18px] border border-[#DED4C4] bg-white px-4 py-3 text-[13px] text-[#171411] file:mr-3 file:rounded-full file:border-0 file:bg-[#171411] file:px-3 file:py-2 file:text-[12px] file:font-semibold file:text-[#F6EFDF]"
                 />
                 {assetNames.length > 0 && <p className="mt-2 text-[12px] text-[#6B5D4B]">{assetNames.length} item{assetNames.length === 1 ? '' : 's'} staged into continuity.</p>}

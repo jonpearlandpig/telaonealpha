@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       submittedBy: session.name,
     })
 
-    await writeShowTelaCache(result.data)
+    await writeShowTelaCache({ ...result.data, source: 'supabase', diagnosticState: 'persistence-connected' })
 
     return NextResponse.json({
       ok: true,
