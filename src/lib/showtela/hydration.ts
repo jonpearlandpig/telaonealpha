@@ -5,8 +5,7 @@ import { assertShowTelaStartupEnv, getShowTelaEnvStatus, logShowTelaEnvStatus } 
 import { threadContinuity } from './threadContinuity'
 import { cleanBody, extractUnresolvedMarkers, validateAndFilter, validateContinuityEventRecord, validateOperationRecord, validatePersonRecord } from './normalizeNotionRecord'
 import { getShowTelaCacheSchemaCompatibility, readShowTelaCache, writeShowTelaCache } from '@/lib/supabase/operationalCache'
-import { mergePersistedRuntimeContinuity } from './runtimeContinuity'
-import type { ShowTelaHomeData, ShowTelaHydrationSummary } from './types'
+import type { ContinuityEvent, OperationEntity, PersonEntity, ShowTelaHomeData, ShowTelaHydrationSummary, UnresolvedObject } from './types'
 
 function emptyShowTelaHomeData(): ShowTelaHomeData {
   return {
@@ -27,6 +26,74 @@ function countsFor(data: ShowTelaHomeData) {
     continuity: data.continuityFeed.length,
     unresolved: data.unresolved.length,
     artifacts: 0,
+  }
+}
+
+function timelineFromFeed(feed: ContinuityEvent[]) {
+  return feed.slice(0, 20).map((event, idx) => ({
+    id: `timeline-${event.id}`,
+    timestamp: event.timestamp ?? new Date().toISOString(),
+    actor: event.owner?.name ?? 'Operations',
+    summary: event.headline,
+    continuityObjectId: event.continuityObject?.id ?? event.threadId ?? event.id,
+    pressureDelta: (
+      (event.pressure === 'high' ? 2 : event.pressure === 'medium' ? 1 : 0) -
+      (idx > 0 && feed[idx - 1]?.pressure === 'high' ? 1 : 0)
+    ) as -2 | -1 | 0 | 1 | 2,
+  }))
+}
+
+function mergeByKey<T>(primary: T[], secondary: T[], key: (item: T) => string) {
+  const merged = new Map<string, T>()
+  for (const item of [...primary, ...secondary]) {
+    const itemKey = key(item)
+    if (!itemKey) continue
+    if (!merged.has(itemKey)) merged.set(itemKey, item)
+  }
+  return [...merged.values()]
+}
+
+function mergeCachedSnapshot(base: ShowTelaHomeData, cached: ShowTelaHomeData): ShowTelaHomeData {
+  const activeOps = mergeByKey<PersonEntity>(
+    base.activeOps,
+    cached.activeOps,
+    (person) => person.id || person.name.toLowerCase(),
+  )
+  const fluencyPartners = mergeByKey<PersonEntity>(
+    base.fluencyPartners,
+    cached.fluencyPartners,
+    (person) => person.id || person.name.toLowerCase(),
+  )
+  const operations = mergeByKey<OperationEntity>(
+    base.operations,
+    cached.operations,
+    (operation) => operation.id || operation.title.toLowerCase(),
+  )
+  const unresolved = mergeByKey<UnresolvedObject>(
+    base.unresolved,
+    cached.unresolved,
+    (item) => item.id || item.title.toLowerCase(),
+  )
+  const continuityFeed = mergeByKey<ContinuityEvent>(
+    cached.continuityFeed,
+    base.continuityFeed,
+    (event) => event.id,
+  )
+    .sort((left, right) => new Date(right.timestamp ?? 0).getTime() - new Date(left.timestamp ?? 0).getTime())
+    .slice(0, 50)
+
+  const high = unresolved.filter((item) => item.severity === 'high').length
+  const medium = unresolved.filter((item) => item.severity === 'medium').length
+
+  return {
+    ...base,
+    activeOps,
+    fluencyPartners,
+    operations,
+    unresolved,
+    continuityFeed,
+    pressureSummary: { total: unresolved.length, high, medium },
+    runtimeTimeline: timelineFromFeed(continuityFeed),
   }
 }
 
@@ -119,7 +186,7 @@ async function fetchFromNotion(): Promise<ShowTelaHomeData | null> {
     ) as -2 | -1 | 0 | 1 | 2,
   }))
 
-  return mergePersistedRuntimeContinuity({
+  return {
     activeOps: people.filter(p => p.active).slice(0, 12),
     fluencyPartners: people.filter(p => p.partner).slice(0, 12),
     operations,
@@ -139,7 +206,7 @@ async function fetchFromNotion(): Promise<ShowTelaHomeData | null> {
       },
       cacheSource: 'notion',
     }),
-  })
+  }
 }
 
 // SSR path: read Supabase first for instant hydration.
@@ -150,18 +217,17 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
   try {
     const cached = await readShowTelaCache()
     if (cached) {
-      const reconstructed = await mergePersistedRuntimeContinuity(cached)
       console.log('[TELA:TRACE] getShowTelaHome hydrated from Supabase cache', {
-        source: reconstructed.source ?? 'supabase',
-        activeOpsCount: reconstructed.activeOps.length,
-        operationsCount: reconstructed.operations.length,
-        feedCount: reconstructed.continuityFeed.length,
+        source: cached.source ?? 'supabase',
+        activeOpsCount: cached.activeOps.length,
+        operationsCount: cached.operations.length,
+        feedCount: cached.continuityFeed.length,
       })
       return {
-        ...reconstructed,
+        ...cached,
         source: 'supabase',
         diagnosticState: 'persistence-connected',
-        hydration: hydrationSummary(reconstructed, { connectedToSupabase: true, cacheSource: 'supabase' }),
+        hydration: hydrationSummary(cached, { connectedToSupabase: true, cacheSource: 'supabase' }),
       }
     }
     console.log('[TELA:TRACE] getShowTelaHome Supabase cache miss — falling through to Notion')
@@ -197,19 +263,31 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
 // API route path: always fetch fresh from Notion, write to Supabase.
 export async function refreshShowTelaFromNotion(): Promise<ShowTelaHomeData> {
   try {
+    const cached = await readShowTelaCache()
     const data = await fetchFromNotion()
     if (data) {
+      const merged = cached ? mergeCachedSnapshot(data, cached) : data
       try {
-        await writeShowTelaCache(data)
+        await writeShowTelaCache({ ...merged, source: 'supabase', diagnosticState: 'persistence-connected' })
         console.log('[showtela] hydration success: refreshed from Notion and wrote durable_artifacts')
-        return { ...data, source: 'notion', diagnosticState: 'persistence-connected' }
+        return {
+          ...merged,
+          source: 'supabase',
+          diagnosticState: 'persistence-connected',
+          hydration: hydrationSummary(merged, {
+            connectedToNotion: true,
+            connectedToSupabase: true,
+            supabaseWriteOk: true,
+            cacheSource: 'supabase',
+          }),
+        }
       } catch (err) {
         console.error('[showtela] cache write failed after Notion refresh:', String(err))
         return {
-          ...data,
+          ...merged,
           source: 'notion',
-          diagnosticState: 'persistence-connected',
-          hydration: hydrationSummary(data, {
+          diagnosticState: 'persistence-failed',
+          hydration: hydrationSummary(merged, {
             connectedToNotion: true,
             connectedToSupabase: false,
             supabaseWriteOk: false,
@@ -220,7 +298,6 @@ export async function refreshShowTelaFromNotion(): Promise<ShowTelaHomeData> {
     }
     // Notion empty — serve stale Supabase if available
     console.warn('[showtela] Notion empty on refresh — attempting Supabase fallback')
-    const cached = await readShowTelaCache()
     if (cached) {
       return {
         ...cached,

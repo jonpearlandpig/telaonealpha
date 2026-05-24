@@ -6,7 +6,6 @@ import type { ConstitutionalEvent } from '@/lib/constitutional/types'
 import { extractEntities, type EntityRecord, type EntityType } from '@/lib/entities/entityEngine'
 import { persistDurableContinuity } from '@/lib/runtime/durableMemory'
 import { deterministicSnapshotId, type ContinuitySnapshot } from '@/lib/runtime/continuitySnapshots'
-import { listWorkspaceArtifacts } from '@/lib/supabase/queries'
 import { threadContinuity } from './threadContinuity'
 import type { ContinuityEvent, OperationEntity, PersonEntity, RuntimeTimelineItem, ShowTelaHomeData } from './types'
 
@@ -109,16 +108,6 @@ function serializeRuntimeMetadata(input: {
     continuityEvent: input.event,
     ocid: input.ocid,
   })
-}
-
-function parseArtifactPayload(payload?: string): ArtifactRecord | null {
-  if (!payload) return null
-  try {
-    const parsed = JSON.parse(payload) as ArtifactRecord
-    return parsed && typeof parsed.id === 'string' && typeof parsed.threadId === 'string' ? parsed : null
-  } catch {
-    return null
-  }
 }
 
 export function createContinuityOcid(headline: string, timestamp: string) {
@@ -231,39 +220,6 @@ export function mergeContinuityIntoShowTelaHome(data: ShowTelaHomeData, events: 
     continuityFeed,
     runtimeTimeline: timelineFromFeed(continuityFeed),
   }
-}
-
-export async function loadPersistedRuntimeContinuityEvents() {
-  const rows = await listWorkspaceArtifacts(SHOWTELA_WORKSPACE_ID)
-  return rows
-    .filter((row) =>
-      row.threadId === SHOWTELA_RUNTIME_THREAD_ID ||
-      row.artifactGroupId === SHOWTELA_RUNTIME_ARTIFACT_GROUP_ID
-    )
-    .map((row) => parseArtifactPayload(row.payload))
-    .filter(Boolean)
-    .map((artifact) => {
-      if (!artifact?.structure) return null
-      try {
-        const parsed = JSON.parse(artifact.structure) as { continuityEvent?: ContinuityEvent }
-        const event = parsed.continuityEvent
-        if (!event) return null
-        return {
-          ...event,
-          threadId: event.threadId ?? event.continuityObject?.id ?? event.id,
-        }
-      } catch {
-        return null
-      }
-    })
-    .filter(Boolean)
-    .sort((left, right) => new Date(right?.timestamp ?? 0).getTime() - new Date(left?.timestamp ?? 0).getTime()) as ContinuityEvent[]
-}
-
-export async function mergePersistedRuntimeContinuity(data: ShowTelaHomeData) {
-  const persisted = await loadPersistedRuntimeContinuityEvents()
-  if (persisted.length === 0) return data
-  return mergeContinuityIntoShowTelaHome(data, persisted)
 }
 
 export function createShowTelaDurableSnapshot(input: {
