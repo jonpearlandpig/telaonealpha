@@ -4,7 +4,7 @@ import {
   SHOWTELA_RUNTIME_THREAD_ID,
   SHOWTELA_SNAPSHOT_ID,
   SHOWTELA_WORKSPACE_ID,
-} from '@/lib/showtela/runtimeContinuity'
+} from '@/lib/showtela/runtimeIds'
 import type { ShowTelaHomeData } from '@/lib/showtela/types'
 
 type ShowTelaCacheDbRow = {

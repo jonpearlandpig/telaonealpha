@@ -2,10 +2,11 @@ import { getContinuityEvents, getOperations, getPeople, getUnresolved, probeShow
 import { mapContinuityEvent, mapOperation, mapPerson, mapUnresolved } from './notionMappers'
 import { calculatePressure } from './pressure'
 import { assertShowTelaStartupEnv, getShowTelaEnvStatus, logShowTelaEnvStatus } from './env'
+import { recoverCanonicalShowTelaHomeFromDurable } from './runtimeRecovery'
 import { resolveRefreshHomeData } from './runtimeSnapshot'
 import { threadContinuity } from './threadContinuity'
 import { cleanBody, extractUnresolvedMarkers, validateAndFilter, validateContinuityEventRecord, validateOperationRecord, validatePersonRecord } from './normalizeNotionRecord'
-import { getShowTelaCacheSchemaCompatibility, readShowTelaCache, writeShowTelaCache } from '@/lib/supabase/operationalCache'
+import { getShowTelaCacheSchemaCompatibility, readShowTelaCache, readShowTelaCacheRow, writeShowTelaCache } from '@/lib/supabase/operationalCache'
 import type { ShowTelaHomeData, ShowTelaHydrationSummary } from './types'
 
 function emptyShowTelaHomeData(): ShowTelaHomeData {
@@ -148,7 +149,31 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
   console.log('[TELA:TRACE] getShowTelaHome SSR — attempting Supabase cache read')
   // 1. Supabase cache — instant hydration
   try {
+    const cacheRow = await readShowTelaCacheRow()
     const cached = await readShowTelaCache()
+    const recovered = await recoverCanonicalShowTelaHomeFromDurable({
+      cached,
+      cachedUpdatedAt: cacheRow?.updated_at ?? null,
+    })
+    if (recovered) {
+      console.log('[TELA:TRACE] getShowTelaHome recovered canonical runtime snapshot from durable artifacts', {
+        snapshotId: recovered.runtimeSnapshotMeta?.snapshotId ?? null,
+        updatedAt: recovered.runtimeSnapshotMeta?.updatedAt ?? null,
+        activeOpsCount: recovered.activeOps.length,
+        operationsCount: recovered.operations.length,
+      })
+      try {
+        await writeShowTelaCache(recovered)
+      } catch (err) {
+        console.error('[TELA:TRACE] recovered canonical snapshot cache repair failed:', String(err))
+      }
+      return {
+        ...recovered,
+        source: 'supabase',
+        diagnosticState: 'persistence-connected',
+        hydration: hydrationSummary(recovered, { connectedToSupabase: true, cacheSource: 'supabase' }),
+      }
+    }
     if (cached) {
       console.log('[TELA:TRACE] getShowTelaHome hydrated from Supabase cache', {
         source: cached.source ?? 'supabase',
@@ -196,16 +221,29 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
 // API route path: always fetch fresh from Notion, write to Supabase.
 export async function refreshShowTelaFromNotion(): Promise<ShowTelaHomeData> {
   try {
+    const cacheRow = await readShowTelaCacheRow()
     const cached = await readShowTelaCache()
+    const recovered = await recoverCanonicalShowTelaHomeFromDurable({
+      cached,
+      cachedUpdatedAt: cacheRow?.updated_at ?? null,
+    })
+    const effectiveCached = recovered ?? cached
+    if (recovered) {
+      try {
+        await writeShowTelaCache(recovered)
+      } catch (err) {
+        console.error('[showtela] recovered canonical snapshot cache repair failed:', String(err))
+      }
+    }
     const data = await fetchFromNotion()
     if (data) {
-      const merged = resolveRefreshHomeData(data, cached)
+      const merged = resolveRefreshHomeData(data, effectiveCached)
       console.log('[TELA:TRACE] refreshShowTelaFromNotion precedence', {
-        snapshotId: cached?.runtimeSnapshotMeta?.snapshotId ?? null,
-        workspaceId: cached?.runtimeSnapshotMeta?.workspaceId ?? null,
-        updatedAt: cached?.runtimeSnapshotMeta?.updatedAt ?? null,
-        overwriteMode: cached?.runtimeSnapshotMeta?.overwriteMode ?? null,
-        mergePrecedence: cached?.runtimeSnapshotMeta?.canonical ? 'cached-canonical-runtime-snapshot' : 'fresh-notion-with-cached-merge',
+        snapshotId: effectiveCached?.runtimeSnapshotMeta?.snapshotId ?? null,
+        workspaceId: effectiveCached?.runtimeSnapshotMeta?.workspaceId ?? null,
+        updatedAt: effectiveCached?.runtimeSnapshotMeta?.updatedAt ?? null,
+        overwriteMode: effectiveCached?.runtimeSnapshotMeta?.overwriteMode ?? null,
+        mergePrecedence: effectiveCached?.runtimeSnapshotMeta?.canonical ? 'cached-canonical-runtime-snapshot' : 'fresh-notion-with-cached-merge',
       })
       try {
         await writeShowTelaCache({ ...merged, source: 'supabase', diagnosticState: 'persistence-connected' })
@@ -238,12 +276,12 @@ export async function refreshShowTelaFromNotion(): Promise<ShowTelaHomeData> {
     }
     // Notion empty — serve stale Supabase if available
     console.warn('[showtela] Notion empty on refresh — attempting Supabase fallback')
-    if (cached) {
+    if (effectiveCached) {
       return {
-        ...cached,
+        ...effectiveCached,
         source: 'supabase',
         diagnosticState: 'notion-unavailable',
-        hydration: hydrationSummary(cached, { connectedToSupabase: true, cacheSource: 'supabase' }),
+        hydration: hydrationSummary(effectiveCached, { connectedToSupabase: true, cacheSource: 'supabase' }),
       }
     }
   } catch (err) {

@@ -6,14 +6,15 @@ import type { ConstitutionalEvent } from '@/lib/constitutional/types'
 import { extractEntities, type EntityRecord, type EntityType } from '@/lib/entities/entityEngine'
 import { persistDurableContinuity } from '@/lib/runtime/durableMemory'
 import { deterministicSnapshotId, type ContinuitySnapshot } from '@/lib/runtime/continuitySnapshots'
+import {
+  SHOWTELA_RUNTIME_ARTIFACT_GROUP_ID,
+  SHOWTELA_RUNTIME_THREAD_ID,
+  SHOWTELA_WORKSPACE_ID,
+} from './runtimeIds'
 import { createRuntimeSnapshotMeta, replaceHomeWithDirectoryIngest } from './runtimeSnapshot'
 import { threadContinuity } from './threadContinuity'
 import type { ContinuityEvent, OperationEntity, PersonEntity, RuntimeTimelineItem, ShowTelaHomeData } from './types'
 
-export const SHOWTELA_WORKSPACE_ID = 'tela-showtela'
-export const SHOWTELA_SNAPSHOT_ID = 'showtela-home-snapshot'
-export const SHOWTELA_RUNTIME_THREAD_ID = 'showtela-runtime-continuity'
-export const SHOWTELA_RUNTIME_ARTIFACT_GROUP_ID = 'showtela-runtime-continuity'
 const SHOWTELA_RUNTIME_SESSION_ID = 'showtela-runtime-ingest'
 const ENTITY_STOPLIST = new Set(['linked entities', 'owner', 'ocid'])
 
