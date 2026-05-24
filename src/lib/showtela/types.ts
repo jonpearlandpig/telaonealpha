@@ -163,7 +163,7 @@ export type ShowTelaRuntimeSnapshotMeta = {
   updatedAt: string
   canonical: boolean
   overwriteMode: 'merge' | 'replace'
-  sourceIngest: 'continuity' | 'directory'
+  sourceIngest: 'continuity' | 'directory' | 'artifact'
 }
 
 export type RuntimeTimelineItem = {

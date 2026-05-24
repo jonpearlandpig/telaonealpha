@@ -62,6 +62,38 @@ function reconstructDirectoryState(artifact: ArtifactRecord): { people: PersonEn
   return { people, operations }
 }
 
+function inferArtifactOperationState(artifact: ArtifactRecord): { people: PersonEntity[]; operations: OperationEntity[] } | null {
+  const candidates = [
+    artifact.title,
+    artifact.fileName,
+    artifact.text?.split('\n').map((line) => line.trim()).find(Boolean),
+  ].filter(Boolean) as string[]
+
+  for (const raw of candidates) {
+    const cleaned = raw
+      .replace(/^#+\s*/, '')
+      .replace(/\.[^.]+$/, '')
+      .replace(/\b(call sheet|schedule|production schedule|daily schedule|show schedule)\b/gi, '')
+      .replace(/[-_:|]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    if (cleaned.length >= 3) {
+      return {
+        people: [],
+        operations: [{
+          id: `artifact-${cleaned.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+          title: cleaned,
+          status: 'active',
+          unresolvedCount: 0,
+          latestMovement: 'Recovered from durable ingest artifact',
+        }],
+      }
+    }
+  }
+
+  return null
+}
+
 export function recoverCanonicalShowTelaHomeFromArtifactRows(input: {
   artifacts: DurableArtifactRow[]
   cached: ShowTelaHomeData | null
@@ -80,7 +112,7 @@ export function recoverCanonicalShowTelaHomeFromArtifactRows(input: {
   const cachedTime = input.cached?.runtimeSnapshotMeta?.updatedAt ?? input.cachedUpdatedAt ?? null
 
   for (const artifact of runtimeArtifacts) {
-    const rebuilt = reconstructDirectoryState(artifact)
+    const rebuilt = reconstructDirectoryState(artifact) ?? inferArtifactOperationState(artifact)
     if (!rebuilt) continue
 
     if (cachedTime && new Date(artifact.createdAt).getTime() <= new Date(cachedTime).getTime()) {
@@ -110,7 +142,7 @@ export function recoverCanonicalShowTelaHomeFromArtifactRows(input: {
         workspaceId: SHOWTELA_WORKSPACE_ID,
         updatedAt: artifact.createdAt,
         overwriteMode: 'replace',
-        sourceIngest: 'directory',
+        sourceIngest: rebuilt.people.length > 0 ? 'directory' : 'artifact',
       }),
     }
   }

@@ -11,7 +11,7 @@ import {
   SHOWTELA_RUNTIME_THREAD_ID,
   SHOWTELA_WORKSPACE_ID,
 } from './runtimeIds'
-import { createRuntimeSnapshotMeta, replaceHomeWithDirectoryIngest } from './runtimeSnapshot'
+import { createRuntimeSnapshotMeta, replaceHomeWithCanonicalIngest, replaceHomeWithDirectoryIngest } from './runtimeSnapshot'
 import { threadContinuity } from './threadContinuity'
 import type { ContinuityEvent, OperationEntity, PersonEntity, RuntimeTimelineItem, ShowTelaHomeData } from './types'
 
@@ -301,6 +301,49 @@ function extractDirectoryData(
   return { newPeople: people, newOperations: operations }
 }
 
+function inferCanonicalOperationTitle(input: {
+  payload: ContinuityIngestionInput
+  assetContents: Array<{ name: string; content: string; type: string }>
+}): string | null {
+  const candidates = [
+    input.payload.operation,
+    input.payload.linkedEntity,
+    input.payload.headline,
+    ...(input.payload.assetNames ?? []),
+    ...input.assetContents.map((asset) => asset.content.split('\n').map((line) => line.trim()).find(Boolean) ?? ''),
+  ]
+    .map((value) => value?.trim())
+    .filter(Boolean) as string[]
+
+  for (const raw of candidates) {
+    const firstLine = raw.replace(/^#+\s*/, '').split('\n')[0]?.trim() ?? raw
+    const cleaned = firstLine
+      .replace(/\.[^.]+$/, '')
+      .replace(/\b(call sheet|schedule|production schedule|daily schedule|show schedule)\b/gi, '')
+      .replace(/[-_:|]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    if (cleaned.length >= 3) return cleaned
+  }
+
+  return null
+}
+
+function canonicalOperationsFromArtifact(input: {
+  payload: ContinuityIngestionInput
+  assetContents: Array<{ name: string; content: string; type: string }>
+}): OperationEntity[] {
+  const inferredTitle = inferCanonicalOperationTitle(input)
+  if (!inferredTitle) return []
+  return [{
+    id: `artifact-${slugify(inferredTitle)}`,
+    title: inferredTitle,
+    status: 'active',
+    unresolvedCount: 0,
+    latestMovement: 'Anchored from runtime ingest artifact',
+  }]
+}
+
 export async function ingestShowTelaContinuity(input: {
   baseData: ShowTelaHomeData
   payload: ContinuityIngestionInput
@@ -323,11 +366,21 @@ export async function ingestShowTelaContinuity(input: {
     firstContentPreview: rawAssets[0]?.content?.slice(0, 500) ?? null,
   })
   const { newPeople, newOperations } = extractDirectoryData(rawAssets)
+  const artifactOperations = canonicalOperationsFromArtifact({
+    payload: input.payload,
+    assetContents: rawAssets,
+  })
+  const shouldCanonicalReplace = newPeople.length > 0 || (
+    input.payload.mode === 'upload-files' &&
+    fileContents.length > 0
+  )
   console.log('[TELA:TRACE] extractDirectoryData result', {
     newPeopleCount: newPeople.length,
     newOperationsCount: newOperations.length,
+    artifactOperationsCount: artifactOperations.length,
     firstPerson: newPeople[0]?.name ?? null,
     firstOperation: newOperations[0]?.title ?? null,
+    canonicalReplace: shouldCanonicalReplace,
   })
   const primaryFileName = input.payload.assetNames?.[0] ?? ''
   const basePayload: ContinuityIngestionInput = newPeople.length > 0
@@ -367,8 +420,8 @@ export async function ingestShowTelaContinuity(input: {
     snapshotId,
     workspaceId: SHOWTELA_WORKSPACE_ID,
     updatedAt: timestamp,
-    overwriteMode: newPeople.length > 0 ? 'replace' : 'merge',
-    sourceIngest: newPeople.length > 0 ? 'directory' : 'continuity',
+    overwriteMode: shouldCanonicalReplace ? 'replace' : 'merge',
+    sourceIngest: newPeople.length > 0 ? 'directory' : shouldCanonicalReplace ? 'artifact' : 'continuity',
   })
 
   // Artifact persistence is non-fatal — cache hydration proceeds regardless.
@@ -402,6 +455,13 @@ export async function ingestShowTelaContinuity(input: {
         operations: newOperations,
         meta: runtimeSnapshotMeta,
       })
+    : shouldCanonicalReplace
+      ? replaceHomeWithCanonicalIngest({
+          base: input.baseData,
+          event,
+          operations: artifactOperations,
+          meta: runtimeSnapshotMeta,
+        })
     : {
         ...feedMerged,
         source: 'supabase',

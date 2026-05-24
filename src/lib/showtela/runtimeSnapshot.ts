@@ -38,7 +38,7 @@ export function createRuntimeSnapshotMeta(input: {
   workspaceId: string
   updatedAt: string
   overwriteMode: 'merge' | 'replace'
-  sourceIngest: 'continuity' | 'directory'
+  sourceIngest: 'continuity' | 'directory' | 'artifact'
 }): ShowTelaRuntimeSnapshotMeta {
   return {
     snapshotId: input.snapshotId,
@@ -115,6 +115,32 @@ export function replaceHomeWithDirectoryIngest(input: {
     activeOps: input.people.slice(0, 20),
     fluencyPartners: [],
     operations: input.operations,
+    unresolved: [],
+    continuityFeed,
+    pressureSummary: { total: 0, high: 0, medium: 0 },
+    runtimeTimeline: timelineFromFeed(continuityFeed),
+    source: 'supabase',
+    diagnosticState: 'persistence-connected',
+    runtimeSnapshotMeta: input.meta,
+  }
+}
+
+export function replaceHomeWithCanonicalIngest(input: {
+  base: ShowTelaHomeData
+  event: ContinuityEvent
+  people?: PersonEntity[]
+  operations?: OperationEntity[]
+  meta: ShowTelaRuntimeSnapshotMeta
+}): ShowTelaHomeData {
+  const continuityFeed = threadContinuity([input.event])
+    .sort((left, right) => new Date(right.timestamp ?? 0).getTime() - new Date(left.timestamp ?? 0).getTime())
+    .slice(0, 50)
+
+  return {
+    ...input.base,
+    activeOps: (input.people ?? []).slice(0, 20),
+    fluencyPartners: [],
+    operations: input.operations ?? [],
     unresolved: [],
     continuityFeed,
     pressureSummary: { total: 0, high: 0, medium: 0 },

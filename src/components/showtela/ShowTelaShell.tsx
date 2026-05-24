@@ -227,6 +227,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
         data?: {
           continuityFeed?: ContinuityEvent[]
           runtimeTimeline?: typeof vm.runtimeTimeline
+          runtimeSnapshotMeta?: { overwriteMode?: 'merge' | 'replace' }
           activeOps?: Array<{ id: string; name: string; role?: string; avatar?: string; unresolvedCount?: number }>
           operations?: Array<{ id: string; title: string; latestMovement?: string; unresolvedCount?: number }>
         }
@@ -242,12 +243,16 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
         firstOperation: data.data?.operations?.[0],
         source: (data.data as { source?: string } | undefined)?.source,
       })
-      if (data.data?.continuityFeed) setFeedOverride(data.data.continuityFeed)
-      if (data.data?.runtimeTimeline) setRuntimeTimelineOverride(data.data.runtimeTimeline)
-      if (data.data?.activeOps?.length) {
-        console.log('[TELA:TRACE] setActiveOpsOverride firing with', data.data.activeOps.length, 'items')
+      const responseData = data.data
+      const activeOps = responseData?.activeOps ?? []
+      const operationsData = responseData?.operations ?? []
+      if (responseData?.continuityFeed) setFeedOverride(responseData.continuityFeed)
+      if (responseData?.runtimeTimeline) setRuntimeTimelineOverride(responseData.runtimeTimeline)
+      const shouldReplaceOverrides = responseData?.runtimeSnapshotMeta?.overwriteMode === 'replace'
+      if (shouldReplaceOverrides || responseData?.activeOps) {
+        console.log('[TELA:TRACE] setActiveOpsOverride firing with', activeOps.length, 'items')
         setActiveOpsOverride(
-          data.data.activeOps.map(p => ({
+          activeOps.map(p => ({
             id: p.id,
             name: p.name === 'TBD' ? (p.role ?? 'TBD') : p.name,
             image: p.avatar ?? '',
@@ -258,10 +263,10 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
       } else {
         console.log('[TELA:TRACE] setActiveOpsOverride NOT fired — activeOps empty or missing')
       }
-      if (data.data?.operations?.length) {
-        console.log('[TELA:TRACE] setOperationsOverride firing with', data.data.operations.length, 'items')
+      if (shouldReplaceOverrides || responseData?.operations) {
+        console.log('[TELA:TRACE] setOperationsOverride firing with', operationsData.length, 'items')
         setOperationsOverride(
-          data.data.operations.map(o => ({
+          operationsData.map(o => ({
             id: o.id,
             name: o.title,
             label: o.title,
