@@ -83,10 +83,10 @@ export async function writeShowTelaCache(data: ShowTelaHomeData): Promise<void> 
 
   const { error } = await db
     .from('durable_artifacts')
-    .upsert(rows, { onConflict: 'id' })
+    .insert(rows)
 
   if (error) {
-    console.error('[operationalCache] Supabase snapshot write failed:', error.message)
+    console.error('[operationalCache] Supabase snapshot write failed:', error.message, '| code:', error.code)
     throw new Error(`writeShowTelaCache: ${error.message}`)
   }
 

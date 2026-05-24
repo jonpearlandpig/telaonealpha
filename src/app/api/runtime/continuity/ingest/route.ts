@@ -59,7 +59,11 @@ export async function POST(req: NextRequest) {
       firstOperation: result.data.operations[0]?.title ?? null,
     })
 
-    await writeShowTelaCache({ ...result.data, source: 'supabase', diagnosticState: 'persistence-connected' })
+    try {
+      await writeShowTelaCache({ ...result.data, source: 'supabase', diagnosticState: 'persistence-connected' })
+    } catch (cacheErr) {
+      console.error('[runtime/continuity/ingest] cache write non-fatal — continuing:', String(cacheErr))
+    }
 
     return NextResponse.json({
       ok: true,
