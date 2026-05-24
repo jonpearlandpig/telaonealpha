@@ -18,8 +18,8 @@ export function ContinuityFeed(props: Props) {
 
   return (
     <section className="px-5 pb-32">
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5E5348]">Dispatches</h2>
+      <div className="mb-5 flex items-center justify-between">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5E5348]">Dispatches</h2>
       </div>
       <div className="divide-y divide-[#EDE8E1]">
         {feed.map((item) => (

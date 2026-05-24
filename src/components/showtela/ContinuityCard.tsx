@@ -35,34 +35,26 @@ export function ContinuityCard({ item }: { item: ContinuityEvent }) {
   const pulseColor = pressureColor(item.pressure)
 
   return (
-    <article className="flex items-start gap-4 py-4">
-      {/* Text content */}
+    <article className="flex items-start gap-4 py-5">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           {pulseColor && (
             <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ backgroundColor: pulseColor }} />
           )}
-          {ownerName && (
-            <span className="text-[11px] font-semibold uppercase tracking-[0.07em] text-[#C89B2F]">{ownerName}</span>
-          )}
-          {ownerName && <span className="text-[10px] text-[#C8BFB0]">·</span>}
           <span className="text-[11px] text-[#9B9187]">{timeAgo(item.timestamp)}</span>
         </div>
 
-        <h3 className="mt-1.5 text-[15px] font-semibold leading-snug tracking-[-0.2px] text-[#141210]">{item.headline}</h3>
+        <h3 className="mt-3 text-[18px] font-semibold leading-snug tracking-[-0.4px] text-[#141210]">{item.headline}</h3>
 
         {item.body && (
-          <p className="mt-0.5 line-clamp-1 text-[12px] leading-relaxed text-[#7E7870]">{item.body}</p>
+          <p className="mt-1 line-clamp-1 text-[12px] leading-relaxed text-[#7E7870]">{item.body}</p>
         )}
 
-        {tags.length > 0 && (
-          <span className="mt-2 inline-block rounded-full bg-[#EDEAE4] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.06em] text-[#7A7570]">{tags[0]}</span>
-        )}
+        {tags.length > 0 && <span className="mt-2 inline-block text-[12px] font-medium text-[#141210]">{tags[0]}</span>}
+        {ownerName && <p className="mt-1 text-[12px] text-[#7E7870]">{ownerName}</p>}
       </div>
 
-      {/* Reference thumbnail */}
-      <div className="h-[60px] w-[60px] flex-shrink-0 overflow-hidden rounded-[12px] bg-[#D4C9B4]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+      <div className="h-[76px] w-[76px] flex-shrink-0 overflow-hidden rounded-[16px] bg-[#D4C9B4]">
         <img src={itemImage} alt="" className="h-full w-full object-cover" />
       </div>
     </article>

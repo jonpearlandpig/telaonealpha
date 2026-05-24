@@ -53,32 +53,32 @@ function OperationCard({ item, matchedItems, onTap }: {
     <button
       onClick={onTap}
       className="relative w-full overflow-hidden rounded-[22px] text-left"
-      style={{ height: '230px', boxShadow: unresolved > 0 ? '0 10px 48px rgba(0,0,0,0.30)' : '0 10px 42px rgba(17,17,17,0.18)' }}
+      style={{ height: '274px', boxShadow: unresolved > 0 ? '0 14px 56px rgba(0,0,0,0.24)' : '0 12px 44px rgba(17,17,17,0.14)' }}
     >
       <img src={image} alt="" className="absolute inset-0 h-full w-full object-cover" />
       <div
         className="absolute inset-0"
-        style={{ background: unresolved > 0 ? 'linear-gradient(to top, rgba(8,6,4,0.94) 0%, rgba(8,6,4,0.74) 50%, rgba(8,6,4,0.18) 68%, transparent 100%)' : 'linear-gradient(to top, rgba(8,6,4,0.88) 0%, rgba(8,6,4,0.62) 46%, rgba(8,6,4,0.12) 68%, transparent 100%)' }}
+        style={{ background: unresolved > 0 ? 'linear-gradient(to top, rgba(8,6,4,0.90) 0%, rgba(8,6,4,0.70) 48%, rgba(8,6,4,0.20) 70%, transparent 100%)' : 'linear-gradient(to top, rgba(8,6,4,0.82) 0%, rgba(8,6,4,0.56) 46%, rgba(8,6,4,0.14) 68%, transparent 100%)' }}
       />
       {stateLabel && (
-        <div className="absolute right-5 top-4">
-          <span className={`text-[10px] font-medium uppercase tracking-[0.16em] ${firstBlocker ? 'text-[#D7A29A]' : 'text-white/46'}`}>{stateLabel}</span>
+        <div className="absolute right-5 top-5">
+          <span className={`text-[11px] font-medium uppercase tracking-[0.18em] ${firstBlocker ? 'text-[#D7A29A]' : 'text-white/52'}`}>{stateLabel}</span>
         </div>
       )}
-      <div className="absolute bottom-0 left-0 right-0 px-5 pb-5">
-        <h3 className="text-[26px] font-semibold leading-tight tracking-[-0.4px] text-white">{displayName}</h3>
+      <div className="absolute bottom-0 left-0 right-0 px-6 pb-6">
+        <h3 className="text-[28px] font-semibold leading-tight tracking-[-0.8px] text-white">{displayName}</h3>
         {movement && (
-          <p className="mt-1.5 line-clamp-1 text-[13px] leading-snug text-white/68">{movement}</p>
+          <p className="mt-2 line-clamp-1 text-[14px] leading-snug text-white/72">{movement}</p>
         )}
         {showIntelLayer && (
-          <div className={`mt-3 flex items-center gap-3 ${topItem ? 'justify-between' : 'justify-end'}`}>
+          <div className={`mt-5 flex items-center gap-3 ${topItem ? 'justify-between' : 'justify-end'}`}>
             {topItem && (
               <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                <span className="line-clamp-1 text-[11px] leading-none text-white/50">{topItem.title}</span>
+                <span className="line-clamp-1 text-[12px] leading-none text-white/56">{topItem.title}</span>
               </div>
             )}
             {actionLabel && (
-              <span className="flex-shrink-0 text-[12px] font-medium text-[#D8A742]">{actionLabel} →</span>
+              <span className="flex-shrink-0 text-[13px] font-medium text-[#D8A742]">{actionLabel} →</span>
             )}
           </div>
         )}
@@ -106,10 +106,10 @@ export function CrusadeOperationsRail({ items, unresolvedItems, onOperationTap }
   return (
     <section className="px-5 pb-6">
       <div className="mb-5 flex items-center justify-between">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5E5348]">Operations</h2>
-        <button className="text-[11px] font-medium text-[#C89B2F]">All rooms</button>
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5E5348]">Operations</h2>
+        <button className="text-[11px] font-semibold text-[#C89B2F]">All rooms</button>
       </div>
-      <div className="flex flex-col gap-3.5">
+      <div className="flex flex-col gap-5">
         {items.map((item) => {
           const opKey = (item.label || item.name).toLowerCase()
           const matched = (unresolvedItems ?? []).filter(u =>

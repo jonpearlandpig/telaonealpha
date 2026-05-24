@@ -60,16 +60,16 @@ export function ActiveOpsRail({
   const firstName = userName?.split(' ')[0] ?? 'You'
 
   return (
-    <section className="relative">
-      <div className="mb-5 flex items-center justify-between">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#5E5348]">Anchors</h2>
-        <button className="text-[11px] font-medium text-[#9A7C46]">Open line</button>
+    <section className="px-5 pb-11 pt-6">
+      <div className="mb-6 flex items-center justify-between">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5E5348]">Anchors</h2>
+        <button className="text-[11px] font-semibold text-[#C89B2F]">View all</button>
       </div>
-      <div className="flex flex-col gap-4">
+      <div className="flex gap-6 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div
           role="button"
           tabIndex={0}
-          className="group flex items-center gap-3 rounded-[24px] bg-white/40 px-2 py-1 text-left transition-[background-color,transform] duration-300 hover:bg-white/70 hover:translate-x-0.5"
+          className="flex w-[92px] flex-shrink-0 flex-col items-center gap-4 p-0"
           onClick={onProfileTap}
           onKeyDown={(event) => {
             if (event.key === 'Enter' || event.key === ' ') {
@@ -95,29 +95,20 @@ export function ActiveOpsRail({
               <span className="text-[14px] font-semibold leading-none text-white">+</span>
             </button>
           </div>
-          <div className="min-w-0">
-            <p className="text-[12px] font-semibold leading-tight text-[#141210]">{firstName}</p>
-            <p className="text-[11px] leading-tight text-[#7C7165]">Add continuity</p>
-          </div>
+          <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{firstName}</p>
         </div>
 
-        <button
-          className="group flex items-center gap-3 rounded-[24px] bg-white/40 px-2 py-1 text-left transition-[background-color,transform] duration-300 hover:bg-white/70 hover:translate-x-0.5"
-          onClick={onTelaTap}
-        >
+        <button className="flex w-[84px] flex-shrink-0 flex-col items-center gap-3 p-0" onClick={onTelaTap}>
           <CircleShell background="linear-gradient(140deg, #11100D 0%, #2B2218 48%, #7A5A25 100%)" tone="dark">
             <div className="relative h-full w-full">
               <img src="/showtela/crusade-anchor.jpg" alt="Crusade" className="h-full w-full object-cover" />
               <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(17,16,13,0.08)_0%,rgba(17,16,13,0.32)_100%)]" />
             </div>
           </CircleShell>
-          <div className="min-w-0">
-            <p className="text-[12px] font-semibold leading-tight text-[#141210]">Crusade</p>
-            <p className="text-[11px] leading-tight text-[#7C7165]">Persistent thread</p>
-          </div>
+          <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">CRUSADE</p>
         </button>
 
-        {items.slice(0, 4).map((p) => {
+        {items.map((p) => {
           const img = p.image ? facePhoto(p.image) : undefined
           const unresolved = p.unresolvedCount ?? 0
           const role = p.latest ?? ''
@@ -131,7 +122,7 @@ export function ActiveOpsRail({
           return (
             <button
               key={p.id}
-              className="group flex items-center gap-3 rounded-[24px] bg-white/30 px-2 py-1 text-left transition-[background-color,transform] duration-300 hover:bg-white/70 hover:translate-x-0.5"
+              className="flex w-[92px] flex-shrink-0 flex-col items-center gap-4 p-0"
               onClick={() => onPersonTap?.(p.name, role)}
             >
               <CircleShell background={ringBg}>
@@ -139,12 +130,7 @@ export function ActiveOpsRail({
                   ? <img src={img} alt={p.name} className="h-full w-full object-cover" />
                   : <div className="flex h-full w-full items-center justify-center text-[22px] font-semibold text-[#6F541A]">{p.name.slice(0, 1)}</div>}
               </CircleShell>
-              <div className="min-w-0">
-                <p className="text-[12px] font-semibold leading-tight text-[#141210]">{p.name.split(' ')[0]}</p>
-                <p className="line-clamp-1 text-[11px] leading-tight text-[#7C7165]">
-                  {unresolved > 0 ? `${unresolved} open` : (role || 'Standing by')}
-                </p>
-              </div>
+              <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{p.name.split(' ')[0]}</p>
             </button>
           )
         })}
