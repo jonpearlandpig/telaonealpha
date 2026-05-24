@@ -132,7 +132,14 @@ export async function upsertEntityRow(row: DurableEntityRow): Promise<DurableEnt
     provenance: row.provenance,
   }, { onConflict: 'id' })
   if (error) {
-    console.error('[supabase:queries:upsertEntityRow] failed:', error.message, 'code:', error.code, 'id:', row.id)
+    console.error('[supabase:queries:upsertEntityRow] failed', {
+      message: error.message,
+      code: error.code,
+      details: (error as { details?: string }).details ?? null,
+      hint: (error as { hint?: string }).hint ?? null,
+      id: row.id,
+      workspaceId: row.workspaceId,
+    })
     throw new Error(`upsertEntityRow: ${error.message}`)
   }
   return row
