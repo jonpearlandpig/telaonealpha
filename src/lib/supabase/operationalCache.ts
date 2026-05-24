@@ -38,6 +38,7 @@ export function getShowTelaCacheSchemaCompatibility() {
 
 export async function readShowTelaCache(): Promise<ShowTelaHomeData | null> {
   const db = getSupabaseServerClient()
+  console.log('[TELA:TRACE] readShowTelaCache querying id:', SHOWTELA_SNAPSHOT_ID, 'workspace:', SHOWTELA_WORKSPACE_ID)
   const { data, error } = await db
     .from('durable_artifacts')
     .select('payload')
@@ -45,11 +46,11 @@ export async function readShowTelaCache(): Promise<ShowTelaHomeData | null> {
     .eq('workspace_id', SHOWTELA_WORKSPACE_ID)
     .single()
   if (error) {
-    console.error('[operationalCache] Supabase snapshot read failed:', error.message)
+    console.error('[TELA:TRACE] readShowTelaCache query failed — code:', error.code, 'message:', error.message)
     return null
   }
   if (!data?.payload) {
-    console.warn('[operationalCache] Supabase snapshot empty')
+    console.warn('[TELA:TRACE] readShowTelaCache row found but payload is empty')
     return null
   }
   try {
@@ -57,13 +58,21 @@ export async function readShowTelaCache(): Promise<ShowTelaHomeData | null> {
     const source = (parsed as { source?: string }).source
     const hasDemoPerson = parsed.activeOps?.some((p) => DEMO_PERSON_IDS.has(p.id))
     const hasDemoEvent = parsed.continuityFeed?.some((e) => DEMO_EVENT_IDS.has(e.id))
+    console.log('[TELA:TRACE] readShowTelaCache parsed snapshot', {
+      source,
+      activeOpsCount: parsed.activeOps?.length ?? 0,
+      operationsCount: parsed.operations?.length ?? 0,
+      feedCount: parsed.continuityFeed?.length ?? 0,
+      hasDemoPerson,
+      hasDemoEvent,
+    })
     if ((source && source !== 'notion' && source !== 'supabase') || hasDemoPerson || hasDemoEvent) {
-      console.warn('[operationalCache] cached snapshot contains legacy demo data — discarding')
+      console.warn('[TELA:TRACE] readShowTelaCache discarding legacy snapshot — source:', source)
       return null
     }
     return parsed
   } catch {
-    console.error('[operationalCache] Supabase snapshot payload is not valid JSON')
+    console.error('[TELA:TRACE] readShowTelaCache payload is not valid JSON')
     return null
   }
 }
@@ -71,24 +80,35 @@ export async function readShowTelaCache(): Promise<ShowTelaHomeData | null> {
 export async function writeShowTelaCache(data: ShowTelaHomeData): Promise<void> {
   const db = getSupabaseServerClient()
   const src: 'notion' | 'supabase' = data.source === 'supabase' ? 'supabase' : 'notion'
+  const snapshotRow = row(SHOWTELA_SNAPSHOT_ID, 'showtela-home', data, src)
 
-  const rows = [
-    ...data.activeOps.map(p => row(`showtela-person-${p.id}`, 'showtela-people', p, src)),
-    ...data.fluencyPartners.map(p => row(`showtela-partner-${p.id}`, 'showtela-people', p, src)),
-    ...data.operations.map(o => row(`showtela-op-${o.id}`, 'showtela-operations', o, src)),
-    ...data.unresolved.map(u => row(`showtela-unresolved-${u.id}`, 'showtela-unresolved', u, src)),
-    ...data.continuityFeed.slice(0, 50).map(e => row(`showtela-event-${e.id}`, 'showtela-events', e, src)),
-    row(SHOWTELA_SNAPSHOT_ID, 'showtela-home', data, src),
-  ]
+  console.log('[TELA:TRACE] writeShowTelaCache writing snapshot', {
+    id: SHOWTELA_SNAPSHOT_ID,
+    source: src,
+    activeOpsCount: data.activeOps.length,
+    operationsCount: data.operations.length,
+    feedCount: data.continuityFeed.length,
+  })
+
+  // Delete any existing snapshot row so the subsequent insert never hits a duplicate key.
+  const { error: deleteError } = await db
+    .from('durable_artifacts')
+    .delete()
+    .eq('id', SHOWTELA_SNAPSHOT_ID)
+    .eq('workspace_id', SHOWTELA_WORKSPACE_ID)
+
+  if (deleteError) {
+    console.warn('[TELA:TRACE] writeShowTelaCache delete pre-step warn (non-fatal):', deleteError.message)
+  }
 
   const { error } = await db
     .from('durable_artifacts')
-    .insert(rows)
+    .insert([snapshotRow])
 
   if (error) {
-    console.error('[operationalCache] Supabase snapshot write failed:', error.message, '| code:', error.code)
+    console.error('[operationalCache] snapshot insert failed:', error.message, '| code:', error.code)
     throw new Error(`writeShowTelaCache: ${error.message}`)
   }
 
-  console.log(`[operationalCache] wrote ${rows.length} rows (snapshot + ${data.continuityFeed.slice(0, 50).length} events, ${data.activeOps.length + data.fluencyPartners.length} people, ${data.operations.length} ops, ${data.unresolved.length} unresolved)`)
+  console.log('[TELA:TRACE] writeShowTelaCache snapshot written OK — activeOps:', data.activeOps.length, 'ops:', data.operations.length)
 }

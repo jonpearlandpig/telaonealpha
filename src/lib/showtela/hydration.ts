@@ -153,12 +153,18 @@ async function fetchFromNotion(): Promise<ShowTelaHomeData | null> {
 // SSR path: read Supabase first for instant hydration.
 // Client calls /api/home-feed on mount to get fresh Notion data.
 export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
+  console.log('[TELA:TRACE] getShowTelaHome SSR — attempting Supabase cache read')
   // 1. Supabase cache — instant hydration
   try {
     const cached = await readShowTelaCache()
     if (cached) {
       const reconstructed = await mergePersistedRuntimeContinuity(cached)
-      console.log('[showtela] hydrated from Supabase cache')
+      console.log('[TELA:TRACE] getShowTelaHome hydrated from Supabase cache', {
+        source: reconstructed.source ?? 'supabase',
+        activeOpsCount: reconstructed.activeOps.length,
+        operationsCount: reconstructed.operations.length,
+        feedCount: reconstructed.continuityFeed.length,
+      })
       return {
         ...reconstructed,
         source: 'supabase',
@@ -166,9 +172,9 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
         hydration: hydrationSummary(reconstructed, { connectedToSupabase: true, cacheSource: 'supabase' }),
       }
     }
-    console.log('[showtela] Supabase cache empty — falling through to Notion')
+    console.log('[TELA:TRACE] getShowTelaHome Supabase cache miss — falling through to Notion')
   } catch (err) {
-    console.error('[showtela] Supabase read failed:', String(err))
+    console.error('[TELA:TRACE] getShowTelaHome Supabase read threw:', String(err))
     // not returning — fall through to Notion
   }
 
