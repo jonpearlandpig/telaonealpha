@@ -84,13 +84,17 @@ export async function writeShowTelaCache(data: ShowTelaHomeData): Promise<void> 
   const snapshotRow = row(SHOWTELA_SNAPSHOT_ID, 'showtela-home', data, src)
 
   const payloadJson = snapshotRow.payload
-  console.log('[TELA:TRACE] writeShowTelaCache snapshot row shape', {
+  console.log('[TELA:TRACE] writeShowTelaCache PRE-INSERT row', {
+    rowKeys: Object.keys(snapshotRow),
     id: snapshotRow.id,
     workspace_id: snapshotRow.workspace_id,
     thread_id: snapshotRow.thread_id,
+    typeof_payload: typeof snapshotRow.payload,
     payloadByteLength: payloadJson?.length ?? 0,
     payloadSourceField: (() => { try { return (JSON.parse(payloadJson ?? '') as { source?: string }).source } catch { return 'PARSE_ERROR' } })(),
+    typeof_provenance: typeof snapshotRow.provenance,
     provenanceKeys: Object.keys(snapshotRow.provenance ?? {}),
+    provenanceSourceType: (snapshotRow.provenance as { sourceType?: string })?.sourceType ?? null,
     created_at: snapshotRow.created_at,
     updated_at: snapshotRow.updated_at,
   })
@@ -113,32 +117,39 @@ export async function writeShowTelaCache(data: ShowTelaHomeData): Promise<void> 
     console.log('[TELA:TRACE] writeShowTelaCache DELETE OK (pre-insert clear)')
   }
 
-  const { error } = await db
+  const { data: insertData, error } = await db
     .from('durable_artifacts')
     .insert([snapshotRow])
+    .select('id, workspace_id')
+
+  console.log('[TELA:TRACE] writeShowTelaCache INSERT response', {
+    insertDataRows: insertData?.length ?? null,
+    insertDataFirst: insertData?.[0] ?? null,
+    errorCode: error?.code ?? null,
+    errorMessage: error?.message ?? null,
+    errorDetails: (error as { details?: string } | null)?.details ?? null,
+    errorHint: (error as { hint?: string } | null)?.hint ?? null,
+  })
 
   if (error) {
-    console.error('[TELA:TRACE] writeShowTelaCache INSERT failed', {
-      code: error.code,
-      message: error.message,
-      details: (error as { details?: string }).details ?? null,
-      hint: (error as { hint?: string }).hint ?? null,
-    })
     throw new Error(`writeShowTelaCache: ${error.message}`)
   }
 
-  // Verify the row actually landed — confirms RLS or visibility issues immediately.
+  // Verify row visibility immediately after insert — rules out RLS-invisible writes.
   const { data: verifyData, error: verifyError } = await db
     .from('durable_artifacts')
-    .select('id, workspace_id, thread_id, created_at')
+    .select('*')
     .eq('id', SHOWTELA_SNAPSHOT_ID)
     .eq('workspace_id', SHOWTELA_WORKSPACE_ID)
     .single()
 
-  console.log('[TELA:TRACE] writeShowTelaCache post-insert SELECT verify', {
-    found: !!verifyData,
-    id: verifyData?.id ?? null,
-    workspace_id: (verifyData as { workspace_id?: string } | null)?.workspace_id ?? null,
+  const verifyRow = verifyData as Record<string, unknown> | null
+  console.log('[TELA:TRACE] writeShowTelaCache POST-INSERT SELECT verify', {
+    found: !!verifyRow,
+    returnedKeys: verifyRow ? Object.keys(verifyRow) : null,
+    id: verifyRow?.id ?? null,
+    workspace_id: verifyRow?.workspace_id ?? null,
+    payloadLength: typeof verifyRow?.payload === 'string' ? (verifyRow.payload as string).length : null,
     verifyErrorCode: verifyError?.code ?? null,
     verifyErrorMessage: verifyError?.message ?? null,
   })
