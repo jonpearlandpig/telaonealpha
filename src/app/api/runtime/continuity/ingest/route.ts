@@ -29,11 +29,34 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const incomingAssets = (payload as { assetContents?: unknown[] }).assetContents ?? []
+    const incomingAsset0 = (incomingAssets[0] as { content?: string } | undefined)
+    console.log('[TELA:TRACE] ingest route received', {
+      mode: (payload as { mode?: string }).mode,
+      assetContentsCount: incomingAssets.length,
+      firstContentPreview: incomingAsset0?.content?.slice(0, 500) ?? null,
+    })
+
     const baseData = await getShowTelaHome()
+    console.log('[TELA:TRACE] baseData', {
+      source: baseData.source,
+      activeOpsCount: baseData.activeOps.length,
+      operationsCount: baseData.operations.length,
+    })
+
     const result = await ingestShowTelaContinuity({
       baseData,
       payload,
       submittedBy: session.name,
+    })
+
+    console.log('[TELA:TRACE] ingest result.data', {
+      source: result.data.source,
+      activeOpsCount: result.data.activeOps.length,
+      operationsCount: result.data.operations.length,
+      feedCount: result.data.continuityFeed.length,
+      firstActiveOp: result.data.activeOps[0]?.name ?? null,
+      firstOperation: result.data.operations[0]?.title ?? null,
     })
 
     await writeShowTelaCache({ ...result.data, source: 'supabase', diagnosticState: 'persistence-connected' })

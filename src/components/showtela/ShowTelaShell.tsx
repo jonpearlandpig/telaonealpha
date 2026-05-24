@@ -152,6 +152,12 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
   })
 
   const isEmpty = vm.source === 'empty' && !activeOpsOverride?.length && !operationsOverride?.length
+  console.log('[TELA:TRACE] isEmpty eval', {
+    vmSource: vm.source,
+    activeOpsOverrideLength: activeOpsOverride?.length ?? null,
+    operationsOverrideLength: operationsOverride?.length ?? null,
+    isEmpty,
+  })
 
   const autoscan = {
     currentTruth: priorityOperation
@@ -227,9 +233,19 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
         error?: string
       }
       if (!res.ok || data.error) throw new Error(data.error ?? `HTTP ${res.status}`)
+      console.log('[TELA:TRACE] submitContinuity response', {
+        ok: res.ok,
+        activeOpsCount: data.data?.activeOps?.length ?? 0,
+        operationsCount: data.data?.operations?.length ?? 0,
+        feedCount: data.data?.continuityFeed?.length ?? 0,
+        firstActiveOp: data.data?.activeOps?.[0],
+        firstOperation: data.data?.operations?.[0],
+        source: (data.data as { source?: string } | undefined)?.source,
+      })
       if (data.data?.continuityFeed) setFeedOverride(data.data.continuityFeed)
       if (data.data?.runtimeTimeline) setRuntimeTimelineOverride(data.data.runtimeTimeline)
       if (data.data?.activeOps?.length) {
+        console.log('[TELA:TRACE] setActiveOpsOverride firing with', data.data.activeOps.length, 'items')
         setActiveOpsOverride(
           data.data.activeOps.map(p => ({
             id: p.id,
@@ -239,8 +255,11 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
             unresolvedCount: p.unresolvedCount ?? 0,
           }))
         )
+      } else {
+        console.log('[TELA:TRACE] setActiveOpsOverride NOT fired — activeOps empty or missing')
       }
       if (data.data?.operations?.length) {
+        console.log('[TELA:TRACE] setOperationsOverride firing with', data.data.operations.length, 'items')
         setOperationsOverride(
           data.data.operations.map(o => ({
             id: o.id,
@@ -251,6 +270,8 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
             unresolvedCount: o.unresolvedCount ?? 0,
           }))
         )
+      } else {
+        console.log('[TELA:TRACE] setOperationsOverride NOT fired — operations empty or missing')
       }
       return true
     } catch (err) {

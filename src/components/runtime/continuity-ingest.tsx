@@ -98,6 +98,13 @@ export function ContinuityIngest({
   const submit = () => {
     if (!mode) return
 
+    console.log('[TELA:TRACE] continuity-ingest submit', {
+      mode,
+      assetNamesCount: assetNames.length,
+      assetContentsCount: assetContents.length,
+      firstContentPreview: assetContents[0]?.content?.slice(0, 500) ?? null,
+    })
+
     onSubmit({
       mode,
       headline: headline.trim() || undefined,

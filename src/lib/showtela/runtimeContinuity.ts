@@ -377,7 +377,20 @@ export async function ingestShowTelaContinuity(input: {
     .map(f => f.content.trim())
 
   // Parse crew directories FIRST so the dispatch headline reflects what was extracted
-  const { newPeople, newOperations } = extractDirectoryData(input.payload.assetContents ?? [])
+  const rawAssets = input.payload.assetContents ?? []
+  console.log('[TELA:TRACE] runtimeContinuity assetContents', {
+    count: rawAssets.length,
+    names: rawAssets.map(a => a.name),
+    firstContentLength: rawAssets[0]?.content?.length ?? 0,
+    firstContentPreview: rawAssets[0]?.content?.slice(0, 500) ?? null,
+  })
+  const { newPeople, newOperations } = extractDirectoryData(rawAssets)
+  console.log('[TELA:TRACE] extractDirectoryData result', {
+    newPeopleCount: newPeople.length,
+    newOperationsCount: newOperations.length,
+    firstPerson: newPeople[0]?.name ?? null,
+    firstOperation: newOperations[0]?.title ?? null,
+  })
   const primaryFileName = input.payload.assetNames?.[0] ?? ''
   const basePayload: ContinuityIngestionInput = newPeople.length > 0
     ? {
@@ -422,6 +435,12 @@ export async function ingestShowTelaContinuity(input: {
   const mergedData: ShowTelaHomeData = newPeople.length > 0
     ? mergeDirectoryIntoHome(feedMerged, newPeople, newOperations)
     : { ...feedMerged, source: 'supabase', diagnosticState: 'persistence-connected' }
+  console.log('[TELA:TRACE] mergedData', {
+    source: mergedData.source,
+    activeOpsCount: mergedData.activeOps.length,
+    operationsCount: mergedData.operations.length,
+    feedCount: mergedData.continuityFeed.length,
+  })
 
   const snapshot = createShowTelaDurableSnapshot({
     artifact,
