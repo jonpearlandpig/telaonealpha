@@ -81,78 +81,61 @@ export async function readShowTelaCache(): Promise<ShowTelaHomeData | null> {
 export async function writeShowTelaCache(data: ShowTelaHomeData): Promise<void> {
   const db = getSupabaseServerClient()
   const src: 'notion' | 'supabase' = data.source === 'supabase' ? 'supabase' : 'notion'
-  const snapshotRow = row(SHOWTELA_SNAPSHOT_ID, 'showtela-home', data, src)
+  const now = new Date().toISOString()
+  const payloadStr = JSON.stringify({ ...data, source: src })
 
-  const payloadJson = snapshotRow.payload
-  console.log('[TELA:TRACE] writeShowTelaCache PRE-INSERT row', {
-    rowKeys: Object.keys(snapshotRow),
-    id: snapshotRow.id,
-    workspace_id: snapshotRow.workspace_id,
-    thread_id: snapshotRow.thread_id,
-    typeof_payload: typeof snapshotRow.payload,
-    payloadByteLength: payloadJson?.length ?? 0,
-    payloadSourceField: (() => { try { return (JSON.parse(payloadJson ?? '') as { source?: string }).source } catch { return 'PARSE_ERROR' } })(),
-    typeof_provenance: typeof snapshotRow.provenance,
-    provenanceKeys: Object.keys(snapshotRow.provenance ?? {}),
-    provenanceSourceType: (snapshotRow.provenance as { sourceType?: string })?.sourceType ?? null,
-    created_at: snapshotRow.created_at,
-    updated_at: snapshotRow.updated_at,
-  })
-
-  // Delete any existing snapshot row so the subsequent insert never hits a duplicate key.
-  const { error: deleteError } = await db
+  // Step 1: UPDATE if a snapshot row already exists.
+  // PostgREST UPDATE returns [] (not an error) when 0 rows match — safe to check length.
+  const { data: updated, error: updateError } = await db
     .from('durable_artifacts')
-    .delete()
+    .update({ payload: payloadStr, updated_at: now })
     .eq('id', SHOWTELA_SNAPSHOT_ID)
     .eq('workspace_id', SHOWTELA_WORKSPACE_ID)
+    .select('id')
 
-  if (deleteError) {
-    console.error('[TELA:TRACE] writeShowTelaCache DELETE failed', {
-      code: deleteError.code,
-      message: deleteError.message,
-      details: (deleteError as { details?: string }).details ?? null,
-      hint: (deleteError as { hint?: string }).hint ?? null,
-    })
+  if (!updateError && updated && updated.length > 0) {
+    console.log('[TELA:TRACE] writeShowTelaCache UPDATE succeeded — snapshot overwritten')
+    return
+  }
+
+  if (updateError) {
+    console.warn('[TELA:TRACE] writeShowTelaCache UPDATE failed — falling through to INSERT:', updateError.message, '| code:', updateError.code)
   } else {
-    console.log('[TELA:TRACE] writeShowTelaCache DELETE OK (pre-insert clear)')
+    console.log('[TELA:TRACE] writeShowTelaCache UPDATE matched 0 rows — no existing snapshot, inserting')
   }
 
-  const { data: insertData, error } = await db
-    .from('durable_artifacts')
-    .insert([snapshotRow])
-    .select('id, workspace_id')
-
-  console.log('[TELA:TRACE] writeShowTelaCache INSERT response', {
-    insertDataRows: insertData?.length ?? null,
-    insertDataFirst: insertData?.[0] ?? null,
-    errorCode: error?.code ?? null,
-    errorMessage: error?.message ?? null,
-    errorDetails: (error as { details?: string } | null)?.details ?? null,
-    errorHint: (error as { hint?: string } | null)?.hint ?? null,
+  // Step 2: INSERT the snapshot row (first write).
+  // provenance is JSON-stringified so it is compatible with both text and jsonb column types.
+  const provenanceStr = JSON.stringify({
+    sourceType: src,
+    sourceId: SHOWTELA_SNAPSHOT_ID,
+    truthRank: 0.9,
+    lineageRefs: [SHOWTELA_SNAPSHOT_ID],
+    createdAt: now,
+    updatedAt: now,
   })
 
-  if (error) {
-    throw new Error(`writeShowTelaCache: ${error.message}`)
+  const { error: insertError } = await db
+    .from('durable_artifacts')
+    .insert([{
+      id: SHOWTELA_SNAPSHOT_ID,
+      workspace_id: SHOWTELA_WORKSPACE_ID,
+      thread_id: 'showtela-home',
+      payload: payloadStr,
+      created_at: now,
+      updated_at: now,
+      provenance: provenanceStr,
+    }])
+
+  if (insertError) {
+    console.error('[TELA:TRACE] writeShowTelaCache INSERT failed', {
+      code: insertError.code,
+      message: insertError.message,
+      details: (insertError as { details?: string }).details ?? null,
+      hint: (insertError as { hint?: string }).hint ?? null,
+    })
+    throw new Error(`writeShowTelaCache: ${insertError.message} [${insertError.code}]`)
   }
 
-  // Verify row visibility immediately after insert — rules out RLS-invisible writes.
-  const { data: verifyData, error: verifyError } = await db
-    .from('durable_artifacts')
-    .select('*')
-    .eq('id', SHOWTELA_SNAPSHOT_ID)
-    .eq('workspace_id', SHOWTELA_WORKSPACE_ID)
-    .single()
-
-  const verifyRow = verifyData as Record<string, unknown> | null
-  console.log('[TELA:TRACE] writeShowTelaCache POST-INSERT SELECT verify', {
-    found: !!verifyRow,
-    returnedKeys: verifyRow ? Object.keys(verifyRow) : null,
-    id: verifyRow?.id ?? null,
-    workspace_id: verifyRow?.workspace_id ?? null,
-    payloadLength: typeof verifyRow?.payload === 'string' ? (verifyRow.payload as string).length : null,
-    verifyErrorCode: verifyError?.code ?? null,
-    verifyErrorMessage: verifyError?.message ?? null,
-  })
-
-  console.log('[TELA:TRACE] writeShowTelaCache snapshot written OK — activeOps:', data.activeOps.length, 'ops:', data.operations.length)
+  console.log('[TELA:TRACE] writeShowTelaCache INSERT succeeded — activeOps:', data.activeOps.length, 'ops:', data.operations.length)
 }
