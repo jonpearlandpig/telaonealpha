@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useRef, useState } from 'react'
+import type { ContinuityIngestionInput } from '@/lib/continuity/normalize-ingestion'
 import type { OperationalCalendarEvent } from '@/lib/showtela/calendar'
 import type { ContinuityEvent } from '@/lib/showtela/types'
 import type { OperationEntity, UnresolvedItem } from './types'
@@ -26,12 +27,16 @@ export function TelaTalk({
   operations = [],
   unresolvedItems = [],
   calendarEvents = [],
+  submittedBy,
+  onContinuityIngest,
 }: {
   autoscan: AutoscanSummary
   feed?: ContinuityEvent[]
   operations?: OperationEntity[]
   unresolvedItems?: UnresolvedItem[]
   calendarEvents?: OperationalCalendarEvent[]
+  submittedBy?: string
+  onContinuityIngest?: (input: ContinuityIngestionInput) => Promise<boolean>
 }) {
   const promptOptions = [
     'What changed today?',
@@ -59,6 +64,29 @@ export function TelaTalk({
       pressureEvents: calendarEvents.filter((event) => event.unresolvedCount > 0 || ['pressure', 'critical', 'needs_decision'].includes(event.pressureState)),
     }
   }, [calendarEvents, feed, operations, unresolvedItems])
+
+  function isQuestionPrompt(value: string) {
+    const normalized = value.trim().toLowerCase()
+    return normalized.endsWith('?') || promptOptions.some((prompt) => prompt.toLowerCase() === normalized)
+  }
+
+  function createQuickUpdatePayload(value: string): ContinuityIngestionInput {
+    const lines = value
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+    const body = value.trim()
+    const headlineSource = lines[0] ?? body
+    const headline = headlineSource.length > 80 ? `${headlineSource.slice(0, 77).trimEnd()}...` : headlineSource
+
+    return {
+      mode: 'quick-update',
+      headline,
+      body,
+      owner: submittedBy,
+      tags: ['note'],
+    }
+  }
 
   function deriveTelaAnswer(question: string) {
     const lower = question.toLowerCase()
@@ -97,15 +125,33 @@ export function TelaTalk({
     return `${autoscan.currentTruth} ${autoscan.nextMovement}`
   }
 
-  function submitQuestion(value: string) {
+  async function submitQuestion(value: string) {
     const question = value.trim()
     if (!question) return
     messageCounter.current += 1
     const messageId = messageCounter.current
+    const userMessage = { id: `user-${messageId}`, role: 'user' as const, text: question }
+    if (isQuestionPrompt(question) || !onContinuityIngest) {
+      setThread((current) => [
+        ...current,
+        userMessage,
+        { id: `tela-${messageId}`, role: 'tela', text: deriveTelaAnswer(question) },
+      ])
+      setDraft('')
+      return
+    }
+
+    const persisted = await onContinuityIngest(createQuickUpdatePayload(question))
     setThread((current) => [
       ...current,
-      { id: `user-${messageId}`, role: 'user', text: question },
-      { id: `tela-${messageId}`, role: 'tela', text: deriveTelaAnswer(question) },
+      userMessage,
+      {
+        id: `tela-${messageId}`,
+        role: 'tela',
+        text: persisted
+          ? 'Continuity captured. I anchored it into runtime memory and it will survive refresh.'
+          : 'I could not anchor that into runtime continuity. Please try again.',
+      },
     ])
     setDraft('')
   }

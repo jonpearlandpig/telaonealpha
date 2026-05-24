@@ -89,6 +89,7 @@ export function normalizeContinuityIngestion(
     owner: owner ? { id: owner.toLowerCase().replace(/\s+/g, '-'), name: owner } : undefined,
     pressure: normalizedTags.includes('risk'.toUpperCase()) ? 'high' : 'medium',
     isNew: true,
+    threadId: continuityObjectId,
     linkedEntities: linkedRefs,
     unresolvedDependencies: [],
     attachments: attachments.length ? attachments : undefined,

@@ -242,7 +242,12 @@ export async function loadPersistedRuntimeContinuityEvents() {
       if (!artifact?.structure) return null
       try {
         const parsed = JSON.parse(artifact.structure) as { continuityEvent?: ContinuityEvent }
-        return parsed.continuityEvent ?? null
+        const event = parsed.continuityEvent
+        if (!event) return null
+        return {
+          ...event,
+          threadId: event.threadId ?? event.continuityObject?.id ?? event.id,
+        }
       } catch {
         return null
       }

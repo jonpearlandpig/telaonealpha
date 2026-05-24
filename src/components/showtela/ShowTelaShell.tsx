@@ -221,8 +221,10 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
       if (!res.ok || data.error) throw new Error(data.error ?? `HTTP ${res.status}`)
       if (data.data?.continuityFeed) setFeedOverride(data.data.continuityFeed)
       if (data.data?.runtimeTimeline) setRuntimeTimelineOverride(data.data.runtimeTimeline)
+      return true
     } catch (err) {
       console.error('[ShowTelaShell] continuity ingest failed:', err)
+      return false
     }
   }
 
@@ -298,6 +300,8 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
           operations={operations}
           unresolvedItems={unresolvedItemsState}
           calendarEvents={calendarEvents}
+          submittedBy={user?.name}
+          onContinuityIngest={submitContinuity}
         />
       )}
 
