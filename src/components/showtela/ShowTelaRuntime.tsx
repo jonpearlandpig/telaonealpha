@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { ShowTelaShell } from './ShowTelaShell'
 import type { ShowTelaViewModel } from './types'
+import { clearStaleRuntimeSnapshot } from '@/lib/showtela/runtimePersist'
 
 type User = { name: string; email: string; image: string }
 
@@ -33,93 +34,49 @@ function DiagnosticBar({ state }: { state: string }) {
   )
 }
 
-function HydrationDiagnostics({ vm }: { vm: ShowTelaViewModel }) {
-  const h = vm.hydration
-  if (!h) return null
-  const last = h.lastHydratedAt ? new Date(h.lastHydratedAt).toLocaleString() : 'Not run'
-
+function RuntimeDebugOverlay({ vm }: { vm: ShowTelaViewModel }) {
+  const meta = vm.runtimeSnapshotMeta
+  const isCanonical = Boolean(meta?.canonical)
+  const snapshotId = meta?.snapshotId ? meta.snapshotId.slice(0, 16) + '…' : '—'
+  const updatedAt = meta?.updatedAt ? new Date(meta.updatedAt).toLocaleTimeString() : '—'
   return (
-    <div className="mx-5 mb-3 rounded-[16px] border border-[#E5D8BF] bg-[#FFFDF8] px-3 py-3 shadow-sm">
-      <div className="mb-2 flex items-center justify-between">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8B6F32]">Hydration</p>
-        <p className="text-[10px] font-medium text-[#8B847B]">{h.cacheSource}</p>
-      </div>
-      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-[#5E5348]">
-        <p>Connected to Notion: <span className="font-semibold text-[#141210]">{h.connectedToNotion ? 'yes' : 'no'}</span></p>
-        <p>Connected to Supabase: <span className="font-semibold text-[#141210]">{h.connectedToSupabase ? 'yes' : 'no'}</span></p>
-        <p>People rows: <span className="font-semibold text-[#141210]">{h.counts.people}</span></p>
-        <p>Operations rows: <span className="font-semibold text-[#141210]">{h.counts.operations}</span></p>
-        <p>Continuity rows: <span className="font-semibold text-[#141210]">{h.counts.continuity}</span></p>
-        <p>Last hydration: <span className="font-semibold text-[#141210]">{last}</span></p>
-      </div>
+    <div
+      className="pointer-events-none fixed right-2 top-2 z-[9999] min-w-[200px] rounded-lg px-3 py-2 font-mono text-[10px] leading-5 text-white shadow-lg"
+      style={{ background: 'rgba(0,0,0,0.82)' }}
+    >
+      <div>SOURCE: {vm.source ?? '—'}</div>
+      <div>SNAPSHOT: {snapshotId}</div>
+      <div>UPDATED: {updatedAt}</div>
+      <div>CANONICAL: {isCanonical ? 'YES' : 'NO'}</div>
+      <div>RENDER MODE: {meta?.overwriteMode ?? '—'}</div>
+      <div>FEED: {vm.feed?.length ?? 0} OPS: {vm.crusadeOperations?.length ?? 0} PEOPLE: {vm.activeOps?.length ?? 0}</div>
     </div>
   )
 }
 
 export function ShowTelaRuntime({ vm: initialVm, user }: { vm: ShowTelaViewModel; user?: User }) {
-  const [vm, setVm] = useState(initialVm)
-  const [showHydrationDebug] = useState(() =>
+  // Canonical truth is always the SSR prop — no localStorage restore
+  const [vm, setVm] = useState<ShowTelaViewModel>(initialVm)
+  const [showDebug] = useState(() =>
     typeof window !== 'undefined' && (
       process.env.NEXT_PUBLIC_SHOWTELA_DEBUG_UI === 'true' ||
       new URLSearchParams(window.location.search).get('showtela_debug') === '1'
     )
   )
 
-  const refresh = useCallback(async () => {
-    try {
-      const res = await fetch('/api/home-feed', { cache: 'no-store' })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        console.warn('[ShowTelaRuntime] refresh failed:', res.status, body)
-        if (body.diagnosticState) {
-          setVm(prev => ({ ...prev, diagnosticState: body.diagnosticState }))
-        }
-        return
-      }
-      const fresh: ShowTelaViewModel = await res.json()
-      console.log('[SHOWTELA:setVm]', {
-        source: fresh?.source,
-        feedCount: fresh?.feed?.length,
-        operationsCount: fresh?.crusadeOperations?.length,
-        timestamp: Date.now()
-      })
-      setVm(prev => ({
-        ...prev,
-        activeOps: fresh.activeOps ?? prev.activeOps,
-        fluencyPartners: fresh.fluencyPartners ?? prev.fluencyPartners,
-        crusadeOperations: fresh.crusadeOperations ?? prev.crusadeOperations,
-        unresolvedPressure: fresh.unresolvedPressure ?? prev.unresolvedPressure,
-        unresolved: fresh.unresolved ?? prev.unresolved,
-        feed: fresh.feed ?? prev.feed,
-        runtimeTimeline: fresh.runtimeTimeline ?? prev.runtimeTimeline,
-        source: fresh.source,
-        diagnosticState: fresh.diagnosticState,
-        hydration: fresh.hydration ?? prev.hydration,
-      }))
-    } catch (err) {
-      console.warn('[ShowTelaRuntime] refresh network error:', err)
-    }
-  }, [])
-
+  // Clear any stale localStorage state left from pre-canonical-snapshot sessions — run once on mount
   useEffect(() => {
-    const refreshTimer = window.setTimeout(() => {
-      void refresh()
-    }, 0)
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') void refresh()
-    }
-    document.addEventListener('visibilitychange', onVisibility)
-    return () => {
-      window.clearTimeout(refreshTimer)
-      document.removeEventListener('visibilitychange', onVisibility)
-    }
-  }, [refresh])
+    clearStaleRuntimeSnapshot()
+    // Log uses initialVm which is the stable SSR prop — safe in a mount-only effect
+    const snap = initialVm.runtimeSnapshotMeta?.snapshotId ?? '—'
+    console.log('[SHOWTELA] mount — source:', initialVm.source, 'snap:', snap, 'feed:', initialVm.feed?.length ?? 0, 'ops:', initialVm.crusadeOperations?.length ?? 0)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const showDiagnostic = vm.diagnosticState && vm.diagnosticState !== 'persistence-connected'
 
   return (
     <>
-      {showHydrationDebug && <HydrationDiagnostics vm={vm} />}
+      {showDebug && <RuntimeDebugOverlay vm={vm} />}
       <ShowTelaShell vm={vm} user={user} />
       {showDiagnostic && (
         <div className="pointer-events-none fixed bottom-28 left-0 right-0 z-40 mx-auto w-full max-w-[430px] px-5 md:max-w-[680px] xl:max-w-[760px]">

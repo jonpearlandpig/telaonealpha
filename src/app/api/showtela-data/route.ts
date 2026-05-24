@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getShowTelaHome } from '@/lib/showtela/hydration'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   const data = await getShowTelaHome()
   return NextResponse.json({

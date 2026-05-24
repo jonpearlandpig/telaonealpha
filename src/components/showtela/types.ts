@@ -1,4 +1,4 @@
-import type { ContinuityEvent, ShowTelaHydrationSummary } from '@/lib/showtela/types'
+import type { ContinuityEvent, ShowTelaHydrationSummary, ShowTelaRuntimeSnapshotMeta } from '@/lib/showtela/types'
 
 export interface PersonItem {
   id: string
@@ -60,6 +60,7 @@ export interface ShowTelaViewModel {
   source?: 'supabase' | 'notion' | 'empty'
   diagnosticState?: string
   hydration?: ShowTelaHydrationSummary
+  runtimeSnapshotMeta?: ShowTelaRuntimeSnapshotMeta
 }
 
 export type ActionType = 'resolve' | 'escalate' | 'comment' | 'archive'

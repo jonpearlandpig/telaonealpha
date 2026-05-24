@@ -57,5 +57,6 @@ export function buildShowTelaVM(data: ShowTelaHomeData): ShowTelaViewModel {
     source: data.source,
     diagnosticState: data.diagnosticState,
     hydration: data.hydration,
+    runtimeSnapshotMeta: data.runtimeSnapshotMeta,
   }
 }

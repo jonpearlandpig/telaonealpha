@@ -1,28 +1,21 @@
 import type { ShowTelaViewModel } from '@/components/showtela/types'
 
-const KEY = 'showtela-runtime-v1'
-const MAX_AGE_MS = 12 * 60 * 60 * 1000 // 12h
+// Canonical truth is Supabase snapshot only — localStorage restore is disabled
+// to prevent stale runtime state from flashing before canonical hydration.
+const STALE_KEY = 'showtela-runtime-v1'
 
-type Snapshot = { vm: ShowTelaViewModel; savedAt: number }
-
-export function readRuntimeSnapshot(): ShowTelaViewModel | null {
+export function clearStaleRuntimeSnapshot(): void {
   try {
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return null
-    const { vm, savedAt } = JSON.parse(raw) as Snapshot
-    if (Date.now() - savedAt > MAX_AGE_MS) return null
-    if (!vm.feed?.length) return null
-    return vm
-  } catch {
-    return null
-  }
-}
-
-export function writeRuntimeSnapshot(vm: ShowTelaViewModel): void {
-  try {
-    if (!vm.feed?.length) return
-    localStorage.setItem(KEY, JSON.stringify({ vm, savedAt: Date.now() }))
+    localStorage.removeItem(STALE_KEY)
   } catch {
     // localStorage unavailable — silent
   }
+}
+
+export function readRuntimeSnapshot(): ShowTelaViewModel | null {
+  return null
+}
+
+export function writeRuntimeSnapshot(_vm: ShowTelaViewModel): void {
+  // no-op — canonical truth lives in Supabase, not localStorage
 }

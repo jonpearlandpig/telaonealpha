@@ -19,8 +19,18 @@ function resolveFirst(keys: readonly string[]) {
   return { key: keys[0] ?? 'UNKNOWN', value: undefined }
 }
 
+function normalizeSupabaseUrl(value: string | undefined): string | undefined {
+  if (!value) return value
+  const trimmed = value.trim().replace(/\/+$/, '')
+  return trimmed.replace(/\/(?:rest|auth|storage|functions)\/v1$/i, '')
+}
+
 export function resolveSupabaseUrl() {
-  return resolveFirst(SUPABASE_URL_KEYS)
+  const resolved = resolveFirst(SUPABASE_URL_KEYS)
+  return {
+    key: resolved.key,
+    value: normalizeSupabaseUrl(resolved.value),
+  }
 }
 
 export function resolveSupabaseServiceRoleKey() {

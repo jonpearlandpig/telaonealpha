@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createRuntimeSnapshotMeta, replaceHomeWithDirectoryIngest, resolveRefreshHomeData } from './runtimeSnapshot'
+import { createRuntimeSnapshotMeta, isCanonicalReplaceSnapshot, replaceHomeWithDirectoryIngest, resolveRefreshHomeData } from './runtimeSnapshot'
 import type { ContinuityEvent, ShowTelaHomeData } from './types'
 
 function crusadeBase(): ShowTelaHomeData {
@@ -81,4 +81,22 @@ test('refresh keeps the latest canonical runtime snapshot instead of rehydrating
   assert.deepEqual(resolved.continuityFeed.map((event) => event.headline), ['Positive Rocks directory ingested'])
   assert.equal(resolved.operations.some((operation) => operation.title === 'Crusade'), false)
   assert.equal(resolved.continuityFeed.some((event) => event.headline.includes('Crusade')), false)
+})
+
+test('canonical replace snapshots are treated as hard-stop runtime truth', () => {
+  const canonicalCached = replaceHomeWithDirectoryIngest({
+    base: crusadeBase(),
+    event: positiveRocksEvent(),
+    people: [{ id: 'person-positive-rocks', name: 'Positive Rocks Lead', role: 'FOH', active: true }],
+    operations: [{ id: 'op-positive-rocks', title: 'Positive Rocks', status: 'active', latestMovement: 'Fresh ingest' }],
+    meta: createRuntimeSnapshotMeta({
+      snapshotId: 'snap_positive_rocks',
+      workspaceId: 'tela-showtela',
+      updatedAt: '2026-05-24T12:00:00.000Z',
+      overwriteMode: 'replace',
+      sourceIngest: 'directory',
+    }),
+  })
+
+  assert.equal(isCanonicalReplaceSnapshot(canonicalCached), true)
 })

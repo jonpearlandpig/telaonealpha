@@ -3,7 +3,7 @@ import { loadDurableContinuity } from '@/lib/runtime/durableMemory'
 import type { ArtifactRecord } from '@/lib/artifacts/artifactStore'
 import type { DurableArtifactRow } from '@/lib/supabase/schema'
 import { SHOWTELA_RUNTIME_ARTIFACT_GROUP_ID, SHOWTELA_WORKSPACE_ID } from './runtimeIds'
-import { createRuntimeSnapshotMeta, isCanonicalRuntimeSnapshot } from './runtimeSnapshot'
+import { createRuntimeSnapshotMeta, isCanonicalReplaceSnapshot } from './runtimeSnapshot'
 import type { ContinuityEvent, OperationEntity, PersonEntity, ShowTelaHomeData } from './types'
 
 function parseArtifactPayload(payload: string | undefined): ArtifactRecord | null {
@@ -99,7 +99,7 @@ export function recoverCanonicalShowTelaHomeFromArtifactRows(input: {
   cached: ShowTelaHomeData | null
   cachedUpdatedAt?: string | null
 }): ShowTelaHomeData | null {
-  if (isCanonicalRuntimeSnapshot(input.cached) && input.cached?.runtimeSnapshotMeta?.overwriteMode === 'replace') {
+  if (isCanonicalReplaceSnapshot(input.cached)) {
     return input.cached ?? null
   }
 
@@ -109,15 +109,9 @@ export function recoverCanonicalShowTelaHomeFromArtifactRows(input: {
     .filter((artifact) => artifact.artifactGroupId === SHOWTELA_RUNTIME_ARTIFACT_GROUP_ID)
     .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
 
-  const cachedTime = input.cached?.runtimeSnapshotMeta?.updatedAt ?? input.cachedUpdatedAt ?? null
-
   for (const artifact of runtimeArtifacts) {
     const rebuilt = reconstructDirectoryState(artifact) ?? inferArtifactOperationState(artifact)
     if (!rebuilt) continue
-
-    if (cachedTime && new Date(artifact.createdAt).getTime() <= new Date(cachedTime).getTime()) {
-      continue
-    }
 
     const event = recoverEventFromArtifact(artifact)
     return {

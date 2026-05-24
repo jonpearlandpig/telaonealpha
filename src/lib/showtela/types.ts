@@ -163,6 +163,7 @@ export type ShowTelaRuntimeSnapshotMeta = {
   updatedAt: string
   canonical: boolean
   overwriteMode: 'merge' | 'replace'
+  snapshotType?: 'merge' | 'replace'
   sourceIngest: 'continuity' | 'directory' | 'artifact'
 }
 

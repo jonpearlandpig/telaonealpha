@@ -46,12 +46,17 @@ export function createRuntimeSnapshotMeta(input: {
     updatedAt: input.updatedAt,
     canonical: true,
     overwriteMode: input.overwriteMode,
+    snapshotType: input.overwriteMode,
     sourceIngest: input.sourceIngest,
   }
 }
 
 export function isCanonicalRuntimeSnapshot(data: ShowTelaHomeData | null | undefined): boolean {
   return Boolean(data?.runtimeSnapshotMeta?.canonical)
+}
+
+export function isCanonicalReplaceSnapshot(data: ShowTelaHomeData | null | undefined): boolean {
+  return isCanonicalRuntimeSnapshot(data) && data?.runtimeSnapshotMeta?.overwriteMode === 'replace'
 }
 
 export function mergeCachedSnapshot(base: ShowTelaHomeData, cached: ShowTelaHomeData): ShowTelaHomeData {
@@ -153,6 +158,6 @@ export function replaceHomeWithCanonicalIngest(input: {
 
 export function resolveRefreshHomeData(fresh: ShowTelaHomeData, cached: ShowTelaHomeData | null): ShowTelaHomeData {
   if (!cached) return fresh
-  if (isCanonicalRuntimeSnapshot(cached)) return cached
+  if (isCanonicalReplaceSnapshot(cached)) return cached
   return mergeCachedSnapshot(fresh, cached)
 }

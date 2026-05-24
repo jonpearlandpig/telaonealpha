@@ -3,7 +3,7 @@ import { mapContinuityEvent, mapOperation, mapPerson, mapUnresolved } from './no
 import { calculatePressure } from './pressure'
 import { assertShowTelaStartupEnv, getShowTelaEnvStatus, logShowTelaEnvStatus } from './env'
 import { recoverCanonicalShowTelaHomeFromDurable } from './runtimeRecovery'
-import { resolveRefreshHomeData } from './runtimeSnapshot'
+import { isCanonicalReplaceSnapshot } from './runtimeSnapshot'
 import { threadContinuity } from './threadContinuity'
 import { cleanBody, extractUnresolvedMarkers, validateAndFilter, validateContinuityEventRecord, validateOperationRecord, validatePersonRecord } from './normalizeNotionRecord'
 import { getShowTelaCacheSchemaCompatibility, readShowTelaCache, readShowTelaCacheRow, writeShowTelaCache } from '@/lib/supabase/operationalCache'
@@ -143,8 +143,9 @@ async function fetchFromNotion(): Promise<ShowTelaHomeData | null> {
   }
 }
 
-// SSR path: read Supabase first for instant hydration.
-// Client calls /api/home-feed on mount to get fresh Notion data.
+// SSR path: canonical runtime only.
+// Home never hydrates from legacy Notion fallback. If no canonical or cached runtime exists,
+// ShowTELA stays blank until an ingest writes the durable snapshot.
 export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
   console.log('[TELA:TRACE] getShowTelaHome SSR — attempting Supabase cache read')
   // 1. Supabase cache — instant hydration
@@ -156,6 +157,12 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
       cachedUpdatedAt: cacheRow?.updated_at ?? null,
     })
     if (recovered) {
+      console.log('SSR_CANONICAL_FOUND', {
+        snapshotId: recovered.runtimeSnapshotMeta?.snapshotId ?? null,
+        operations: recovered.operations.length,
+        activeOps: recovered.activeOps.length,
+        anchors: recovered.continuityFeed.length,
+      })
       console.log('[TELA:TRACE] getShowTelaHome recovered canonical runtime snapshot from durable artifacts', {
         snapshotId: recovered.runtimeSnapshotMeta?.snapshotId ?? null,
         updatedAt: recovered.runtimeSnapshotMeta?.updatedAt ?? null,
@@ -175,6 +182,13 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
       }
     }
     if (cached) {
+      console.log('SSR_CACHE_HIT', {
+        snapshotId: cached.runtimeSnapshotMeta?.snapshotId ?? null,
+        source: cached.source ?? 'supabase',
+        operations: cached.operations.length,
+        activeOps: cached.activeOps.length,
+        anchors: cached.continuityFeed.length,
+      })
       console.log('[TELA:TRACE] getShowTelaHome hydrated from Supabase cache', {
         source: cached.source ?? 'supabase',
         activeOpsCount: cached.activeOps.length,
@@ -188,37 +202,18 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
         hydration: hydrationSummary(cached, { connectedToSupabase: true, cacheSource: 'supabase' }),
       }
     }
-    console.log('[TELA:TRACE] getShowTelaHome Supabase cache miss — falling through to Notion')
+    console.log('[TELA:TRACE] getShowTelaHome — no canonical snapshot in Supabase, serving empty operational shell')
   } catch (err) {
     console.error('[TELA:TRACE] getShowTelaHome Supabase read threw:', String(err))
-    // not returning — fall through to Notion
   }
 
-  // 2. Notion — first load or cold start
-  try {
-    const data = await fetchFromNotion()
-    if (data) {
-      console.log('[TELA:TRACE] getShowTelaHome Notion returned data — source:notion', {
-        activeOpsCount: data.activeOps.length,
-        operationsCount: data.operations.length,
-        feedCount: data.continuityFeed.length,
-      })
-      writeShowTelaCache(data)
-        .then(() => console.log('[showtela] hydration success: Notion fetched and Supabase cache write completed'))
-        .catch(err => console.error('[showtela] cache write failed:', String(err)))
-      return { ...data, source: 'notion', diagnosticState: 'persistence-connected' }
-    }
-    console.log('[TELA:TRACE] getShowTelaHome Notion returned null — falling to empty state')
-  } catch (err) {
-    console.error('[TELA:TRACE] getShowTelaHome Notion fetch threw:', String(err))
-  }
-
-  console.warn('[TELA:TRACE] getShowTelaHome serving EMPTY STATE — source:empty')
+  console.warn('[TELA:TRACE] getShowTelaHome serving EMPTY STATE — source:empty reason:canonical-runtime-missing')
   const empty = emptyShowTelaHomeData()
   return { ...empty, source: 'empty', diagnosticState: 'notion-unavailable', hydration: hydrationSummary(empty, { cacheSource: 'empty' }) }
 }
 
-// API route path: always fetch fresh from Notion, write to Supabase.
+// API route path: home refresh is canonical-runtime only.
+// It must never rehydrate legacy Notion state over the active runtime.
 export async function refreshShowTelaFromNotion(): Promise<ShowTelaHomeData> {
   try {
     const cacheRow = await readShowTelaCacheRow()
@@ -235,52 +230,34 @@ export async function refreshShowTelaFromNotion(): Promise<ShowTelaHomeData> {
         console.error('[showtela] recovered canonical snapshot cache repair failed:', String(err))
       }
     }
-    const data = await fetchFromNotion()
-    if (data) {
-      const merged = resolveRefreshHomeData(data, effectiveCached)
-      console.log('[TELA:TRACE] refreshShowTelaFromNotion precedence', {
-        snapshotId: effectiveCached?.runtimeSnapshotMeta?.snapshotId ?? null,
-        workspaceId: effectiveCached?.runtimeSnapshotMeta?.workspaceId ?? null,
-        updatedAt: effectiveCached?.runtimeSnapshotMeta?.updatedAt ?? null,
-        overwriteMode: effectiveCached?.runtimeSnapshotMeta?.overwriteMode ?? null,
-        mergePrecedence: effectiveCached?.runtimeSnapshotMeta?.canonical ? 'cached-canonical-runtime-snapshot' : 'fresh-notion-with-cached-merge',
+    if (isCanonicalReplaceSnapshot(effectiveCached)) {
+      const canonicalCached = effectiveCached!
+      console.log('[TELA:TRACE] refreshShowTelaFromNotion canonical stop', {
+        snapshotId: canonicalCached.runtimeSnapshotMeta?.snapshotId ?? null,
+        workspaceId: canonicalCached.runtimeSnapshotMeta?.workspaceId ?? null,
+        updatedAt: canonicalCached.runtimeSnapshotMeta?.updatedAt ?? null,
+        overwriteMode: canonicalCached.runtimeSnapshotMeta?.overwriteMode ?? null,
+        haltedBefore: 'notion-fetch',
       })
-      try {
-        await writeShowTelaCache({ ...merged, source: 'supabase', diagnosticState: 'persistence-connected' })
-        console.log('[showtela] hydration success: refreshed from Notion and wrote durable_artifacts')
-        return {
-          ...merged,
-          source: 'supabase',
-          diagnosticState: 'persistence-connected',
-          hydration: hydrationSummary(merged, {
-            connectedToNotion: true,
-            connectedToSupabase: true,
-            supabaseWriteOk: true,
-            cacheSource: 'supabase',
-          }),
-        }
-      } catch (err) {
-        console.error('[showtela] cache write failed after Notion refresh:', String(err))
-        return {
-          ...merged,
-          source: 'notion',
-          diagnosticState: 'persistence-failed',
-          hydration: hydrationSummary(merged, {
-            connectedToNotion: true,
-            connectedToSupabase: false,
-            supabaseWriteOk: false,
-            cacheSource: 'notion',
-          }),
-        }
+      return {
+        ...canonicalCached,
+        source: 'supabase',
+        diagnosticState: 'persistence-connected',
+        hydration: hydrationSummary(canonicalCached, { connectedToSupabase: true, cacheSource: 'supabase' }),
       }
     }
-    // Notion empty — serve stale Supabase if available
-    console.warn('[showtela] Notion empty on refresh — attempting Supabase fallback')
     if (effectiveCached) {
+      console.log('[TELA:TRACE] refreshShowTelaFromNotion returning cached runtime without Notion refresh', {
+        snapshotId: effectiveCached.runtimeSnapshotMeta?.snapshotId ?? null,
+        workspaceId: effectiveCached.runtimeSnapshotMeta?.workspaceId ?? null,
+        updatedAt: effectiveCached.runtimeSnapshotMeta?.updatedAt ?? null,
+        overwriteMode: effectiveCached.runtimeSnapshotMeta?.overwriteMode ?? null,
+        refreshOrder: ['supabase-cache-read', 'durable-canonical-recovery', 'cache-return'],
+      })
       return {
         ...effectiveCached,
-        source: 'supabase',
-        diagnosticState: 'notion-unavailable',
+        source: effectiveCached.source ?? 'supabase',
+        diagnosticState: effectiveCached.diagnosticState ?? 'persistence-connected',
         hydration: hydrationSummary(effectiveCached, { connectedToSupabase: true, cacheSource: 'supabase' }),
       }
     }
@@ -302,7 +279,7 @@ export async function refreshShowTelaFromNotion(): Promise<ShowTelaHomeData> {
     }
   }
 
-  console.warn('[showtela] refresh: no live ShowTELA data available — serving empty state')
+  console.warn('[showtela] refresh: no canonical ShowTELA runtime available — serving empty state')
   const empty = emptyShowTelaHomeData()
   return { ...empty, source: 'empty', diagnosticState: 'notion-unavailable', hydration: hydrationSummary(empty, { cacheSource: 'empty' }) }
 }
