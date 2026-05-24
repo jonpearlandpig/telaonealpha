@@ -269,12 +269,12 @@ export function buildReasoningSummary(events: OperationalCalendarEvent[], dayKey
   const keyDependency = dependencies[0]
 
   const recommendedFocus = oldestUnresolvedItem
-    ? `Clarify ${oldestUnresolvedItem.title} before pressure propagates.`
+    ? `Confirm ${oldestUnresolvedItem.title} before tomorrow tightens.`
     : keyDependency
-      ? `Watch ${keyDependency.department} because ${keyDependency.dependencyReason.toLowerCase()}`
+      ? `Keep an eye on ${keyDependency.department} because ${keyDependency.dependencyReason.toLowerCase()}`
       : highestPressureEvent
-        ? `Keep ${highestPressureEvent.title} in view as the highest current pressure signal.`
-        : 'Hold the current operating picture until new continuity arrives.'
+        ? `Keep ${highestPressureEvent.title} in view while the team moves forward.`
+        : 'Hold the current plan until a new update comes in.'
 
   return {
     pressureReasons,

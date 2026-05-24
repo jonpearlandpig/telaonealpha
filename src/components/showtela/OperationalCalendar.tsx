@@ -7,6 +7,7 @@ import { TelaCalendarActionPanel } from './TelaCalendarActionPanel'
 import { TelaReasoningPanel } from './TelaReasoningPanel'
 import { BottomSheet } from './sheets/BottomSheet'
 import { getWeekDays } from '@/lib/showtela/calendar'
+import { buildTrustStatus } from './calendarTrust'
 
 const STATE_LABELS: Record<string, string> = {
   calm: 'Calm',
@@ -40,13 +41,18 @@ function buildOperationalSentence(event?: OperationalCalendarEvent) {
 }
 
 function buildDaySummary(event?: OperationalCalendarEvent, unresolvedCount = 0) {
-  if (!event && unresolvedCount === 0) return 'The day is mostly stable.'
-  if (!event) return 'One detail still needs a follow-up.'
-  if (event.type === 'hospitality' && unresolvedCount > 0) return 'Hospitality is waiting on a final count.'
-  if (event.type === 'venue' && unresolvedCount > 0) return 'One venue detail still needs confirmation.'
-  if (event.type === 'travel' && unresolvedCount > 0) return 'Travel still has one moving piece to confirm.'
+  if (!event && unresolvedCount === 0) return 'No active blockers.'
+  if (!event) return 'Quiet prep day.'
+  if (event.type === 'hospitality' && unresolvedCount > 0) return 'Waiting on meal counts.'
+  if (event.type === 'travel' && unresolvedCount > 0) return 'Travel still needs one final confirmation.'
+  if (event.type === 'travel') return 'Travel finalized.'
+  if (event.type === 'venue' && unresolvedCount > 0) return 'Venue timing still needs a final check.'
+  if (event.type === 'venue') return 'Venue timing looks settled.'
+  if ((event.type === 'show' || event.type === 'production') && unresolvedCount > 0) return 'Load-in still has one open thread.'
+  if (event.type === 'show' || event.type === 'production') return 'Load-in confirmed.'
+  if (event.type === 'staffing' && unresolvedCount > 0) return 'Crew pacing needs one more check.'
+  if (event.type === 'staffing') return 'Crew pacing looks healthy.'
   if (event.unresolvedCount > 0) return `${event.title} still needs a final confirmation.`
-  if (event.type === 'show' || event.type === 'production') return `${event.title} is the main thing holding the day together.`
   return buildOperationalSentence(event)
 }
 
@@ -59,10 +65,13 @@ function buildChangeSummary(event?: OperationalCalendarEvent) {
 }
 
 function buildNextAction(event?: OperationalCalendarEvent, fallback?: string) {
-  if (fallback) return fallback.replace('Clarify ', 'Confirm ').replace(' before it becomes the pacing constraint.', ' before the day tightens.')
+  if (fallback) return fallback
   if (!event) return 'Stay with the current plan and check again later.'
   if (event.unresolvedCount > 0 || ['critical', 'needs_decision', 'pressure'].includes(event.pressureState)) {
-    return `Confirm the open detail around ${event.title.toLowerCase()}.`
+    if (event.type === 'travel') return 'Confirm it before travel finalizes.'
+    if (event.type === 'venue') return 'Confirm it before load-in compresses.'
+    if (event.type === 'hospitality') return 'Confirm it before catering locks.'
+    return `Confirm the open detail around ${event.title.toLowerCase()} before tomorrow tightens.`
   }
   if (event.people.length === 0) return `Assign a clear owner for ${event.title.toLowerCase()}.`
   if (event.continuityState === 'stale') return `Refresh the latest context for ${event.title.toLowerCase()}.`
@@ -70,10 +79,21 @@ function buildNextAction(event?: OperationalCalendarEvent, fallback?: string) {
 }
 
 function buildWeekRailLine(day: OperationalWeekDay) {
-  if (day.nextEvent?.unresolvedCount) return 'One thing to confirm'
-  if (day.nextEvent?.continuityState === 'fresh') return 'Fresh update'
-  if (day.events.length === 0) return 'Quiet day'
-  return day.nextEvent?.title ?? 'Holding steady'
+  const event = day.nextEvent
+  if (!event && day.events.length === 0) return day.label === 'SUN' ? 'No active blockers' : 'Quiet prep day'
+  if (!event) return 'Holding steady'
+  if (event.type === 'hospitality' && event.unresolvedCount > 0) return 'Waiting on meal counts'
+  if (event.type === 'travel' && event.unresolvedCount > 0) return 'Travel still open'
+  if (event.type === 'travel') return 'Travel finalized'
+  if (event.type === 'venue' && event.unresolvedCount > 0) return 'Venue timing shifted'
+  if (event.type === 'venue') return 'Venue timing settled'
+  if ((event.type === 'show' || event.type === 'production') && event.unresolvedCount > 0) return 'Load-in still moving'
+  if (event.type === 'show' || event.type === 'production') return 'Load-in confirmed'
+  if (event.type === 'staffing' && event.unresolvedCount > 0) return 'Crew pacing needs care'
+  if (event.type === 'staffing') return 'Crew pacing looks healthy'
+  if (event.unresolvedCount > 0) return 'Final detail still open'
+  if (event.continuityState === 'fresh') return 'Freshly confirmed'
+  return event.title
 }
 
 function buildTimingLine(event?: OperationalCalendarEvent, day?: OperationalWeekDay) {
@@ -95,22 +115,26 @@ export function OperationalCalendar({
   events,
   baseDate,
   onOpenVoice,
+  diagnosticState,
+  lastHydratedAt,
 }: {
   events: OperationalCalendarEvent[]
   baseDate?: Date
   onOpenVoice?: () => void
+  diagnosticState?: string
+  lastHydratedAt?: string
 }) {
   const days = useMemo(() => getWeekDays(baseDate, events), [baseDate, events])
   const [selectedDayKey, setSelectedDayKey] = useState(() => days[0]?.key ?? '')
   const [showTelaWhy, setShowTelaWhy] = useState(false)
-
-  const selectedDay = days.find((day) => day.key === selectedDayKey) ?? days[0]
+  const resolvedDayKey = days.some((day) => day.key === selectedDayKey) ? selectedDayKey : days[0]?.key ?? ''
+  const selectedDay = days.find((day) => day.key === resolvedDayKey) ?? days[0]
   const selectedEvents = selectedDay?.events ?? []
   const selectedEvent = selectedEvents[0]
   const reasoningScope = selectedEvents.length > 0 ? selectedEvents : events
   const reasoning = useMemo(
-    () => buildReasoningSummary(reasoningScope, selectedDay?.key ?? selectedDayKey),
-    [reasoningScope, selectedDay?.key, selectedDayKey],
+    () => buildReasoningSummary(reasoningScope, selectedDay?.key ?? resolvedDayKey),
+    [reasoningScope, resolvedDayKey, selectedDay?.key],
   )
   const briefingEvent = selectedDay?.nextEvent ?? selectedEvent
   const focusEvent = reasoning.highestPressureEvent ?? briefingEvent
@@ -119,20 +143,21 @@ export function OperationalCalendar({
   const daySummary = buildDaySummary(focusEvent, selectedDay?.unresolvedCount ?? 0)
   const changeSummary = buildChangeSummary(focusEvent)
   const nextActionText = buildNextAction(focusEvent, reasoning.recommendedFocus)
+  const trustLine = buildTrustStatus({ diagnosticState, event: focusEvent, lastHydratedAt })
 
   return (
     <div className="min-h-screen bg-[#F8F6F2] pb-8">
       <header className="bg-[#F8F6F2] px-5 pb-1 pt-14">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Calendar</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Crusade Calendar</p>
       </header>
 
-      <section className="pt-2">
+      <section className="pt-3">
         <div className="mb-3 flex items-center justify-between px-5">
           <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7C705F]">This Week</h2>
           <button
             type="button"
             onClick={onOpenVoice}
-            className="min-h-[36px] rounded-full bg-[#FFF9EF] px-3 text-[11px] font-semibold text-[#8A6725]"
+            className="min-h-[36px] rounded-full bg-[#FBF6EC] px-3 text-[11px] font-semibold text-[#8A6725]"
           >
             Add note
           </button>
@@ -145,7 +170,7 @@ export function OperationalCalendar({
                 key={day.key}
                 type="button"
                 onClick={() => setSelectedDayKey(day.key)}
-                className={`w-[78px] flex-shrink-0 rounded-[24px] px-3 py-3 text-left transition-colors ${selected ? 'bg-[#EFE7D9] text-[#17130F]' : 'bg-[#FBF8F2] text-[#4F463D]'}`}
+                className={`w-[80px] flex-shrink-0 rounded-[24px] px-3 py-3 text-left transition-colors ${selected ? 'bg-[#F1EADF] text-[#17130F]' : 'bg-[#FCFAF5] text-[#4F463D]'}`}
               >
                 <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${selected ? 'text-[#8A6725]' : 'text-[#8A7D6E]'}`}>{day.label}</p>
                 <p className="mt-1 text-[24px] font-semibold leading-none">{day.dateLabel}</p>
@@ -158,15 +183,16 @@ export function OperationalCalendar({
         </div>
       </section>
 
-      <section className="px-5 pt-5">
+      <section className="px-5 pt-6">
         <div
-          className="rounded-[32px] border px-5 py-5 shadow-[0_12px_30px_rgba(27,22,16,0.05)]"
+          className="rounded-[32px] border px-5 py-6 shadow-[0_12px_30px_rgba(27,22,16,0.04)]"
           style={{ backgroundColor: dayTone.panelBg, borderColor: dayTone.panelBorder }}
         >
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Daily Briefing</p>
               <h2 className="mt-1 text-[24px] font-semibold leading-tight text-[#17130F]">{selectedDay?.fullLabel}</h2>
+              <p className="mt-2 text-[11px] text-[#9A8A76]">{trustLine}</p>
             </div>
             <span
               className="rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
@@ -176,30 +202,30 @@ export function OperationalCalendar({
             </span>
           </div>
 
-          <p className="mt-5 text-[26px] font-semibold leading-tight text-[#17130F]">{daySummary}</p>
-          <p className="mt-3 text-[14px] leading-relaxed text-[#5E5348]">{changeSummary}</p>
+          <p className="mt-8 text-[24px] font-semibold leading-tight text-[#17130F]">{daySummary}</p>
+          <p className="mt-4 max-w-[30ch] text-[14px] leading-relaxed text-[#5E5348]">{changeSummary}</p>
 
-          <div className="mt-5 rounded-[22px] bg-white/78 px-4 py-4">
+          <div className="mt-8 rounded-[22px] bg-white/58 px-4 py-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9A7C46]">Next Move</p>
             <p className="mt-2 text-[14px] leading-relaxed text-[#3E352C]">{nextActionText}</p>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <div className="rounded-[18px] bg-white/65 px-4 py-3">
+          <div className="mt-7 grid grid-cols-2 gap-3">
+            <div className="rounded-[18px] bg-white/46 px-4 py-3">
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9A7C46]">Timing</p>
               <p className="mt-1 text-[12px] leading-relaxed text-[#4F463D]">{buildTimingLine(focusEvent, selectedDay)}</p>
             </div>
-            <div className="rounded-[18px] bg-white/65 px-4 py-3">
+            <div className="rounded-[18px] bg-white/46 px-4 py-3">
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9A7C46]">Status</p>
               <p className="mt-1 text-[12px] leading-relaxed text-[#4F463D]">{buildStillOpenLine(focusEvent)}</p>
             </div>
           </div>
 
-          <div className="mt-5 flex items-center justify-between gap-3">
+          <div className="mt-8 flex items-center justify-between gap-3">
             <button
               type="button"
               onClick={() => setShowTelaWhy(true)}
-              className="min-h-[40px] rounded-full bg-white/76 px-4 text-[12px] font-semibold text-[#7A6643]"
+              className="min-h-[40px] rounded-full bg-white/64 px-4 text-[12px] font-semibold text-[#7A6643]"
             >
               TELAwhy
             </button>
@@ -213,21 +239,21 @@ export function OperationalCalendar({
 
       <BottomSheet open={showTelaWhy} onClose={() => setShowTelaWhy(false)} title="TELAwhy">
         <div className="space-y-4">
-          <div className="rounded-[20px] border border-[#E5D8C7] bg-[#FFFDF8] px-4 py-4 shadow-[0_10px_26px_rgba(27,22,16,0.05)]">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Quiet context</p>
+          <div className="rounded-[20px] bg-[#FFFDF8] px-4 py-4 shadow-[0_8px_22px_rgba(27,22,16,0.04)]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Producer note</p>
             <p className="mt-2 text-[14px] leading-relaxed text-[#3E352C]">
-              Depth stays here when you want it. The main calendar stays focused on what matters today, what may slip, and what to do next.
+              This layer explains why the day is leaning this way, who is carrying it, and where confidence is still soft.
             </p>
           </div>
 
-          <TelaCalendarActionPanel selectedEvent={selectedEvent} />
-          <TelaReasoningPanel selectedEvent={selectedEvent} summary={reasoning} />
+          <TelaCalendarActionPanel selectedEvent={focusEvent} />
+          <TelaReasoningPanel selectedEvent={focusEvent} summary={reasoning} diagnosticState={diagnosticState} lastHydratedAt={lastHydratedAt} />
 
           <section>
             <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5E5348]">What Still Needs Care</h2>
             <div className="flex flex-col gap-2">
               {selectedEvents.slice(0, 4).map((event) => (
-                <div key={event.id} className="rounded-[18px] bg-[#FFFDF8] px-3 py-3 shadow-[0_8px_20px_rgba(27,22,16,0.05)]">
+                <div key={event.id} className="rounded-[18px] bg-[#FFFDF8] px-3 py-3 shadow-[0_8px_20px_rgba(27,22,16,0.04)]">
                   <p className="text-[12px] font-semibold text-[#17130F]">{event.title}</p>
                   <p className="mt-1 text-[11px] leading-snug text-[#6B5D4B]">{event.telaHint ?? buildOperationalSentence(event)}</p>
                 </div>
@@ -238,11 +264,11 @@ export function OperationalCalendar({
             </div>
           </section>
 
-          <section className="rounded-[22px] border border-[#E4D8C9] bg-[#FFFDF8] px-4 py-4">
+          <section className="rounded-[22px] bg-[#FFFDF8] px-4 py-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">What Changed</p>
             <div className="mt-3 flex flex-col gap-2">
               {selectedEvents.slice(0, 4).map((event) => (
-                <div key={event.id} className="border-t border-[#EEE5D8] pt-2 first:border-t-0 first:pt-0">
+                <div key={event.id} className="border-t border-[#F2EBE0] pt-2 first:border-t-0 first:pt-0">
                   <p className="line-clamp-1 text-[12px] font-semibold text-[#17130F]">{event.title}</p>
                   <p className="mt-0.5 text-[10px] text-[#8B847B]">{event.summary ?? 'No new shift has been written yet.'}</p>
                 </div>

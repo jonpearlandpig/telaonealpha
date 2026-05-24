@@ -1,5 +1,5 @@
 'use client'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ContinuityIngest } from '@/components/runtime/continuity-ingest'
 import { normalizeContinuityIngestion, type ContinuityIngestionMode } from '@/lib/continuity/normalize-ingestion'
 import { buildOperationalCalendarEvents } from '@/lib/showtela/calendar'
@@ -208,6 +208,10 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
     [activeOperators, calendarBaseDate, feed, operations, unresolvedItemsState, vm.runtimeTimeline, vm.source],
   )
 
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [tab])
+
   function handleResolveOperation(name: string, detail?: { movement: string; unresolvedTitles: string[] }) {
     setUnresolvedItemsState((current) => {
       const next = current.filter((entry) => !matchesOperation(entry.operation, name))
@@ -283,7 +287,13 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
       )}
 
       {tab === 'calendar' && (
-        <OperationalCalendar events={calendarEvents} baseDate={calendarBaseDate} onOpenVoice={() => openVoice(user?.name)} />
+        <OperationalCalendar
+          events={calendarEvents}
+          baseDate={calendarBaseDate}
+          onOpenVoice={() => openVoice(user?.name)}
+          diagnosticState={vm.diagnosticState}
+          lastHydratedAt={vm.hydration?.lastHydratedAt}
+        />
       )}
 
       {tab === 'profile' && (
