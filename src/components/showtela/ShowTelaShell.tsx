@@ -215,7 +215,10 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
   }
 
   return (
-    <main style={{ backgroundColor: '#F8F6F2', color: '#141210' }} className="relative mx-auto min-h-screen w-full max-w-[430px] pb-36">
+    <main
+      style={{ backgroundColor: '#F8F6F2', color: '#141210' }}
+      className="relative mx-auto min-h-screen w-full max-w-[430px] pb-36 md:max-w-[680px] xl:max-w-[760px]"
+    >
       {tab === 'home' && (
         <>
           <ShowTelaHeader

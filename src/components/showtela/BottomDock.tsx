@@ -13,7 +13,7 @@ export function BottomDock({ activeTab, onTabChange, userImage, userName }: { ac
   const muted = '#8B847B'
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-[430px]">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-[430px] md:max-w-[680px] xl:max-w-[760px]">
       <div className="mx-3 mb-4 rounded-[28px] border border-white/60 bg-[rgba(248,246,242,0.94)] px-4 py-2 shadow-[0_-2px_24px_rgba(17,17,17,0.10)] backdrop-blur-[28px]">
         <div className="flex items-end justify-between">
           <button onClick={() => handleTab('home')} className="flex flex-col items-center gap-1 py-1 min-w-[52px]">

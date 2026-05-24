@@ -121,7 +121,7 @@ export function ShowTelaRuntime({ vm: initialVm, user }: { vm: ShowTelaViewModel
       {showHydrationDebug && <HydrationDiagnostics vm={vm} />}
       <ShowTelaShell vm={vm} user={user} />
       {showDiagnostic && (
-        <div className="pointer-events-none fixed bottom-28 left-0 right-0 z-40 mx-auto max-w-md px-5">
+        <div className="pointer-events-none fixed bottom-28 left-0 right-0 z-40 mx-auto w-full max-w-[430px] px-5 md:max-w-[680px] xl:max-w-[760px]">
           <DiagnosticBar state={vm.diagnosticState!} />
         </div>
       )}
