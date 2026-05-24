@@ -5,6 +5,7 @@ import { assertShowTelaStartupEnv, getShowTelaEnvStatus, logShowTelaEnvStatus } 
 import { threadContinuity } from './threadContinuity'
 import { cleanBody, extractUnresolvedMarkers, validateAndFilter, validateContinuityEventRecord, validateOperationRecord, validatePersonRecord } from './normalizeNotionRecord'
 import { getShowTelaCacheSchemaCompatibility, readShowTelaCache, writeShowTelaCache } from '@/lib/supabase/operationalCache'
+import { mergePersistedRuntimeContinuity } from './runtimeContinuity'
 import type { ShowTelaHomeData, ShowTelaHydrationSummary } from './types'
 
 function emptyShowTelaHomeData(): ShowTelaHomeData {
@@ -126,7 +127,7 @@ async function fetchFromNotion(): Promise<ShowTelaHomeData | null> {
     ) as -2 | -1 | 0 | 1 | 2,
   }))
 
-  return {
+  return mergePersistedRuntimeContinuity({
     activeOps: people.filter(p => p.active).slice(0, 12),
     fluencyPartners: people.filter(p => p.partner).slice(0, 12),
     operations,
@@ -146,7 +147,7 @@ async function fetchFromNotion(): Promise<ShowTelaHomeData | null> {
       },
       cacheSource: 'notion',
     }),
-  }
+  })
 }
 
 // SSR path: read Supabase first for instant hydration.
@@ -156,12 +157,13 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
   try {
     const cached = await readShowTelaCache()
     if (cached) {
+      const reconstructed = await mergePersistedRuntimeContinuity(cached)
       console.log('[showtela] hydrated from Supabase cache')
       return {
-        ...cached,
+        ...reconstructed,
         source: 'supabase',
         diagnosticState: 'persistence-connected',
-        hydration: hydrationSummary(cached, { connectedToSupabase: true, cacheSource: 'supabase' }),
+        hydration: hydrationSummary(reconstructed, { connectedToSupabase: true, cacheSource: 'supabase' }),
       }
     }
     console.log('[showtela] Supabase cache empty — falling through to Notion')

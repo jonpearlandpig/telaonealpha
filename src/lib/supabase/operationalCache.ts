@@ -1,8 +1,7 @@
 import { getSupabaseServerClient } from './server'
+import { SHOWTELA_SNAPSHOT_ID, SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeContinuity'
 import type { ShowTelaHomeData } from '@/lib/showtela/types'
 
-const WORKSPACE = 'tela-showtela'
-const SNAPSHOT_ID = 'showtela-home-snapshot'
 // Legacy fixture IDs from mockData.ts. Guards against stale demo snapshots in Supabase.
 // Remove once all caches have been flushed and no mock-sourced records remain.
 const DEMO_PERSON_IDS = new Set(['jon', 'juan', 'mags'])
@@ -17,7 +16,7 @@ function row(id: string, threadId: string, payload: unknown) {
   const now = new Date().toISOString()
   return {
     id,
-    workspace_id: WORKSPACE,
+    workspace_id: SHOWTELA_WORKSPACE_ID,
     thread_id: threadId,
     payload: JSON.stringify(payload),
     created_at: now,
@@ -32,7 +31,7 @@ export function getShowTelaCacheSchemaCompatibility() {
     compatible: true,
     requiredColumns: ['id', 'workspace_id', 'thread_id', 'payload', 'created_at', 'updated_at', 'provenance'],
     optionalColumns: ['file_name', 'mime_type', 'lineage_id', 'artifact_group_id'],
-    rowShape: row(SNAPSHOT_ID, 'showtela-home', { activeOps: [], operations: [], continuityFeed: [] }),
+    rowShape: row(SHOWTELA_SNAPSHOT_ID, 'showtela-home', { activeOps: [], operations: [], continuityFeed: [] }),
   }
 }
 
@@ -41,8 +40,8 @@ export async function readShowTelaCache(): Promise<ShowTelaHomeData | null> {
   const { data, error } = await db
     .from('durable_artifacts')
     .select('payload')
-    .eq('id', SNAPSHOT_ID)
-    .eq('workspace_id', WORKSPACE)
+    .eq('id', SHOWTELA_SNAPSHOT_ID)
+    .eq('workspace_id', SHOWTELA_WORKSPACE_ID)
     .single()
   if (error) {
     console.error('[operationalCache] Supabase snapshot read failed:', error.message)
@@ -77,7 +76,7 @@ export async function writeShowTelaCache(data: ShowTelaHomeData): Promise<void> 
     ...data.operations.map(o => row(`showtela-op-${o.id}`, 'showtela-operations', o)),
     ...data.unresolved.map(u => row(`showtela-unresolved-${u.id}`, 'showtela-unresolved', u)),
     ...data.continuityFeed.slice(0, 50).map(e => row(`showtela-event-${e.id}`, 'showtela-events', e)),
-    row(SNAPSHOT_ID, 'showtela-home', data),
+    row(SHOWTELA_SNAPSHOT_ID, 'showtela-home', data),
   ]
 
   const { error } = await db

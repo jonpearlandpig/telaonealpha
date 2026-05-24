@@ -22,8 +22,18 @@ export type ContinuityIngestionInput = {
   assetNames?: string[]
 }
 
+type NormalizeContinuityIngestionOptions = {
+  author?: string
+  continuityObjectId?: string
+  eventId?: string
+  existingLineageChain?: readonly string[]
+  lineageParentId?: string
+  timestamp?: string
+}
+
 export function normalizeContinuityIngestion(
   input: ContinuityIngestionInput,
+  options?: NormalizeContinuityIngestionOptions,
 ): ContinuityEvent {
   const owner = input.owner?.trim()
   const operation = input.operation?.trim()
@@ -58,17 +68,20 @@ export function normalizeContinuityIngestion(
   const uppercaseRefs = linkedRefs.map((ref) => ref.toUpperCase())
   const tags = Array.from(new Set([input.mode.replace('-', ' ').toUpperCase(), ...uppercaseRefs, ...normalizedTags]))
   const what = [headline, body, linkUrl, assetNames.join(', ')].filter(Boolean).join(' · ')
-  const timestamp = new Date().toISOString()
+  const timestamp = options?.timestamp ?? new Date().toISOString()
+  const seed = timestamp.replace(/[^0-9]/g, '').slice(-10) || Date.now().toString()
+  const eventId = options?.eventId ?? `local-${seed}`
+  const continuityObjectId = options?.continuityObjectId ?? `continuity-${seed}`
 
   const attachments = assetNames.map((name, index) => ({
-    id: `attachment-${Date.now()}-${index}`,
+    id: `attachment-${seed}-${index}`,
     title: name,
     type: input.mode === 'add-photos' ? 'image' as const : 'pdf' as const,
     capturedAt: timestamp,
   }))
 
   return {
-    id: `local-${Date.now()}`,
+    id: eventId,
     headline,
     body,
     timestamp,
@@ -80,7 +93,7 @@ export function normalizeContinuityIngestion(
     unresolvedDependencies: [],
     attachments: attachments.length ? attachments : undefined,
     continuityObject: {
-      id: `continuity-${Date.now()}`,
+      id: continuityObjectId,
       kind: input.mode,
       title: headline,
       summary: body || generatedHeadline,
@@ -100,10 +113,13 @@ export function normalizeContinuityIngestion(
       },
     },
     authorshipTrace: createAuthorshipTrace({
-      author: owner,
+      author: options?.author ?? owner,
       surface: input.mode === 'voice-note' ? 'voice' : 'ingest',
       capturedAt: timestamp,
     }),
-    lineageRef: createLineageRef({}),
+    lineageRef: createLineageRef({
+      parentId: options?.lineageParentId,
+      existingChain: options?.existingLineageChain,
+    }),
   }
 }

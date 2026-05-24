@@ -1,7 +1,7 @@
 'use client'
 import { useMemo, useState } from 'react'
 import { ContinuityIngest } from '@/components/runtime/continuity-ingest'
-import { normalizeContinuityIngestion, type ContinuityIngestionMode } from '@/lib/continuity/normalize-ingestion'
+import type { ContinuityIngestionInput, ContinuityIngestionMode } from '@/lib/continuity/normalize-ingestion'
 import { buildOperationalCalendarEvents } from '@/lib/showtela/calendar'
 import { ActiveOpsRail } from './ActiveOpsRail'
 import { BottomDock } from './BottomDock'
@@ -126,6 +126,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
     })),
   )
   const [operations, setOperations] = useState<OperationEntity[]>(vm.crusadeOperations)
+  const [runtimeTimeline, setRuntimeTimeline] = useState(vm.runtimeTimeline)
   const [unresolvedItemsState, setUnresolvedItemsState] = useState<UnresolvedItem[]>(vm.unresolved ?? [])
   const [sheet, setSheet] = useState<Sheet>(null)
   const openVoice = (person?: string) => { setTaggedPerson(person); setShowVoice(true) }
@@ -188,13 +189,35 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
       feed,
       operations,
       unresolvedItems: unresolvedItemsState,
-      runtimeTimeline: vm.runtimeTimeline,
+      runtimeTimeline,
       people: activeOperators,
       source: vm.source,
       baseDate: calendarBaseDate,
     }),
-    [activeOperators, calendarBaseDate, feed, operations, unresolvedItemsState, vm.runtimeTimeline, vm.source],
+    [activeOperators, calendarBaseDate, feed, operations, runtimeTimeline, unresolvedItemsState, vm.source],
   )
+
+  async function submitContinuity(input: ContinuityIngestionInput) {
+    try {
+      const res = await fetch('/api/runtime/continuity/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      })
+      const data = await res.json() as {
+        data?: {
+          continuityFeed?: ContinuityEvent[]
+          runtimeTimeline?: typeof vm.runtimeTimeline
+        }
+        error?: string
+      }
+      if (!res.ok || data.error) throw new Error(data.error ?? `HTTP ${res.status}`)
+      if (data.data?.continuityFeed) setFeed(data.data.continuityFeed)
+      if (data.data?.runtimeTimeline) setRuntimeTimeline(data.data.runtimeTimeline)
+    } catch (err) {
+      console.error('[ShowTelaShell] continuity ingest failed:', err)
+    }
+  }
 
   function handleResolveOperation(name: string, detail?: { movement: string; unresolvedTitles: string[] }) {
     setUnresolvedItemsState((current) => {
@@ -327,7 +350,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
           initialMode={ingestMode}
           onClose={() => { setShowIngest(false); setIngestMode(null) }}
           onVoiceNote={() => openVoice(user?.name)}
-          onSubmit={(input) => setFeed((current) => [normalizeContinuityIngestion(input), ...current])}
+          onSubmit={submitContinuity}
         />
       )}
       <PersonSheet open={sheet?.type === 'person'} name={sheet?.type === 'person' ? sheet.name : ''} role={sheet?.type === 'person' ? sheet.role : undefined} onClose={() => setSheet(null)} />
