@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { ShowTelaShell } from './ShowTelaShell'
 import type { ShowTelaViewModel } from './types'
 import { clearStaleRuntimeSnapshot } from '@/lib/showtela/runtimePersist'
@@ -55,8 +55,7 @@ function RuntimeDebugOverlay({ vm }: { vm: ShowTelaViewModel }) {
 }
 
 export function ShowTelaRuntime({ vm: initialVm, user }: { vm: ShowTelaViewModel; user?: User }) {
-  // Canonical truth is always the SSR prop — no localStorage restore
-  const [vm, setVm] = useState<ShowTelaViewModel>(initialVm)
+  const [vm] = useState<ShowTelaViewModel>(initialVm)
   const [showDebug] = useState(() =>
     typeof window !== 'undefined' && (
       process.env.NEXT_PUBLIC_SHOWTELA_DEBUG_UI === 'true' ||

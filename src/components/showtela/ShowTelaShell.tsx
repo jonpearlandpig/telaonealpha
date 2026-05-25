@@ -1,5 +1,6 @@
 'use client'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { ContinuityIngest } from '@/components/runtime/continuity-ingest'
 import type { ContinuityIngestionInput, ContinuityIngestionMode } from '@/lib/continuity/normalize-ingestion'
 import { buildOperationalCalendarEvents } from '@/lib/showtela/calendar'
@@ -18,7 +19,7 @@ import { OperationSheet } from './sheets/OperationSheet'
 import { UnresolvedSheet } from './sheets/UnresolvedSheet'
 import { PearlDropVoice } from './PearlDropVoice'
 import { TelaTalk } from './TelaTalk'
-import type { OperationEntity, ShowTelaViewModel, UnresolvedItem, UnresolvedPressure } from './types'
+import type { ShowTelaViewModel, UnresolvedItem, UnresolvedPressure } from './types'
 import type { ContinuityEvent } from '@/lib/showtela/types'
 
 type Tab = 'home' | 'play' | 'messages' | 'calendar' | 'profile'
@@ -64,13 +65,6 @@ function formatTimelineTime(iso?: string) {
   }
 }
 
-function matchesOperation(operationName: string | undefined, candidate: string) {
-  if (!operationName) return false
-  const left = operationName.toLowerCase().trim()
-  const right = candidate.toLowerCase().trim()
-  return left.includes(right) || right.includes(left)
-}
-
 function derivePressure(unresolvedItems: UnresolvedItem[]): UnresolvedPressure {
   const overdueCount = unresolvedItems.filter((item) => (item.severity ?? '').toLowerCase() === 'high' || (item.aging ?? 0) >= 3).length
   const blockedCount = unresolvedItems.filter((item) => item.blocking).length
@@ -81,28 +75,6 @@ function derivePressure(unresolvedItems: UnresolvedItem[]): UnresolvedPressure {
     overdueCount,
     blockedCount,
     pendingApprovals,
-  }
-}
-
-function buildResolutionEvent(name: string, detail?: { movement: string; unresolvedTitles: string[] }): ContinuityEvent {
-  const timestamp = new Date().toISOString()
-  const normalizedName = name.trim()
-  const headline = `${normalizedName} stabilized`
-  const body = detail?.movement
-    ? `${detail.movement}${detail.unresolvedTitles.length ? ` after ${detail.unresolvedTitles[0].toLowerCase()}` : ''}.`
-    : `${normalizedName} is operationally clear for now.`
-
-  return {
-    id: `local-resolution-${Date.now()}`,
-    headline,
-    body,
-    timestamp,
-    tags: ['RESOLUTION', normalizedName.toUpperCase()],
-    owner: { id: 'tela', name: 'TELA' },
-    pressure: 'low',
-    isNew: true,
-    linkedEntities: [normalizedName],
-    unresolvedDependencies: [],
   }
 }
 
@@ -121,26 +93,23 @@ function mapVmFeedItem(item: ShowTelaViewModel['feed'][number]): ContinuityEvent
 }
 
 export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { name: string; email: string; image: string } }) {
+  const router = useRouter()
   const initialSurface = getInitialSurfaceState()
   const [tab, setTab] = useState<Tab>(initialSurface.tab)
   const [showVoice, setShowVoice] = useState(false)
   const [showIngest, setShowIngest] = useState(initialSurface.showIngest)
   const [ingestMode, setIngestMode] = useState<ContinuityIngestionMode | null>(initialSurface.ingestMode)
   const [taggedPerson, setTaggedPerson] = useState<string | undefined>(undefined)
-  const [feedOverride, setFeedOverride] = useState<ContinuityEvent[] | null>(null)
-  const [operationsOverride, setOperationsOverride] = useState<OperationEntity[] | null>(null)
-  const [activeOpsOverride, setActiveOpsOverride] = useState<typeof vm.activeOps | null>(null)
-  const [runtimeTimelineOverride, setRuntimeTimelineOverride] = useState<typeof vm.runtimeTimeline | null>(null)
-  const [unresolvedOverride, setUnresolvedOverride] = useState<UnresolvedItem[] | null>(null)
+  const [isRefreshing, startRefresh] = useTransition()
   const [sheet, setSheet] = useState<Sheet>(null)
   const openVoice = (person?: string) => { setTaggedPerson(person); setShowVoice(true) }
   const openIngest = (mode?: ContinuityIngestionMode | null) => { setIngestMode(mode ?? null); setShowIngest(true) }
   const vmUnresolved = useMemo(() => vm.unresolved ?? [], [vm.unresolved])
-  const feed = feedOverride ?? vm.feed.map(mapVmFeedItem)
-  const operations = operationsOverride ?? vm.crusadeOperations
-  const activeOpsData = activeOpsOverride ?? vm.activeOps
-  const runtimeTimeline = runtimeTimelineOverride ?? vm.runtimeTimeline
-  const unresolvedItemsState = unresolvedOverride ?? vmUnresolved
+  const feed = vm.feed.map(mapVmFeedItem)
+  const operations = vm.crusadeOperations
+  const activeOpsData = vm.activeOps
+  const runtimeTimeline = vm.runtimeTimeline
+  const unresolvedItemsState = vmUnresolved
   const latestTimeline = runtimeTimeline?.[0]
   const unresolvedPressure = derivePressure(unresolvedItemsState)
   const priorityOperation = operations[0]
@@ -152,14 +121,14 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
     return item.name.toLowerCase() !== userFirstName && !item.name.toLowerCase().includes(userFirstName)
   })
 
-  const isEmpty = vm.source === 'empty' && !activeOpsOverride?.length && !operationsOverride?.length
+  const isEmpty = vm.source === 'empty' && activeOpsData.length === 0 && operations.length === 0
   const runtimeLabel = priorityOperation?.label || priorityOperation?.name || feed[0]?.linkedEntities?.[0] || 'Operational Runtime'
-  console.log('[TELA:TRACE] isEmpty eval', {
-    vmSource: vm.source,
-    activeOpsOverrideLength: activeOpsOverride?.length ?? null,
-    operationsOverrideLength: operationsOverride?.length ?? null,
-    isEmpty,
-  })
+    console.log('[TELA:TRACE] isEmpty eval', {
+      vmSource: vm.source,
+      activeOpsLength: activeOpsData.length,
+      operationsLength: operations.length,
+      isEmpty,
+    })
 
   const autoscan = {
     currentTruth: priorityOperation
@@ -225,61 +194,11 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       })
-      const data = await res.json() as {
-        data?: {
-          continuityFeed?: ContinuityEvent[]
-          runtimeTimeline?: typeof vm.runtimeTimeline
-          runtimeSnapshotMeta?: { overwriteMode?: 'merge' | 'replace' }
-          activeOps?: Array<{ id: string; name: string; role?: string; avatar?: string; unresolvedCount?: number }>
-          operations?: Array<{ id: string; title: string; latestMovement?: string; unresolvedCount?: number }>
-        }
-        error?: string
-      }
+      const data = await res.json() as { error?: string }
       if (!res.ok || data.error) throw new Error(data.error ?? `HTTP ${res.status}`)
-      console.log('[TELA:TRACE] submitContinuity response', {
-        ok: res.ok,
-        activeOpsCount: data.data?.activeOps?.length ?? 0,
-        operationsCount: data.data?.operations?.length ?? 0,
-        feedCount: data.data?.continuityFeed?.length ?? 0,
-        firstActiveOp: data.data?.activeOps?.[0],
-        firstOperation: data.data?.operations?.[0],
-        source: (data.data as { source?: string } | undefined)?.source,
+      startRefresh(() => {
+        router.refresh()
       })
-      const responseData = data.data
-      const activeOps = responseData?.activeOps ?? []
-      const operationsData = responseData?.operations ?? []
-      if (responseData?.continuityFeed) setFeedOverride(responseData.continuityFeed)
-      if (responseData?.runtimeTimeline) setRuntimeTimelineOverride(responseData.runtimeTimeline)
-      const shouldReplaceOverrides = responseData?.runtimeSnapshotMeta?.overwriteMode === 'replace'
-      if (shouldReplaceOverrides || responseData?.activeOps) {
-        console.log('[TELA:TRACE] setActiveOpsOverride firing with', activeOps.length, 'items')
-        setActiveOpsOverride(
-          activeOps.map(p => ({
-            id: p.id,
-            name: p.name === 'TBD' ? (p.role ?? 'TBD') : p.name,
-            image: p.avatar ?? '',
-            latest: p.role ?? '',
-            unresolvedCount: p.unresolvedCount ?? 0,
-          }))
-        )
-      } else {
-        console.log('[TELA:TRACE] setActiveOpsOverride NOT fired — activeOps empty or missing')
-      }
-      if (shouldReplaceOverrides || responseData?.operations) {
-        console.log('[TELA:TRACE] setOperationsOverride firing with', operationsData.length, 'items')
-        setOperationsOverride(
-          operationsData.map(o => ({
-            id: o.id,
-            name: o.title,
-            label: o.title,
-            image: '',
-            latest: o.latestMovement ?? '',
-            unresolvedCount: o.unresolvedCount ?? 0,
-          }))
-        )
-      } else {
-        console.log('[TELA:TRACE] setOperationsOverride NOT fired — operations empty or missing')
-      }
       return true
     } catch (err) {
       console.error('[ShowTelaShell] continuity ingest failed:', err)
@@ -288,23 +207,23 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
   }
 
   function handleResolveOperation(name: string, detail?: { movement: string; unresolvedTitles: string[] }) {
-    setUnresolvedOverride((currentOverride) => {
-      const current = currentOverride ?? vmUnresolved
-      const next = current.filter((entry) => !matchesOperation(entry.operation, name))
-      setOperationsOverride((opsOverride) => {
-        const ops = opsOverride ?? vm.crusadeOperations
-        return ops.map((item) =>
-          item.label === name || item.name === name
-            ? { ...item, unresolvedCount: 0, latest: 'Operationally clear.' }
-            : {
-                ...item,
-                unresolvedCount: next.filter((entry) => matchesOperation(entry.operation, item.label || item.name)).length,
-              }
-        )
-      })
-      return next
+    const detailLine = detail?.movement?.trim()
+    const firstUnresolved = detail?.unresolvedTitles?.[0]?.trim()
+    const body = [
+      `${name} stabilized.`,
+      detailLine ? `Latest movement: ${detailLine}.` : null,
+      firstUnresolved ? `Primary cleared item: ${firstUnresolved}.` : null,
+    ].filter(Boolean).join(' ')
+
+    void submitContinuity({
+      mode: 'quick-update',
+      headline: `${name} stabilized`,
+      body,
+      owner: user?.name ?? 'TELA',
+      operation: name,
+      linkedEntity: name,
+      tags: ['resolution', 'stabilized'],
     })
-    setFeedOverride((currentOverride) => [buildResolutionEvent(name, detail), ...(currentOverride ?? vm.feed.map(mapVmFeedItem))])
   }
 
   return (
@@ -437,12 +356,17 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
           open={showIngest}
           ownerName={user?.name}
           people={activeOpsData.map((item) => ({ id: item.id, label: item.name }))}
-          operations={vm.crusadeOperations.map((item) => ({ id: item.id, label: item.label }))}
+          operations={operations.map((item) => ({ id: item.id, label: item.label }))}
           initialMode={ingestMode}
           onClose={() => { setShowIngest(false); setIngestMode(null) }}
           onVoiceNote={() => openVoice(user?.name)}
           onSubmit={submitContinuity}
         />
+      )}
+      {isRefreshing && (
+        <div className="pointer-events-none fixed bottom-24 left-1/2 z-[80] -translate-x-1/2 rounded-full bg-[#17130F] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#F7E8C2]">
+          Syncing runtime
+        </div>
       )}
     </main>
   )

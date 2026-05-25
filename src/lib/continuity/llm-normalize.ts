@@ -1,6 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
+import { anthropic } from '@/lib/ai/claude'
 
 export type LLMNormalizationResult = {
   headline: string
@@ -9,6 +7,7 @@ export type LLMNormalizationResult = {
   tags: string[]
   pressure: 'low' | 'medium' | 'high' | 'critical'
   nextActions: string[]
+  confidence: number
   classification:
     | 'venue'
     | 'staffing'
@@ -78,9 +77,9 @@ export async function llmNormalize(
     })
 
     const text = response.content
-      .filter(b => b.type === 'text')
-      .map(b => (b as { type: 'text'; text: string }).text)
+      .flatMap((block) => (block.type === 'text' ? [block.text] : []))
       .join('')
+      .replace(/```json|```/g, '')
       .trim()
 
     const parsed = JSON.parse(text) as LLMNormalizationResult

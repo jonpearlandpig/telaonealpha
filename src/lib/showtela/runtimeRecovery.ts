@@ -94,6 +94,12 @@ function inferArtifactOperationState(artifact: ArtifactRecord): { people: Person
   return null
 }
 
+function toTimestamp(value?: string | null) {
+  if (!value) return 0
+  const parsed = new Date(value).getTime()
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
 export function recoverCanonicalShowTelaHomeFromArtifactRows(input: {
   artifacts: DurableArtifactRow[]
   cached: ShowTelaHomeData | null
@@ -108,6 +114,16 @@ export function recoverCanonicalShowTelaHomeFromArtifactRows(input: {
     .filter((artifact): artifact is ArtifactRecord => Boolean(artifact))
     .filter((artifact) => artifact.artifactGroupId === SHOWTELA_RUNTIME_ARTIFACT_GROUP_ID)
     .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+
+  const latestArtifactTimestamp = toTimestamp(runtimeArtifacts[0]?.createdAt)
+  const cachedTimestamp = Math.max(
+    toTimestamp(input.cached?.runtimeSnapshotMeta?.updatedAt),
+    toTimestamp(input.cachedUpdatedAt),
+  )
+
+  if (input.cached && cachedTimestamp >= latestArtifactTimestamp) {
+    return null
+  }
 
   for (const artifact of runtimeArtifacts) {
     const rebuilt = reconstructDirectoryState(artifact) ?? inferArtifactOperationState(artifact)

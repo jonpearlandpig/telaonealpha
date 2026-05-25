@@ -130,6 +130,7 @@ export function normalizeContinuityIngestion(
       parentId: options?.lineageParentId,
       existingChain: options?.existingLineageChain,
     }),
+    sourceMode: input.mode,
   }
 }
 
@@ -153,11 +154,16 @@ export async function normalizeContinuityIngestionWithLLM(
     ...base,
     headline: llm.headline || base.headline,
     body: llm.summary || base.body,
+    summary: llm.summary,
     rawTranscript: input.body,
     pressure: llm.pressure || base.pressure,
     tags: Array.from(new Set([...(base.tags ?? []), ...llm.tags])),
     nextActions: llm.nextActions,
     classification: llm.classification,
     linkedEntities: Array.from(new Set([...(base.linkedEntities ?? []), ...llm.entities])),
+    confidence: llm.confidence,
+    normalizedBy: 'claude',
+    normalizationVersion: 'v1',
+    sourceMode: input.mode,
   }
 }

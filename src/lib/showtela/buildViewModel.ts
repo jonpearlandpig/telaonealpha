@@ -44,7 +44,7 @@ export function buildShowTelaVM(data: ShowTelaHomeData): ShowTelaViewModel {
       id: e.id,
       timestamp: e.timestamp ?? '',
       title: e.headline,
-      summary: e.body ?? '',
+      summary: e.summary ?? e.body ?? '',
       owner: e.owner?.name ?? '',
       image: e.image ?? '',
       avatar: '',

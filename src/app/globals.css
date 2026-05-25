@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #F6F3ED;
+  --bg: #EAE0D2;
   --surface: #FFFFFF;
   --text-primary: #0D1B2A;
   --text-secondary: rgba(13, 27, 42, 0.58);
@@ -16,7 +16,7 @@
 * { box-sizing: border-box; }
 body {
   margin: 0;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+  font-family: "DM Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
   background: var(--bg);
   color: var(--text-primary);
 }

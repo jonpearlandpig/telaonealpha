@@ -16,6 +16,6 @@ export function readRuntimeSnapshot(): ShowTelaViewModel | null {
   return null
 }
 
-export function writeRuntimeSnapshot(_vm: ShowTelaViewModel): void {
+export function writeRuntimeSnapshot(): void {
   // no-op — canonical truth lives in Supabase, not localStorage
 }

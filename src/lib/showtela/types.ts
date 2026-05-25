@@ -50,6 +50,7 @@ export type ContinuityEvent = {
   id: string
   headline: string
   body?: string
+  summary?: string
   timestamp?: string
   image?: string
   tags?: string[]
@@ -93,6 +94,10 @@ export type ContinuityEvent = {
   rawTranscript?: string
   nextActions?: string[]
   classification?: string
+  confidence?: number
+  normalizedBy?: 'claude'
+  normalizationVersion?: string
+  sourceMode?: string
 }
 
 export type MediaMemoryType = 'image' | 'pdf' | 'stage_plot' | 'screenshot' | 'bus_schedule' | 'venue_packet' | 'contract' | 'voice_memo'

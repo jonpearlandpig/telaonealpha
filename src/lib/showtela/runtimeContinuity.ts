@@ -1,5 +1,8 @@
 import { deterministicArtifactId, type ArtifactRecord } from '@/lib/artifacts/artifactStore'
-import { normalizeContinuityIngestion, type ContinuityIngestionInput } from '@/lib/continuity/normalize-ingestion'
+import {
+  normalizeContinuityIngestionWithLLM,
+  type ContinuityIngestionInput,
+} from '@/lib/continuity/normalize-ingestion'
 import { parseMarkdownDirectory } from '@/lib/continuity/parseMarkdownDirectory'
 import { createConstitutionalEvent } from '@/lib/constitutional/create-event'
 import type { ConstitutionalEvent } from '@/lib/constitutional/types'
@@ -423,7 +426,7 @@ export async function ingestShowTelaContinuity(input: {
 
   const headlineSeed = basePayload.headline?.trim() || basePayload.body?.trim() || 'continuity'
   const ocid = createContinuityOcid(headlineSeed, timestamp)
-  const event = normalizeContinuityIngestion(basePayload, {
+  const event = await normalizeContinuityIngestionWithLLM(basePayload, {
     author: input.submittedBy,
     continuityObjectId: ocid,
     eventId: ocid,
