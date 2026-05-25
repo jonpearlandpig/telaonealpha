@@ -8,6 +8,8 @@ import { threadContinuity } from './threadContinuity'
 import { cleanBody, extractUnresolvedMarkers, validateAndFilter, validateContinuityEventRecord, validateOperationRecord, validatePersonRecord } from './normalizeNotionRecord'
 import { getShowTelaCacheSchemaCompatibility, readShowTelaCache, readShowTelaCacheRow, writeShowTelaCache } from '@/lib/supabase/operationalCache'
 import type { ShowTelaHomeData, ShowTelaHydrationSummary } from './types'
+import { buildShowTelaVM } from './buildViewModel'
+import { deriveStatesFromVM, persistStates } from './operationalState'
 
 function emptyShowTelaHomeData(): ShowTelaHomeData {
   return {
@@ -174,12 +176,14 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
       } catch (err) {
         console.error('[TELA:TRACE] recovered canonical snapshot cache repair failed:', String(err))
       }
-      return {
+      const recoveredResult = {
         ...recovered,
-        source: 'supabase',
-        diagnosticState: 'persistence-connected',
+        source: 'supabase' as const,
+        diagnosticState: 'persistence-connected' as const,
         hydration: hydrationSummary(recovered, { connectedToSupabase: true, cacheSource: 'supabase' }),
       }
+      persistStates(deriveStatesFromVM(buildShowTelaVM(recoveredResult))).catch(console.error)
+      return recoveredResult
     }
     if (cached) {
       console.log('SSR_CACHE_HIT', {
@@ -195,12 +199,14 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
         operationsCount: cached.operations.length,
         feedCount: cached.continuityFeed.length,
       })
-      return {
+      const cachedResult = {
         ...cached,
-        source: 'supabase',
-        diagnosticState: 'persistence-connected',
+        source: 'supabase' as const,
+        diagnosticState: 'persistence-connected' as const,
         hydration: hydrationSummary(cached, { connectedToSupabase: true, cacheSource: 'supabase' }),
       }
+      persistStates(deriveStatesFromVM(buildShowTelaVM(cachedResult))).catch(console.error)
+      return cachedResult
     }
     console.log('[TELA:TRACE] getShowTelaHome — no canonical snapshot in Supabase, serving empty operational shell')
   } catch (err) {

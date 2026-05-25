@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { normalizeContinuityEvent } from '@/lib/showtela/normalizeContinuityEvent'
+import { llmNormalize } from '@/lib/continuity/llm-normalize'
 import { resolveShowTelaDatabase } from '@/lib/showtela/env'
 
 export const dynamic = 'force-dynamic'
@@ -29,6 +30,37 @@ function notionBullet(text: string) {
 }
 function notionDivider() {
   return { object: 'block', type: 'divider', divider: {} }
+}
+
+type InboxItem = {
+  id: string
+  title: string
+  transcript: string
+  severity: string
+  type: string
+  source: string
+  submittedBy: string
+  taggedPerson: string
+  notes: string
+}
+
+function validateInboxRecord(item: InboxItem): { valid: boolean; errors: string[] } {
+  const errors: string[] = []
+
+  if (!item.title?.trim()) errors.push('missing title')
+
+  const validModes = ['voice-note', 'quick-update', 'upload-files', 'paste-notes', 'add-photos', 'add-link']
+  const mode = item.source?.toLowerCase().replace(/\s+/g, '-')
+  if (mode && !validModes.includes(mode) && item.source) {
+    // source is informational — not a hard failure, just warn
+  }
+
+  const validSeverities = ['high', 'medium', 'low', 'critical', '']
+  if (item.severity && !validSeverities.includes(item.severity.toLowerCase())) {
+    errors.push(`invalid severity: ${item.severity}`)
+  }
+
+  return { valid: errors.length === 0, errors }
 }
 
 export async function POST() {
@@ -72,7 +104,7 @@ export async function POST() {
   }
 
   const p = newest.properties ?? {}
-  const inboxItem = {
+  const inboxItem: InboxItem = {
     id: newest.id,
     title: titleText(p['Title']),
     transcript: richText(p['Transcript']),
@@ -86,23 +118,46 @@ export async function POST() {
 
   console.log('[PROMOTION_INPUT]', inboxItem)
 
-  // 2. Normalize via Claude
+  // 2. Validate inbox record
+  const validation = validateInboxRecord(inboxItem)
+  if (!validation.valid) {
+    console.error('[PROMOTION] invalid inbox record:', validation.errors)
+    return NextResponse.json({
+      error: 'Invalid inbox record',
+      errors: validation.errors,
+      record_id: inboxItem.id,
+    }, { status: 422 })
+  }
+
+  // 3. Normalize via Claude (existing normalizer)
   const normalized = await normalizeContinuityEvent(inboxItem)
   console.log('[PROMOTION_OUTPUT]', normalized)
 
-  // 3. Build page body: action items, tags, entities, full transcript
+  // 4. Additional LLM normalization pass for nextActions + classification
+  const rawBody = inboxItem.transcript || inboxItem.notes || inboxItem.title
+  const llmResult = await llmNormalize(rawBody, inboxItem.source || 'voice-note', {
+    owner: inboxItem.submittedBy,
+    operation: inboxItem.type,
+    linkedEntity: inboxItem.taggedPerson,
+  })
+
+  const nextActions = llmResult?.nextActions ?? normalized.actionItems
+  const classification = llmResult?.classification ?? normalized.category?.toLowerCase() ?? 'update'
+
+  // 5. Build page body: action items, tags, entities, full transcript
   const children = [
     ...(normalized.summary ? [notionParagraph(normalized.summary)] : []),
     notionDivider(),
-    ...(normalized.actionItems.length ? [
+    ...(nextActions.length ? [
       notionHeading('Action Items'),
-      ...normalized.actionItems.map(notionBullet),
+      ...nextActions.map(notionBullet),
     ] : []),
     ...(normalized.people.length || normalized.entities.length ? [
       notionHeading('Entities & People'),
       ...[...normalized.people, ...normalized.entities].map(notionBullet),
     ] : []),
     ...(normalized.tags.length ? [notionParagraph(`Tags: ${normalized.tags.join(', ')}`)]: []),
+    ...(classification ? [notionParagraph(`Classification: ${classification}`)] : []),
     notionDivider(),
     notionHeading('Raw Transcript'),
     notionParagraph(normalized.transcriptRaw || '(no transcript)'),
@@ -112,7 +167,7 @@ export async function POST() {
     ] : []),
   ]
 
-  // 4. Write to Continuity DB (ShowTELA Feed)
+  // 6. Write to Continuity DB (ShowTELA Feed)
   const insertRes = await fetch('https://api.notion.com/v1/pages', {
     method: 'POST',
     headers: notionHeaders(),
@@ -140,10 +195,26 @@ export async function POST() {
   const inserted = await insertRes.json() as { id?: string }
   console.log('[CONTINUITY_INSERT_SUCCESS]', inserted.id)
 
+  // 7. Mark inbox item as Promoted
+  try {
+    await fetch(`https://api.notion.com/v1/pages/${inboxItem.id}`, {
+      method: 'PATCH',
+      headers: notionHeaders(),
+      body: JSON.stringify({
+        properties: {
+          Status: { select: { name: 'Promoted' } },
+        },
+      }),
+    })
+    console.log('[PROMOTION] inbox item marked as Promoted:', inboxItem.id)
+  } catch (err) {
+    console.error('[PROMOTION] failed to mark inbox item as Promoted:', err)
+  }
+
   return NextResponse.json({
     success: true,
     inboxItem,
-    normalized,
+    normalized: { ...normalized, nextActions, classification },
     insertedId: inserted.id,
   })
 }
