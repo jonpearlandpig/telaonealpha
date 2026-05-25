@@ -8,6 +8,7 @@ import { BottomDock } from './BottomDock'
 import { CalendarWeekRail } from './CalendarWeekRail'
 import { ContinuityFeed } from './ContinuityFeed'
 import { CrusadeOperationsRail } from './CrusadeOperationsRail'
+import { OpeningSurface } from './OpeningSurface'
 import { OperationalCalendar } from './OperationalCalendar'
 import { ShowTelaHeader } from './ShowTelaHeader'
 import { UnresolvedPressureCard } from './UnresolvedPressureCard'
@@ -311,109 +312,125 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
       style={{ backgroundColor: '#F8F6F2', color: '#141210' }}
       className="relative mx-auto min-h-screen w-full max-w-[430px] pb-36 md:max-w-[680px] xl:max-w-[760px]"
     >
-      {tab === 'home' && (
+      {/* Opening surface — renders full-screen when no continuity exists yet */}
+      {isEmpty && (
+        <OpeningSurface user={user} onOpenIngest={openIngest} />
+      )}
+
+      {/* Operational runtime — only rendered when continuity exists */}
+      {!isEmpty && (
         <>
-          <ShowTelaHeader
-            userName={user?.name}
-            unresolvedCount={unresolvedPressure.unresolvedCount}
-            autoscan={autoscan}
-            onNextMovementTap={priorityOperation ? () => setSheet({ type: 'operation', name: priorityOperation.label }) : undefined}
-            isEmpty={isEmpty}
-            runtimeLabel={runtimeLabel}
-          />
-          <ActiveOpsRail
-            userName={user?.name}
-            userImage={user?.image}
-            items={visibleActiveOps.map((item) => ({ id: item.id, name: item.name, latest: item.latest, unresolvedCount: item.unresolvedCount ?? 0, image: item.image, updatesCount: 0 }))}
-            onProfileTap={() => setTab('profile')}
-            onTelaTap={() => setTab('messages')}
-            onPersonTap={(name, role) => setSheet({ type: 'person', name, role })}
-            onAddContinuity={() => openIngest(null)}
-            isEmpty={isEmpty}
-          />
-          <CalendarWeekRail events={calendarEvents} baseDate={calendarBaseDate} onOpenCalendar={() => setTab('calendar')} isEmpty={isEmpty} />
-          <CrusadeOperationsRail items={operations} unresolvedItems={unresolvedItemsState} onOperationTap={(name) => setSheet({ type: 'operation', name })} />
-          <UnresolvedPressureCard pressure={unresolvedPressure} onOpen={() => setSheet({ type: 'unresolved' })} />
-          <ContinuityFeed feed={feed} onFeedTap={(item) => setSheet({ type: 'feed', item })} />
+          {tab === 'home' && (
+            <>
+              <ShowTelaHeader
+                userName={user?.name}
+                unresolvedCount={unresolvedPressure.unresolvedCount}
+                autoscan={autoscan}
+                onNextMovementTap={priorityOperation ? () => setSheet({ type: 'operation', name: priorityOperation.label }) : undefined}
+                isEmpty={false}
+                runtimeLabel={runtimeLabel}
+              />
+              <ActiveOpsRail
+                userName={user?.name}
+                userImage={user?.image}
+                items={visibleActiveOps.map((item) => ({ id: item.id, name: item.name, latest: item.latest, unresolvedCount: item.unresolvedCount ?? 0, image: item.image, updatesCount: 0 }))}
+                onProfileTap={() => setTab('profile')}
+                onTelaTap={() => setTab('messages')}
+                onPersonTap={(name, role) => setSheet({ type: 'person', name, role })}
+                onAddContinuity={() => openIngest(null)}
+                isEmpty={false}
+              />
+              <CalendarWeekRail events={calendarEvents} baseDate={calendarBaseDate} onOpenCalendar={() => setTab('calendar')} isEmpty={false} />
+              <CrusadeOperationsRail items={operations} unresolvedItems={unresolvedItemsState} onOperationTap={(name) => setSheet({ type: 'operation', name })} />
+              <UnresolvedPressureCard pressure={unresolvedPressure} onOpen={() => setSheet({ type: 'unresolved' })} />
+              <ContinuityFeed feed={feed} onFeedTap={(item) => setSheet({ type: 'feed', item })} />
+            </>
+          )}
+
+          {tab === 'play' && (
+            <div className="px-5 pt-14">
+              <h1 className="text-2xl font-semibold text-stone-900">Crusade Brief</h1>
+              <p className="mt-1 text-sm text-stone-500">Current movement across the field</p>
+              <div className="mt-6 flex flex-col gap-3">
+                {feed.slice(0, 8).map((item) => (
+                  <button key={item.id} onClick={() => setSheet({ type: 'feed', item })} className="w-full rounded-2xl bg-white px-4 py-3 text-left shadow-sm">
+                    <p className="text-xs font-medium text-yellow-700">{item.owner?.name}</p>
+                    <p className="mt-0.5 text-sm font-semibold text-stone-900">{item.headline}</p>
+                    {item.body && <p className="mt-0.5 line-clamp-1 text-xs text-stone-500">{item.body}</p>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {tab === 'messages' && (
+            <TelaTalk
+              autoscan={autoscan}
+              feed={feed}
+              operations={operations}
+              unresolvedItems={unresolvedItemsState}
+              calendarEvents={calendarEvents}
+              submittedBy={user?.name}
+              onContinuityIngest={submitContinuity}
+            />
+          )}
+
+          {tab === 'calendar' && (
+            <OperationalCalendar events={calendarEvents} baseDate={calendarBaseDate} onOpenVoice={() => openVoice(user?.name)} />
+          )}
+
+          {tab === 'profile' && (
+            <div className="px-5 pt-14">
+              <div className="rounded-[28px] border border-[#E2D7C7] bg-[linear-gradient(180deg,#FFFFFF_0%,#F3EDE3_100%)] px-5 py-6 shadow-[0_12px_30px_rgba(17,17,17,0.06)]">
+                <div className="flex flex-col items-center">
+                  <div className="relative h-20 w-20 overflow-hidden rounded-full border-2 border-[#CFB889] bg-stone-800">
+                    {user?.image ? <img src={user.image} alt={user.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-yellow-200">{user?.name?.slice(0, 1) ?? 'S'}</div>}
+                    <button onClick={() => openVoice(user?.name)} className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-stone-900">
+                      <span className="text-base font-bold text-white">+</span>
+                    </button>
+                  </div>
+                  <h2 className="mt-3 text-xl font-semibold text-stone-900">{user?.name ?? 'Operator'}</h2>
+                  <p className="text-sm text-stone-500">Personal continuity anchor</p>
+                  <p className="mt-2 text-center text-[13px] leading-relaxed text-[#6B5D4B]">Use this surface to contribute notes, voice, artifacts, and personal operational memory without dropping into settings or governance overhead.</p>
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <button onClick={() => openVoice(user?.name)} className="rounded-[22px] bg-[#171411] px-4 py-4 text-left text-[#F6EFDF] shadow-[0_12px_24px_rgba(17,17,17,0.14)]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#D7BC7F]">Voice</p>
+                  <p className="mt-2 text-[15px] font-semibold">Voice Ingestion</p>
+                  <p className="mt-1 text-[12px] leading-relaxed text-[#DDD1BB]">Capture spoken continuity and keep your thread intact.</p>
+                </button>
+                <button onClick={() => openIngest('quick-update')} className="rounded-[22px] bg-white px-4 py-4 text-left shadow-[0_12px_24px_rgba(17,17,17,0.06)]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9A7C46]">Update</p>
+                  <p className="mt-2 text-[15px] font-semibold text-[#171411]">Quick Contribution</p>
+                  <p className="mt-1 text-[12px] leading-relaxed text-[#6B5D4B]">Log notes, blockers, and movement from your side of the field.</p>
+                </button>
+                <button onClick={() => openIngest('upload-files')} className="rounded-[22px] bg-white px-4 py-4 text-left shadow-[0_12px_24px_rgba(17,17,17,0.06)]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9A7C46]">Artifacts</p>
+                  <p className="mt-2 text-[15px] font-semibold text-[#171411]">Uploads</p>
+                  <p className="mt-1 text-[12px] leading-relaxed text-[#6B5D4B]">Stage files and photos as traced continuity objects.</p>
+                </button>
+                <button onClick={() => setTab('calendar')} className="rounded-[22px] bg-white px-4 py-4 text-left shadow-[0_12px_24px_rgba(17,17,17,0.06)]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9A7C46]">Calendar</p>
+                  <p className="mt-2 text-[15px] font-semibold text-[#171411]">Today At A Glance</p>
+                  <p className="mt-1 text-[12px] leading-relaxed text-[#6B5D4B]">See what matters today, what may slip, and the next move.</p>
+                </button>
+              </div>
+              <a href="/api/auth/signout" className="mt-4 flex items-center justify-between rounded-2xl bg-white px-4 py-3.5 shadow-sm">
+                <p className="text-sm font-medium text-red-500">Sign Out</p>
+              </a>
+            </div>
+          )}
+
+          <BottomDock activeTab={tab} onTabChange={setTab} userImage={user?.image} userName={user?.name} />
+          <PersonSheet open={sheet?.type === 'person'} name={sheet?.type === 'person' ? sheet.name : ''} role={sheet?.type === 'person' ? sheet.role : undefined} onClose={() => setSheet(null)} />
+          <FeedSheet open={sheet?.type === 'feed'} item={sheet?.type === 'feed' ? sheet.item : null} onClose={() => setSheet(null)} />
+          <OperationSheet open={sheet?.type === 'operation'} name={sheet?.type === 'operation' ? sheet.name : ''} onClose={() => setSheet(null)} onResolve={handleResolveOperation} />
+          <UnresolvedSheet open={sheet?.type === 'unresolved'} items={unresolvedItemsState} onClose={() => setSheet(null)} />
         </>
       )}
 
-      {tab === 'play' && (
-        <div className="px-5 pt-14">
-          <h1 className="text-2xl font-semibold text-stone-900">Crusade Brief</h1>
-          <p className="mt-1 text-sm text-stone-500">Current movement across the field</p>
-          <div className="mt-6 flex flex-col gap-3">
-            {feed.slice(0, 8).map((item) => (
-              <button key={item.id} onClick={() => setSheet({ type: 'feed', item })} className="w-full rounded-2xl bg-white px-4 py-3 text-left shadow-sm">
-                <p className="text-xs font-medium text-yellow-700">{item.owner?.name}</p>
-                <p className="mt-0.5 text-sm font-semibold text-stone-900">{item.headline}</p>
-                {item.body && <p className="mt-0.5 line-clamp-1 text-xs text-stone-500">{item.body}</p>}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {tab === 'messages' && (
-        <TelaTalk
-          autoscan={autoscan}
-          feed={feed}
-          operations={operations}
-          unresolvedItems={unresolvedItemsState}
-          calendarEvents={calendarEvents}
-          submittedBy={user?.name}
-          onContinuityIngest={submitContinuity}
-        />
-      )}
-
-      {tab === 'calendar' && (
-        <OperationalCalendar events={calendarEvents} baseDate={calendarBaseDate} onOpenVoice={() => openVoice(user?.name)} />
-      )}
-
-      {tab === 'profile' && (
-        <div className="px-5 pt-14">
-          <div className="rounded-[28px] border border-[#E2D7C7] bg-[linear-gradient(180deg,#FFFFFF_0%,#F3EDE3_100%)] px-5 py-6 shadow-[0_12px_30px_rgba(17,17,17,0.06)]">
-            <div className="flex flex-col items-center">
-              <div className="relative h-20 w-20 overflow-hidden rounded-full border-2 border-[#CFB889] bg-stone-800">
-                {user?.image ? <img src={user.image} alt={user.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-yellow-200">{user?.name?.slice(0, 1) ?? 'S'}</div>}
-                <button onClick={() => openVoice(user?.name)} className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-stone-900">
-                  <span className="text-base font-bold text-white">+</span>
-                </button>
-              </div>
-              <h2 className="mt-3 text-xl font-semibold text-stone-900">{user?.name ?? 'Operator'}</h2>
-              <p className="text-sm text-stone-500">Personal continuity anchor</p>
-              <p className="mt-2 text-center text-[13px] leading-relaxed text-[#6B5D4B]">Use this surface to contribute notes, voice, artifacts, and personal operational memory without dropping into settings or governance overhead.</p>
-            </div>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <button onClick={() => openVoice(user?.name)} className="rounded-[22px] bg-[#171411] px-4 py-4 text-left text-[#F6EFDF] shadow-[0_12px_24px_rgba(17,17,17,0.14)]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#D7BC7F]">Voice</p>
-              <p className="mt-2 text-[15px] font-semibold">Voice Ingestion</p>
-              <p className="mt-1 text-[12px] leading-relaxed text-[#DDD1BB]">Capture spoken continuity and keep your thread intact.</p>
-            </button>
-            <button onClick={() => openIngest('quick-update')} className="rounded-[22px] bg-white px-4 py-4 text-left shadow-[0_12px_24px_rgba(17,17,17,0.06)]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9A7C46]">Update</p>
-              <p className="mt-2 text-[15px] font-semibold text-[#171411]">Quick Contribution</p>
-              <p className="mt-1 text-[12px] leading-relaxed text-[#6B5D4B]">Log notes, blockers, and movement from your side of the field.</p>
-            </button>
-            <button onClick={() => openIngest('upload-files')} className="rounded-[22px] bg-white px-4 py-4 text-left shadow-[0_12px_24px_rgba(17,17,17,0.06)]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9A7C46]">Artifacts</p>
-              <p className="mt-2 text-[15px] font-semibold text-[#171411]">Uploads</p>
-              <p className="mt-1 text-[12px] leading-relaxed text-[#6B5D4B]">Stage files and photos as traced continuity objects.</p>
-            </button>
-            <button onClick={() => setTab('calendar')} className="rounded-[22px] bg-white px-4 py-4 text-left shadow-[0_12px_24px_rgba(17,17,17,0.06)]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9A7C46]">Calendar</p>
-              <p className="mt-2 text-[15px] font-semibold text-[#171411]">Today At A Glance</p>
-              <p className="mt-1 text-[12px] leading-relaxed text-[#6B5D4B]">See what matters today, what may slip, and the next move.</p>
-            </button>
-          </div>
-          <a href="/api/auth/signout" className="mt-4 flex items-center justify-between rounded-2xl bg-white px-4 py-3.5 shadow-sm">
-            <p className="text-sm font-medium text-red-500">Sign Out</p>
-          </a>
-        </div>
-      )}
-
-      <BottomDock activeTab={tab} onTabChange={setTab} userImage={user?.image} userName={user?.name} />
+      {/* Voice + ingest always available regardless of continuity state */}
       {showVoice && <PearlDropVoice taggedPerson={taggedPerson} submittedBy={user?.name} onClose={() => { setShowVoice(false); setTaggedPerson(undefined) }} />}
       {showIngest && (
         <ContinuityIngest
@@ -427,10 +444,6 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
           onSubmit={submitContinuity}
         />
       )}
-      <PersonSheet open={sheet?.type === 'person'} name={sheet?.type === 'person' ? sheet.name : ''} role={sheet?.type === 'person' ? sheet.role : undefined} onClose={() => setSheet(null)} />
-      <FeedSheet open={sheet?.type === 'feed'} item={sheet?.type === 'feed' ? sheet.item : null} onClose={() => setSheet(null)} />
-      <OperationSheet open={sheet?.type === 'operation'} name={sheet?.type === 'operation' ? sheet.name : ''} onClose={() => setSheet(null)} onResolve={handleResolveOperation} />
-      <UnresolvedSheet open={sheet?.type === 'unresolved'} items={unresolvedItemsState} onClose={() => setSheet(null)} />
     </main>
   )
 }
