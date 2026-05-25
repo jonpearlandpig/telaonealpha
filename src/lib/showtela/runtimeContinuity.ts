@@ -16,7 +16,7 @@ import {
 } from './runtimeIds'
 import { createRuntimeSnapshotMeta, replaceHomeWithCanonicalIngest, replaceHomeWithDirectoryIngest } from './runtimeSnapshot'
 import { threadContinuity } from './threadContinuity'
-import type { ContinuityEvent, OperationEntity, PersonEntity, RuntimeTimelineItem, ShowTelaHomeData } from './types'
+import type { ContinuityEvent, OperationEntity, PersonEntity, RuntimeTimelineItem, ShowTelaHomeData, UnresolvedObject } from './types'
 
 const SHOWTELA_RUNTIME_SESSION_ID = 'showtela-runtime-ingest'
 const ENTITY_STOPLIST = new Set(['linked entities', 'owner', 'ocid'])
@@ -225,6 +225,137 @@ export function mergeContinuityIntoShowTelaHome(data: ShowTelaHomeData, events: 
     continuityFeed,
     runtimeTimeline: timelineFromFeed(continuityFeed),
   }
+}
+
+const PRESSURE_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 }
+
+function deriveUnresolvedFromEvent(event: ContinuityEvent): UnresolvedObject[] {
+  const result: UnresolvedObject[] = []
+  const opRef = event.continuityObject?.provenance?.linkedOperation ?? undefined
+
+  if (event.pressure === 'high' || event.pressure === 'critical') {
+    result.push({
+      id: `unresolved:event:${event.id}`,
+      title: event.headline,
+      severity: 'high',
+      blocking: Boolean(event.blockedBy || event.waitingOn),
+      aging: 0,
+      operation: opRef,
+    })
+  } else if (event.pressure === 'medium' && (event.waitingOn || event.blockedBy)) {
+    result.push({
+      id: `unresolved:event:${event.id}`,
+      title: event.headline,
+      severity: 'medium',
+      blocking: Boolean(event.blockedBy),
+      aging: 0,
+      operation: opRef,
+    })
+  }
+
+  for (const dep of event.unresolvedDependencies ?? []) {
+    result.push({
+      id: `unresolved:dep:${event.id}:${slugify(dep).slice(0, 32)}`,
+      title: dep,
+      severity: 'medium',
+      blocking: false,
+      aging: 0,
+      operation: opRef,
+    })
+  }
+
+  for (const marker of event.unresolvedMarkers ?? []) {
+    result.push({
+      id: `unresolved:marker:${event.id}:${slugify(marker).slice(0, 32)}`,
+      title: marker,
+      severity: 'medium',
+      blocking: false,
+      aging: 0,
+    })
+  }
+
+  return result
+}
+
+function updateOperationsFromEvent(
+  operations: OperationEntity[],
+  event: ContinuityEvent,
+  artifactOperations: OperationEntity[],
+): OperationEntity[] {
+  if (operations.length === 0) return artifactOperations.length > 0 ? artifactOperations : []
+
+  const eventText = [
+    event.headline,
+    event.body ?? '',
+    event.continuityObject?.provenance?.linkedOperation ?? '',
+    event.continuityObject?.title ?? '',
+    ...(event.linkedEntities ?? []),
+  ].join(' ').toLowerCase()
+
+  let anyMatch = false
+  const updated = operations.map(op => {
+    const opWords = op.title.toLowerCase().split(/\s+/).filter(w => w.length > 3)
+    if (!opWords.length || !opWords.some(w => eventText.includes(w))) return op
+    anyMatch = true
+    return {
+      ...op,
+      latestMovement: event.headline,
+      pressure: event.pressure ?? op.pressure,
+      unresolvedCount: (op.unresolvedCount ?? 0) + (PRESSURE_RANK[event.pressure ?? ''] >= 3 ? 1 : 0),
+    }
+  })
+
+  if (!anyMatch && artifactOperations.length > 0) {
+    const existingIds = new Set(updated.map(o => o.id))
+    return [...updated, ...artifactOperations.filter(o => !existingIds.has(o.id))]
+  }
+
+  return updated
+}
+
+function updateActiveOpsFromEvent(
+  activeOps: PersonEntity[],
+  event: ContinuityEvent,
+): PersonEntity[] {
+  if (activeOps.length === 0) return activeOps
+
+  const ownerName = event.owner?.name?.toLowerCase()
+  const updated = activeOps.map(person => {
+    if (!ownerName || person.name.toLowerCase() !== ownerName) return person
+    return {
+      ...person,
+      pressure: event.pressure ?? person.pressure,
+      unresolvedCount: (person.unresolvedCount ?? 0) + (PRESSURE_RANK[event.pressure ?? ''] >= 3 ? 1 : 0),
+    }
+  })
+
+  return updated.sort((a, b) => {
+    const aRank = PRESSURE_RANK[a.pressure ?? ''] ?? 0
+    const bRank = PRESSURE_RANK[b.pressure ?? ''] ?? 0
+    if (aRank !== bRank) return bRank - aRank
+    return (b.unresolvedCount ?? 0) - (a.unresolvedCount ?? 0)
+  })
+}
+
+export function synthesizeOperationalStateFromEvent(input: {
+  baseData: ShowTelaHomeData
+  event: ContinuityEvent
+  artifactOperations: OperationEntity[]
+}): Pick<ShowTelaHomeData, 'operations' | 'activeOps' | 'unresolved' | 'pressureSummary'> {
+  const newUnresolved = deriveUnresolvedFromEvent(input.event)
+  const unresolvedById = new Map<string, UnresolvedObject>()
+  for (const u of [...newUnresolved, ...input.baseData.unresolved]) {
+    if (!unresolvedById.has(u.id)) unresolvedById.set(u.id, u)
+  }
+  const unresolved = [...unresolvedById.values()]
+
+  const operations = updateOperationsFromEvent(input.baseData.operations, input.event, input.artifactOperations)
+  const activeOps = updateActiveOpsFromEvent(input.baseData.activeOps, input.event)
+
+  const high = unresolved.filter(u => u.severity === 'high').length
+  const medium = unresolved.filter(u => u.severity === 'medium').length
+
+  return { operations, activeOps, unresolved, pressureSummary: { total: unresolved.length, high, medium } }
 }
 
 export function createShowTelaDurableSnapshot(input: {
@@ -495,6 +626,7 @@ export async function ingestShowTelaContinuity(input: {
         })
     : {
         ...feedMerged,
+        ...synthesizeOperationalStateFromEvent({ baseData: input.baseData, event, artifactOperations }),
         source: 'supabase',
         diagnosticState: 'persistence-connected',
         runtimeSnapshotMeta,
