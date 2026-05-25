@@ -495,6 +495,14 @@ export async function ingestShowTelaContinuity(input: {
         })
     : {
         ...feedMerged,
+        operations: feedMerged.operations.length > 0
+          ? feedMerged.operations
+          : artifactOperations,
+        pressureSummary: {
+          total: feedMerged.unresolved.length,
+          high: feedMerged.unresolved.filter(u => u.severity === 'high').length,
+          medium: feedMerged.unresolved.filter(u => u.severity === 'medium').length,
+        },
         source: 'supabase',
         diagnosticState: 'persistence-connected',
         runtimeSnapshotMeta,

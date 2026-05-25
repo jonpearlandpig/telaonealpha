@@ -3,7 +3,7 @@ import { loadDurableContinuity } from '@/lib/runtime/durableMemory'
 import type { ArtifactRecord } from '@/lib/artifacts/artifactStore'
 import type { DurableArtifactRow } from '@/lib/supabase/schema'
 import { SHOWTELA_RUNTIME_ARTIFACT_GROUP_ID, SHOWTELA_WORKSPACE_ID } from './runtimeIds'
-import { createRuntimeSnapshotMeta, isCanonicalReplaceSnapshot } from './runtimeSnapshot'
+import { createRuntimeSnapshotMeta } from './runtimeSnapshot'
 import type { ContinuityEvent, OperationEntity, PersonEntity, ShowTelaHomeData } from './types'
 
 function parseArtifactPayload(payload: string | undefined): ArtifactRecord | null {
@@ -105,10 +105,6 @@ export function recoverCanonicalShowTelaHomeFromArtifactRows(input: {
   cached: ShowTelaHomeData | null
   cachedUpdatedAt?: string | null
 }): ShowTelaHomeData | null {
-  if (isCanonicalReplaceSnapshot(input.cached)) {
-    return input.cached ?? null
-  }
-
   const runtimeArtifacts = input.artifacts
     .map((row) => parseArtifactPayload(row.payload))
     .filter((artifact): artifact is ArtifactRecord => Boolean(artifact))
@@ -121,6 +117,8 @@ export function recoverCanonicalShowTelaHomeFromArtifactRows(input: {
     toTimestamp(input.cachedUpdatedAt),
   )
 
+  // Cache is current — no newer artifacts exist. Return null so the caller uses
+  // the cache directly without triggering a repair write that refreshes updated_at.
   if (input.cached && cachedTimestamp >= latestArtifactTimestamp) {
     return null
   }
