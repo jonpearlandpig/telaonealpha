@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { ActiveOpsRail } from './ActiveOpsRail'
 import { BottomDock } from './BottomDock'
 import { ContinuityFeed } from './ContinuityFeed'
@@ -11,13 +12,44 @@ import { ShowTelaHeader } from './ShowTelaHeader'
 import { TelaTalk } from './TelaTalk'
 import { UnresolvedPressureCard } from './UnresolvedPressureCard'
 import { ContinuitySheet } from './ContinuitySheet'
+import { AddUpdateSheet } from '@/components/ui/AddUpdateSheet'
 import type { ShowTelaViewModel } from './types'
 import type { ContinuityEvent } from '@/lib/showtela/types'
 
-export function ShowTelaShell({ vm, onPearlDrop, isDemoMode = false }: { vm: ShowTelaViewModel; onPearlDrop: () => void; isDemoMode?: boolean }) {
-  const [feed, setFeed] = useState<ContinuityEvent[]>(vm.feed.map((i) => ({ id: i.id, headline: i.title, body: i.rawTranscript ?? i.summary, summary: i.summary, rawTranscript: i.rawTranscript, timestamp: i.timestamp, owner: { id: i.owner, name: i.owner }, isNew: i.unresolved, pressure: i.pressure, classification: i.classification as ContinuityEvent['classification'], nextActions: i.nextActions, confidence: i.confidence, waitingOn: i.waitingOn, blockedBy: i.blockedBy, approvalOwner: i.approvalOwner, lastContactAt: i.lastContactAt, trustLevel: i.trustLevel, operationalRisk: i.operationalRisk, unresolvedDependencies: i.unresolvedDependencies, linkedEntities: i.linkedEntities, linkedThreads: i.linkedThreads, attachments: i.attachments })))
+export function ShowTelaShell({ vm, isDemoMode = false }: { vm: ShowTelaViewModel; isDemoMode?: boolean }) {
+  const router = useRouter()
+  const [isSubmitting, startTransition] = useTransition()
+  const [showAddUpdate, setShowAddUpdate] = useState(false)
   const [sheetPerson, setSheetPerson] = useState<string | null>(null)
   const [lastViewedAt] = useState<number>(() => (typeof window === 'undefined' ? 0 : Number(window.localStorage.getItem('showtela:lastViewedAt') || '0')))
+  const feed = useMemo<ContinuityEvent[]>(
+    () =>
+      vm.feed.map((i) => ({
+        id: i.id,
+        headline: i.title,
+        body: i.rawTranscript ?? i.summary,
+        summary: i.summary,
+        rawTranscript: i.rawTranscript,
+        timestamp: i.timestamp,
+        owner: { id: i.owner, name: i.owner },
+        isNew: i.unresolved,
+        pressure: i.pressure,
+        classification: i.classification as ContinuityEvent['classification'],
+        nextActions: i.nextActions,
+        confidence: i.confidence,
+        waitingOn: i.waitingOn,
+        blockedBy: i.blockedBy,
+        approvalOwner: i.approvalOwner,
+        lastContactAt: i.lastContactAt,
+        trustLevel: i.trustLevel,
+        operationalRisk: i.operationalRisk,
+        unresolvedDependencies: i.unresolvedDependencies,
+        linkedEntities: i.linkedEntities,
+        linkedThreads: i.linkedThreads,
+        attachments: i.attachments,
+      })),
+    [vm.feed],
+  )
 
   useEffect(() => {
     window.localStorage.setItem('showtela:lastViewedAt', String(Date.now()))
@@ -28,21 +60,27 @@ export function ShowTelaShell({ vm, onPearlDrop, isDemoMode = false }: { vm: Sho
   const changedSinceLastOpen = useMemo(() => feed.filter((item) => new Date(item.timestamp ?? 0).getTime() > lastViewedAt).length, [feed, lastViewedAt])
   const isEmpty = vm.source === 'empty' || (!vm.activeOps.length && !vm.crusadeOperations.length && !feed.length && !vm.unresolved.length)
 
-  const handlePearlDrop = () => {
-    onPearlDrop()
-    const now = new Date()
-    const event: ContinuityEvent = {
-      id: `local-${now.getTime()}`,
-      headline: 'New continuity note captured',
-      body: 'Pearl Drop inserted into operational stream.',
-      summary: 'Pearl Drop inserted into operational stream.',
-      timestamp: now.toISOString(),
-      owner: { id: 'jon', name: 'Jon' },
-      isNew: true,
-      pressure: 'low',
-      classification: 'update',
+  async function submitCanonicalContinuity(body: string) {
+    const response = await fetch('/api/runtime/continuity/ingest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mode: 'quick-update',
+        headline: body.split('\n')[0]?.slice(0, 80) || 'Operational update captured',
+        body,
+        owner: 'Jon',
+        tags: ['PEARL_DROP'],
+      }),
+    })
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}))
+      throw new Error(payload?.error ?? `HTTP ${response.status}`)
     }
-    setFeed((prev) => [event, ...prev])
+
+    startTransition(() => {
+      router.refresh()
+    })
   }
 
   return (
@@ -62,9 +100,15 @@ export function ShowTelaShell({ vm, onPearlDrop, isDemoMode = false }: { vm: Sho
           <TelaTalk feed={feed} operations={vm.crusadeOperations.map((item) => ({ id: item.id, title: item.label, latestMovement: item.latest, unresolvedCount: item.unresolvedCount }))} unresolvedItems={vm.unresolved} />
           <ContinuityFeed feed={feed} />
           {sheetPerson ? <div className='px-5 pb-4'><ContinuitySheet personName={sheetPerson} events={feed.filter((e) => e.owner?.name === sheetPerson)} unresolved={vm.unresolved.filter((entry) => entry.operation === sheetPerson)} operations={[]} /></div> : null}
-          <BottomDock onPearlDrop={handlePearlDrop} />
+          <BottomDock onPearlDrop={() => setShowAddUpdate(true)} />
         </>
       )}
+      <AddUpdateSheet
+        open={showAddUpdate}
+        onClose={() => setShowAddUpdate(false)}
+        isSubmitting={isSubmitting}
+        onSubmit={submitCanonicalContinuity}
+      />
     </main>
   )
 }

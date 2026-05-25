@@ -1,5 +1,9 @@
 import type { ShowTelaHomeData } from './types'
 
+// LEGACY / DEMO ONLY
+// Not used in the active ShowTELA hydration path.
+// getShowTelaHome() now returns source:'empty' when live data is absent.
+
 export const mockShowTelaHomeData: ShowTelaHomeData = {
   activeOps: [
     { id: 'jon', name: 'Jon', role: 'Executive Lead', active: true, unresolvedCount: 2, updatesCount: 4, pressure: 'medium', avatar: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?q=80&w=300&auto=format&fit=crop' },

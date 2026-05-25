@@ -8,7 +8,6 @@ export function ShowTelaRuntime({ vm, isDemoMode = false }: { vm: ShowTelaViewMo
     <ShowTelaShell
       vm={vm}
       isDemoMode={isDemoMode}
-      onPearlDrop={() => {}}
     />
   )
 }

@@ -1,6 +1,10 @@
 import type { NormalizeFn } from './viewModels';
 import type { OperationalContinuityObject } from './types';
 
+// LEGACY / DEMO ONLY
+// Not used in the active ShowTELA hydration path.
+// Active runtime shaping now flows through src/lib/showtela/buildViewModel.ts.
+
 const fallbackImage = 'https://images.unsplash.com/photo-1503095396549-807759245b35?q=80&w=900&auto=format&fit=crop'
 
 function toTimestamp(iso?: string) {
