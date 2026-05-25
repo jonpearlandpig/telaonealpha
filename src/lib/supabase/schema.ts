@@ -51,3 +51,60 @@ export type DurableSnapshotRow = {
   updatedAt: string
   provenance: ProvenanceMetadata
 }
+
+export type RuntimeEventSource = 'user' | 'system' | 'operator' | 'automation'
+
+export type RuntimeEventRow = {
+  id: string
+  type: string
+  eventVersion: number
+  schemaVersion: string
+  source: RuntimeEventSource
+  governanceState: string
+  executionState: string
+  traceId?: string
+  correlationId?: string
+  lineageId?: string
+  payloadType?: string
+  payload?: Record<string, unknown>
+  createdAt: string
+}
+
+export type OperationalObjectRow = {
+  id: string
+  objectType: string
+  lineageId?: string
+  status: string
+  payload: Record<string, unknown>
+  createdAt: string
+  updatedAt: string
+}
+
+export type RoutingPlanRow = {
+  id: string
+  action: string
+  governanceState: string
+  selectedOperators: string[]
+  sequence: Record<string, unknown>[]
+  rollbackClass: string
+  escalationPath: string[]
+  createdAt: string
+}
+
+export type EnforcementActionRow = {
+  id: string
+  eventId?: string
+  action: string
+  decision: string
+  reason?: string
+  createdAt: string
+}
+
+export type LineageGraphRow = {
+  id: string
+  lineageId: string
+  parentLineageId?: string
+  eventId?: string
+  relationType: string
+  createdAt: string
+}

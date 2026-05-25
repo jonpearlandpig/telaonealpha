@@ -65,4 +65,77 @@ export const SUPABASE_MIGRATIONS = [
   );
   create index if not exists durable_ingestion_jobs_workspace_status_idx on durable_ingestion_jobs (workspace_id, status);
   `,
+
+  `
+  create table if not exists runtime_events (
+    id text primary key,
+    type text not null,
+    event_version integer not null,
+    schema_version text not null,
+    source text not null,
+    governance_state text not null,
+    execution_state text not null,
+    trace_id text,
+    correlation_id text,
+    lineage_id text,
+    payload_type text,
+    payload jsonb,
+    created_at timestamptz not null default now()
+  );
+  create index if not exists runtime_events_created_idx on runtime_events (created_at desc);
+  create index if not exists runtime_events_trace_idx on runtime_events (trace_id, created_at asc);
+  create index if not exists runtime_events_lineage_idx on runtime_events (lineage_id, created_at asc);
+  `,
+
+  `
+  create table if not exists operational_objects (
+    id text primary key,
+    object_type text not null,
+    lineage_id text,
+    status text not null,
+    payload jsonb not null default '{}',
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+  );
+  create index if not exists operational_objects_lineage_idx on operational_objects (lineage_id, updated_at desc);
+  `,
+
+  `
+  create table if not exists routing_plans (
+    id text primary key,
+    action text not null,
+    governance_state text not null,
+    selected_operators text[] not null default '{}',
+    sequence jsonb not null default '[]',
+    rollback_class text not null,
+    escalation_path text[] not null default '{}',
+    created_at timestamptz not null default now()
+  );
+  create index if not exists routing_plans_action_idx on routing_plans (action, created_at desc);
+  `,
+
+  `
+  create table if not exists enforcement_actions (
+    id text primary key,
+    event_id text,
+    action text not null,
+    decision text not null,
+    reason text,
+    created_at timestamptz not null default now()
+  );
+  create index if not exists enforcement_actions_event_idx on enforcement_actions (event_id, created_at desc);
+  `,
+
+  `
+  create table if not exists lineage_graph (
+    id text primary key,
+    lineage_id text not null,
+    parent_lineage_id text,
+    event_id text,
+    relation_type text not null,
+    created_at timestamptz not null default now()
+  );
+  create index if not exists lineage_graph_lineage_idx on lineage_graph (lineage_id, created_at asc);
+  create index if not exists lineage_graph_parent_idx on lineage_graph (parent_lineage_id, created_at asc);
+  `,
 ]

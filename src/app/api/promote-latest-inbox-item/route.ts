@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import crypto from 'crypto'
 import {
   extractInboxRichText,
   extractInboxSelect,
@@ -6,6 +7,8 @@ import {
   ingestCanonicalContinuity,
   resolveInboxDatabaseId,
 } from '@/lib/continuity/ingest-runtime'
+import { bootstrapRuntimeSpine } from '@/lib/runtime/bootstrap'
+import { emitRuntimeEvent } from '@/lib/runtime/eventBus'
 
 export const dynamic = 'force-dynamic'
 
@@ -75,8 +78,13 @@ export async function POST() {
     )
   }
 
+  bootstrapRuntimeSpine()
+  const traceId = crypto.randomUUID()
+  const correlationId = newest.id
+  const sourceMode = extractInboxSelect(properties['Source'])?.toLowerCase() === 'voice' ? 'voice-note' : 'quick-update'
+
   const ingested = await ingestCanonicalContinuity({
-    mode: extractInboxSelect(properties['Source'])?.toLowerCase() === 'voice' ? 'voice-note' : 'quick-update',
+    mode: sourceMode,
     headline: title,
     body,
     owner: extractInboxRichText(properties['Submitted By']) || 'Operations',
@@ -86,6 +94,49 @@ export async function POST() {
       extractInboxSelect(properties['Type']),
       extractInboxSelect(properties['Severity']),
     ].filter(Boolean),
+  })
+
+  await emitRuntimeEvent({
+    type: 'continuity.ingested',
+    source: 'automation',
+    governanceState: 'constitutional',
+    executionState: 'completed',
+    traceId,
+    correlationId,
+    lineageId: ingested.lineageId,
+    payloadType: 'continuity.inbox-item',
+    payload: {
+      notionPageId: newest.id,
+      headline: title,
+      body,
+      insertedId: ingested.insertedId,
+      threadId: ingested.event.threadId,
+      linkedEntities: ingested.event.linkedEntities ?? [],
+      sourceMode,
+    },
+  })
+
+  await emitRuntimeEvent({
+    type: 'continuity.normalized',
+    source: 'automation',
+    governanceState: 'constitutional',
+    executionState: 'completed',
+    traceId,
+    correlationId,
+    lineageId: ingested.lineageId,
+    payloadType: 'continuity.normalized-event',
+    payload: {
+      notionPageId: newest.id,
+      insertedId: ingested.insertedId,
+      eventId: ingested.event.id,
+      threadId: ingested.event.threadId,
+      linkedEntities: ingested.event.linkedEntities ?? [],
+      linkedThreads: ingested.event.linkedThreads ?? [],
+      normalizedHeadline: ingested.event.headline,
+      schemaVersion: 'runtime.v1',
+      eventVersion: 1,
+      sourceMode: ingested.event.sourceMode ?? sourceMode,
+    },
   })
 
   try {
