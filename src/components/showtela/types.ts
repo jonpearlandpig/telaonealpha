@@ -1,3 +1,5 @@
+import type { MediaMemoryType, PressureLevel } from '@/lib/showtela/types';
+
 export type FeedItem = {
   id: string;
   title: string;
@@ -40,16 +42,21 @@ export type ContinuityFeedItem = {
   timestamp: string;
   title: string;
   summary: string;
+  rawTranscript?: string;
   owner: string;
   image: string;
   avatar: string;
   unresolved: boolean;
+  pressure?: 'low' | 'medium' | 'high' | 'critical';
+  classification?: string;
+  nextActions?: string[];
+  confidence?: number;
   waitingOn?: string;
   blockedBy?: string;
   approvalOwner?: string;
   lastContactAt?: string;
   trustLevel?: 'low' | 'medium' | 'high';
-  operationalRisk?: 'low' | 'medium' | 'high';
+  operationalRisk?: 'low' | 'medium' | 'high' | 'critical';
   unresolvedDependencies?: string[];
   linkedEntities?: string[];
   linkedThreads?: string[];
@@ -81,8 +88,9 @@ export type ShowTelaViewModel = {
   fluencyPartners: ContinuityEntity[];
   crusadeOperations: OperationEntity[];
   unresolvedPressure: UnresolvedPressure;
+  unresolved: Array<{ id: string; title: string; severity?: PressureLevel; blocking?: boolean; aging?: number; operation?: string }>;
   feed: ContinuityFeedItem[];
   continuityObjects: OperationalContinuityObject[];
   runtimeTimeline: Array<{ id: string; timestamp: string; actor: string; summary: string; continuityObjectId: string; pressureDelta: number }>;
+  source?: 'notion' | 'supabase' | 'empty';
 };
-import type { MediaMemoryType } from '@/lib/showtela/types';

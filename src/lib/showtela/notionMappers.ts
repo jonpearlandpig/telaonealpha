@@ -1,4 +1,4 @@
-import type { ArtifactEntity, ContinuityEvent, OperationEntity, PersonEntity, UnresolvedObject } from './types'
+import type { ArtifactEntity, ContinuityClassification, ContinuityEvent, OperationEntity, PersonEntity, UnresolvedObject } from './types'
 
 type NotionProperty = Record<string, unknown> | undefined
 type NotionRecord = { id: string; properties?: Record<string, NotionProperty>; last_edited_time?: string }
@@ -11,6 +11,11 @@ const peopleName = (v: NotionProperty) => (v as { people?: Array<{ name?: string
 const filesUrl = (v: NotionProperty) => (v as { files?: Array<{ file?: { url?: string }; external?: { url?: string } }> } | undefined)?.files?.[0]?.file?.url ?? (v as { files?: Array<{ file?: { url?: string }; external?: { url?: string } }> } | undefined)?.files?.[0]?.external?.url
 const multiSelect = (v: NotionProperty) => (v as { multi_select?: Array<{ name: string }> } | undefined)?.multi_select?.map((t) => t.name) ?? []
 const relationIds = (v: NotionProperty) => (v as { relation?: Array<{ id: string }> } | undefined)?.relation?.map((r) => r.id) ?? []
+const textList = (v: NotionProperty) =>
+  ((v as { rich_text?: Array<{ plain_text?: string }> } | undefined)?.rich_text ?? [])
+    .map((item) => item.plain_text?.trim() ?? '')
+    .filter(Boolean)
+const numberValue = (v: NotionProperty) => (v as { number?: number } | undefined)?.number
 
 function prop(record: NotionRecord, ...keys: string[]) {
   for (const key of keys) {
@@ -47,15 +52,26 @@ export function mapOperation(record: NotionRecord): OperationEntity {
 export function mapContinuityEvent(record: NotionRecord, ownerById: Map<string, PersonEntity>): ContinuityEvent {
   const ownerId = (prop(record, 'Owner') as { relation?: Array<{ id: string }> } | undefined)?.relation?.[0]?.id
   const ownerName = peopleName(prop(record, 'Owner'))
+  const classification = richText(prop(record, 'Classification')) as ContinuityClassification
   return {
     id: record.id,
     headline: richText(prop(record, 'Headline', 'Name')),
-    body: richText(prop(record, 'Body', 'Summary')),
+    body: richText(prop(record, 'Body', 'Transcript', 'Raw Transcript', 'Raw Content', 'Summary')),
+    summary: richText(prop(record, 'Summary')),
+    rawTranscript: richText(prop(record, 'Raw Transcript', 'Transcript', 'Body', 'Raw Content')) || undefined,
     timestamp: (prop(record, 'Timestamp') as { date?: { start?: string } } | undefined)?.date?.start ?? record.last_edited_time,
     image: filesUrl(prop(record, 'Image')),
     tags: multiSelect(prop(record, 'Tags')),
     owner: (ownerId ? ownerById.get(ownerId) : undefined) ?? (ownerName ? { id: ownerId ?? 'owner', name: ownerName } : undefined),
     pressure: selectName(prop(record, 'Pressure')),
+    classification: classification || undefined,
+    nextActions: multiSelect(prop(record, 'Next Actions')).length
+      ? multiSelect(prop(record, 'Next Actions'))
+      : textList(prop(record, 'Next Actions')),
+    confidence: numberValue(prop(record, 'Confidence')),
+    normalizedBy: richText(prop(record, 'Normalized By')) === 'claude' ? 'claude' : undefined,
+    normalizationVersion: richText(prop(record, 'Normalization Version')) || undefined,
+    sourceMode: richText(prop(record, 'Source Mode')) || undefined,
     threadId: richText(prop(record, 'Thread')) || undefined,
     waitingOn: richText(prop(record, 'Waiting On')) || undefined,
     blockedBy: richText(prop(record, 'Blocked By')) || undefined,

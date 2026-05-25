@@ -1,11 +1,8 @@
 import { getArtifacts, getContinuityEvents, getOperations, getPeople, getUnresolved } from './notion'
-import { mockShowTelaHomeData } from './mockData'
 import { mapArtifact, mapContinuityEvent, mapOperation, mapPerson, mapUnresolved } from './notionMappers'
 import { calculatePressure } from './pressure'
 import { threadContinuity } from './threadContinuity'
 import type { ShowTelaHomeData } from './types'
-
-const DEFAULT_OPERATIONS = ['Travel', 'Logistics', 'Venues', 'Hospitality', 'Security']
 
 export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
   const [peopleRes, operationsRes, eventsRes, unresolvedRes, artifactsRes] =
@@ -32,8 +29,15 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
     !unresolvedRes.rows.length
   ) {
     return {
-      ...mockShowTelaHomeData,
-      dataMode: 'demo' as const,
+      activeOps: [],
+      fluencyPartners: [],
+      operations: [],
+      unresolved: [],
+      continuityFeed: [],
+      pressureSummary: { total: 0, high: 0, medium: 0 },
+      runtimeTimeline: [],
+      source: 'empty',
+      dataMode: 'live' as const,
     }
   }
 
@@ -74,24 +78,6 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
       )
   )
 
-  const operationsFilled = [...operations]
-
-  for (const title of DEFAULT_OPERATIONS) {
-    if (
-      !operationsFilled.find(
-        (o) => o.title.toLowerCase() === title.toLowerCase()
-      )
-    ) {
-      operationsFilled.push({
-        id: title.toLowerCase(),
-        title,
-        status: 'Unknown',
-        unresolvedCount: 0,
-        latestMovement: 'No movement logged',
-      })
-    }
-  }
-
   const high = unresolved.filter((u) => u.severity === 'high').length
   const medium = unresolved.filter((u) => u.severity === 'medium').length
   const pressure = calculatePressure(unresolved)
@@ -121,7 +107,7 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
   return {
     activeOps: people.filter((p) => p.active).slice(0, 12),
     fluencyPartners: people.filter((p) => p.partner).slice(0, 12),
-    operations: operationsFilled,
+    operations,
     unresolved,
     continuityFeed,
     pressureSummary: {
@@ -130,6 +116,7 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
       medium,
     },
     runtimeTimeline,
+    source: 'notion',
     dataMode: 'live' as const,
   }
 }

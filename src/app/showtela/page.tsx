@@ -1,12 +1,12 @@
 import { ShowTelaRuntime } from '@/components/showtela/ShowTelaRuntime'
-import { normalizeCrusadeData } from '@/components/showtela/normalizeCrusadeData'
+import { buildShowTelaVM } from '@/lib/showtela/buildViewModel'
 import { getShowTelaHome } from '@/lib/showtela/hydration'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ShowTelaHome() {
   const data = await getShowTelaHome()
-  const vm = normalizeCrusadeData({ feed: data.continuityFeed.map((item) => ({ id: item.id, title: item.headline, status: item.isNew ? 'unresolved' : 'resolved', priority: item.pressure ?? null, summary: item.body ?? '', owner: item.owner?.name ?? 'Ops Lead', updated: item.timestamp ?? new Date().toISOString() })) })
+  const vm = buildShowTelaVM(data)
   const commitHash = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? 'local'
   const branch = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF ?? process.env.VERCEL_GIT_COMMIT_REF ?? 'main'
   const environment = process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? 'unknown'
@@ -21,7 +21,7 @@ export default async function ShowTelaHome() {
         <div>env {environment}</div>
         <div>built {buildTimestamp}</div>
       </div>
-      <ShowTelaRuntime vm={vm} isDemoMode={data.dataMode === 'demo'} />
+      <ShowTelaRuntime vm={vm} isDemoMode={data.source === 'empty'} />
     </main>
   )
 }

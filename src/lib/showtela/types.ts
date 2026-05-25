@@ -1,4 +1,17 @@
-export type PressureLevel = 'low' | 'medium' | 'high'
+export type PressureLevel = 'low' | 'medium' | 'high' | 'critical'
+
+export type ContinuityClassification =
+  | 'venue'
+  | 'staffing'
+  | 'logistics'
+  | 'hospitality'
+  | 'legal'
+  | 'financial'
+  | 'creative'
+  | 'technical'
+  | 'unresolved'
+  | 'update'
+  | 'decision'
 
 export type PersonEntity = {
   id: string
@@ -25,11 +38,20 @@ export type ContinuityEvent = {
   id: string
   headline: string
   body?: string
+  summary?: string
+  rawTranscript?: string
   timestamp?: string
   image?: string
   tags?: string[]
   owner?: PersonEntity
   pressure?: PressureLevel
+  classification?: ContinuityClassification
+  nextActions?: string[]
+  confidence?: number
+  normalizedBy?: 'claude'
+  normalizationVersion?: string
+  replayVersion?: string
+  sourceMode?: string
   threadId?: string
   isNew?: boolean
   waitingOn?: string
@@ -85,6 +107,7 @@ export type ShowTelaHomeData = {
     medium: number
   }
   runtimeTimeline: RuntimeTimelineItem[]
+  source?: 'notion' | 'supabase' | 'empty'
   dataMode?: 'live' | 'demo'
 }
 

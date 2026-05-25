@@ -66,6 +66,7 @@ export const normalizeCrusadeData: NormalizeFn = ({ feed }) => {
     fluencyPartners: [],
     crusadeOperations: operations,
     unresolvedPressure: { unresolvedCount, overdueCount, blockedCount, pendingApprovals: Math.max(0, Math.floor(unresolvedCount / 2)) },
+    unresolved: [],
     feed: continuityObjects.map((item) => ({
       id: item.id,
       timestamp: toTimestamp(item.timestamp),
@@ -83,5 +84,6 @@ export const normalizeCrusadeData: NormalizeFn = ({ feed }) => {
     })),
     continuityObjects,
     runtimeTimeline,
+    source: feed.length ? 'notion' : 'empty',
   };
 };
