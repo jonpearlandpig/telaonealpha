@@ -1,17 +1,29 @@
 export type PressureLevel = 'low' | 'medium' | 'high' | 'critical'
 
-export type ContinuityClassification =
-  | 'venue'
-  | 'staffing'
-  | 'logistics'
-  | 'hospitality'
-  | 'legal'
-  | 'financial'
-  | 'creative'
-  | 'technical'
-  | 'unresolved'
-  | 'update'
-  | 'decision'
+export type AuthorshipSurface = 'telegram' | 'voice' | 'ingest' | 'runtime' | 'notion' | 'api'
+
+export type AuthorshipTrace = {
+  author: string
+  surface: AuthorshipSurface
+  capturedAt: string
+  modifiedBy?: string
+  modifiedAt?: string
+}
+
+export type LineageRef = {
+  lineageId: string
+  parentId?: string
+  chain: readonly string[]
+  capturedAt: string
+}
+
+export type DataSource = 'supabase' | 'notion' | 'empty'
+
+export type DiagnosticState =
+  | 'persistence-connected'
+  | 'persistence-stale'
+  | 'persistence-failed'
+  | 'notion-unavailable'
 
 export type PersonEntity = {
   id: string
@@ -39,19 +51,11 @@ export type ContinuityEvent = {
   headline: string
   body?: string
   summary?: string
-  rawTranscript?: string
   timestamp?: string
   image?: string
   tags?: string[]
   owner?: PersonEntity
   pressure?: PressureLevel
-  classification?: ContinuityClassification
-  nextActions?: string[]
-  confidence?: number
-  normalizedBy?: 'claude'
-  normalizationVersion?: string
-  replayVersion?: string
-  sourceMode?: string
   threadId?: string
   isNew?: boolean
   waitingOn?: string
@@ -64,6 +68,36 @@ export type ContinuityEvent = {
   linkedEntities?: string[]
   linkedThreads?: string[]
   attachments?: MediaMemoryAttachment[]
+  unresolvedMarkers?: string[]
+  continuityObject?: {
+    id: string
+    kind: string
+    title: string
+    summary: string
+    capturedAt: string
+    provenance: {
+      who?: string
+      what: string
+      when: string
+      linkedEntity?: string
+      linkedOperation?: string
+    }
+    source: {
+      mode: string
+      linkUrl?: string
+      assetNames?: string[]
+      notes?: string
+    }
+  }
+  authorshipTrace?: AuthorshipTrace
+  lineageRef?: LineageRef
+  rawTranscript?: string
+  nextActions?: string[]
+  classification?: string
+  confidence?: number
+  normalizedBy?: 'claude'
+  normalizationVersion?: string
+  sourceMode?: string
 }
 
 export type MediaMemoryType = 'image' | 'pdf' | 'stage_plot' | 'screenshot' | 'bus_schedule' | 'venue_packet' | 'contract' | 'voice_memo'
@@ -107,8 +141,38 @@ export type ShowTelaHomeData = {
     medium: number
   }
   runtimeTimeline: RuntimeTimelineItem[]
-  source?: 'notion' | 'supabase' | 'empty'
-  dataMode?: 'live' | 'demo'
+  source?: DataSource
+  diagnosticState?: DiagnosticState
+  hydration?: ShowTelaHydrationSummary
+  runtimeSnapshotMeta?: ShowTelaRuntimeSnapshotMeta
+}
+
+export type ShowTelaHydrationSummary = {
+  connectedToNotion: boolean
+  connectedToSupabase: boolean
+  counts: {
+    people: number
+    operations: number
+    continuity: number
+    unresolved: number
+    artifacts: number
+  }
+  lastHydratedAt: string
+  cacheSource: DataSource
+  supabaseWriteOk?: boolean
+  durableArtifactsCompatible?: boolean
+  missingRequiredEnv?: string[]
+  invalidDatabaseIds?: string[]
+}
+
+export type ShowTelaRuntimeSnapshotMeta = {
+  snapshotId: string
+  workspaceId: string
+  updatedAt: string
+  canonical: boolean
+  overwriteMode: 'merge' | 'replace'
+  snapshotType?: 'merge' | 'replace'
+  sourceIngest: 'continuity' | 'directory' | 'artifact'
 }
 
 export type RuntimeTimelineItem = {

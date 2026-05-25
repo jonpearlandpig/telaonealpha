@@ -1,96 +1,62 @@
 import type { ShowTelaHomeData } from './types'
 import type { ShowTelaViewModel } from '@/components/showtela/types'
 
-function formatTimestamp(iso?: string) {
-  if (!iso) return '—'
-
-  try {
-    const date = new Date(iso)
-    const weekday = date.toLocaleDateString('en-US', { weekday: 'short' })
-    const time = date
-      .toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-      .replace(' AM', 'A')
-      .replace(' PM', 'P')
-    return `${weekday} ${time} ${date.getMonth() + 1}/${date.getDate()}/${String(date.getFullYear()).slice(-2)}`
-  } catch {
-    return iso
-  }
-}
-
 export function buildShowTelaVM(data: ShowTelaHomeData): ShowTelaViewModel {
   return {
-    activeOps: (data.activeOps ?? []).map((person) => ({
-      id: person.id,
-      name: person.name === 'TBD' ? person.role ?? 'TBD' : person.name,
-      image: person.avatar ?? '',
-      latest: person.role ?? '',
-      unresolvedCount: person.unresolvedCount ?? 0,
+    activeOps: data.activeOps.map(p => ({
+      id: p.id,
+      name: p.name === 'TBD' ? (p.role ?? 'TBD') : p.name,
+      image: p.avatar ?? '',
+      latest: p.role ?? '',
+      unresolvedCount: p.unresolvedCount ?? 0,
     })),
-    fluencyPartners: (data.fluencyPartners ?? []).map((person) => ({
-      id: person.id,
-      name: person.name === 'TBD' ? person.role ?? 'TBD' : person.name,
-      image: person.avatar ?? '',
-      latest: person.role ?? '',
-      unresolvedCount: person.unresolvedCount ?? 0,
-      label: person.role ?? '',
+    fluencyPartners: data.fluencyPartners.map(p => ({
+      id: p.id,
+      name: p.name === 'TBD' ? (p.role ?? 'TBD') : p.name,
+      image: p.avatar ?? '',
+      latest: p.role ?? '',
+      unresolvedCount: p.unresolvedCount ?? 0,
+      label: p.role ?? '',
     })),
-    crusadeOperations: (data.operations ?? []).map((operation) => ({
-      id: operation.id,
-      name: operation.title,
-      label: operation.title,
+    crusadeOperations: data.operations.map(o => ({
+      id: o.id,
+      name: o.title,
+      label: o.title,
       image: '',
-      latest: operation.latestMovement ?? '',
-      unresolvedCount: operation.unresolvedCount ?? 0,
+      latest: o.latestMovement ?? '',
+      unresolvedCount: o.unresolvedCount ?? 0,
     })),
     unresolvedPressure: {
       unresolvedCount: data.unresolved.length,
-      overdueCount: data.unresolved.filter((item) => item.severity === 'high' || item.severity === 'critical').length,
-      blockedCount: data.unresolved.filter((item) => item.blocking).length,
-      pendingApprovals: data.unresolved.filter((item) => item.severity === 'medium').length,
+      overdueCount: data.unresolved.filter(u => u.severity === 'high').length,
+      blockedCount: data.unresolved.filter(u => u.blocking).length,
+      pendingApprovals: data.unresolved.filter(u => u.severity === 'medium').length,
     },
-    unresolved: data.unresolved.map((item) => ({
-      id: item.id,
-      title: item.title,
-      severity: item.severity,
-      blocking: item.blocking,
-      operation: item.operation,
-      aging: item.aging,
+    unresolved: data.unresolved.map(u => ({
+      id: u.id,
+      title: u.title,
+      severity: u.severity,
+      blocking: u.blocking,
+      operation: u.operation,
+      aging: u.aging,
     })),
-    feed: data.continuityFeed.map((event) => ({
-      id: event.id,
-      timestamp: formatTimestamp(event.timestamp),
-      title: event.headline,
-      summary: event.summary ?? event.body ?? '',
-      rawTranscript: event.rawTranscript,
-      owner: event.owner?.name ?? '',
-      image: event.image ?? '',
+    feed: data.continuityFeed.map(e => ({
+      id: e.id,
+      timestamp: e.timestamp ?? '',
+      title: e.headline,
+      summary: e.summary ?? e.body ?? '',
+      owner: e.owner?.name ?? '',
+      image: e.image ?? '',
       avatar: '',
-      unresolved: event.isNew ?? false,
-      pressure: event.pressure,
-      classification: event.classification,
-      nextActions: event.nextActions,
-      confidence: event.confidence,
-      waitingOn: event.waitingOn,
-      blockedBy: event.blockedBy,
-      approvalOwner: event.approvalOwner,
-      lastContactAt: event.lastContactAt,
-      trustLevel: event.trustLevel,
-      operationalRisk: event.operationalRisk,
-      unresolvedDependencies: event.unresolvedDependencies,
-      linkedEntities: event.linkedEntities ?? event.tags ?? [],
-      linkedThreads: event.linkedThreads,
-      attachments: (event.attachments ?? []).map((attachment) => ({
-        id: attachment.id,
-        type: attachment.type,
-        title: attachment.title,
-        previewUrl: attachment.previewUrl,
-      })),
+      unresolved: e.isNew ?? false,
+      linkedEntities: e.tags ?? [],
+      pressure: e.pressure,
     })),
     continuityObjects: [],
-    runtimeTimeline: (data.runtimeTimeline ?? []).map((item) => ({
-      ...item,
-      timestamp: formatTimestamp(item.timestamp),
-    })),
+    runtimeTimeline: data.runtimeTimeline,
     source: data.source,
+    diagnosticState: data.diagnosticState,
+    hydration: data.hydration,
+    runtimeSnapshotMeta: data.runtimeSnapshotMeta,
   }
 }

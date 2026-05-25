@@ -1,4 +1,6 @@
 import type { ContinuityEvent } from '@/lib/showtela/types'
+import { createAuthorshipTrace } from '@/lib/showtela/telauthorium'
+import { createLineageRef } from '@/lib/showtela/penAndSword'
 import { llmNormalize } from './llm-normalize'
 
 export type ContinuityIngestionMode =
@@ -29,65 +31,106 @@ export type ContinuityIngestionInput = {
 }
 
 export type NormalizeContinuityIngestionOptions = {
-  eventId?: string
+  author?: string
   continuityObjectId?: string
+  eventId?: string
+  existingLineageChain?: readonly string[]
+  lineageParentId?: string
   timestamp?: string
-}
-
-function dedupeUppercase(values: string[]) {
-  return Array.from(
-    new Set(
-      values
-        .map((value) => value.trim())
-        .filter(Boolean)
-        .map((value) => value.toUpperCase()),
-    ),
-  )
-}
-
-function baseHeadline(input: ContinuityIngestionInput) {
-  if (input.headline?.trim()) return input.headline.trim()
-  if (input.mode === 'voice-note') return `Voice note from ${input.owner?.trim() || 'the field'}`
-  if (input.mode === 'upload-files') return `${Math.max(input.assetNames?.length ?? 0, 1)} file${(input.assetNames?.length ?? 0) === 1 ? '' : 's'} added to continuity`
-  if (input.mode === 'add-photos') return `${Math.max(input.assetNames?.length ?? 0, 1)} photo${(input.assetNames?.length ?? 0) === 1 ? '' : 's'} added to continuity`
-  if (input.mode === 'add-link') return 'Link added to continuity'
-  if (input.mode === 'paste-notes') return 'Notes added to continuity'
-  return 'Operational update captured'
 }
 
 export function normalizeContinuityIngestion(
   input: ContinuityIngestionInput,
   options?: NormalizeContinuityIngestionOptions,
 ): ContinuityEvent {
+  const owner = input.owner?.trim()
+  const operation = input.operation?.trim()
+  const linkedEntity = input.linkedEntity?.trim()
+  const body = input.body?.trim() ?? ''
+  const assetNames = Array.from(new Set((input.assetNames ?? []).map((name) => name.trim()).filter(Boolean)))
+  const linkUrl = input.linkUrl?.trim()
+  const normalizedTags = Array.from(
+    new Set(
+      (input.tags ?? [])
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+        .map((tag) => tag.toUpperCase()),
+    ),
+  )
+
+  const generatedHeadline =
+    input.mode === 'voice-note'
+      ? `Voice note from ${owner || 'the field'}`
+      : input.mode === 'upload-files'
+        ? `${assetNames.length || 1} file${assetNames.length === 1 ? '' : 's'} added to continuity`
+        : input.mode === 'add-photos'
+          ? `${assetNames.length || 1} photo${assetNames.length === 1 ? '' : 's'} added to continuity`
+          : input.mode === 'add-link'
+            ? 'Link added to continuity'
+            : input.mode === 'paste-notes'
+              ? 'Notes added to continuity'
+              : 'Operational update captured'
+
+  const headline = input.headline?.trim() || generatedHeadline
+  const linkedRefs = [linkedEntity, operation].filter(Boolean) as string[]
+  const uppercaseRefs = linkedRefs.map((ref) => ref.toUpperCase())
+  const tags = Array.from(new Set([input.mode.replace('-', ' ').toUpperCase(), ...uppercaseRefs, ...normalizedTags]))
+  const what = [headline, body, linkUrl, assetNames.join(', ')].filter(Boolean).join(' · ')
   const timestamp = options?.timestamp ?? new Date().toISOString()
   const seed = timestamp.replace(/[^0-9]/g, '').slice(-10) || Date.now().toString()
-  const body = input.body?.trim() ?? ''
-  const owner = input.owner?.trim()
-  const linkedEntity = input.linkedEntity?.trim()
-  const operation = input.operation?.trim()
-  const headline = baseHeadline(input)
-  const baseTags = dedupeUppercase([
-    input.mode.replace('-', ' '),
-    ...(input.tags ?? []),
-    linkedEntity ?? '',
-    operation ?? '',
-  ])
+  const eventId = options?.eventId ?? `local-${seed}`
+  const continuityObjectId = options?.continuityObjectId ?? `continuity-${seed}`
+
+  const attachments = assetNames.map((name, index) => ({
+    id: `attachment-${seed}-${index}`,
+    title: name,
+    type: input.mode === 'add-photos' ? 'image' as const : 'pdf' as const,
+    capturedAt: timestamp,
+  }))
 
   return {
-    id: options?.eventId ?? `local-${seed}`,
+    id: eventId,
     headline,
     body,
-    rawTranscript: input.mode === 'voice-note' ? body : undefined,
-    summary: undefined,
     timestamp,
-    tags: baseTags,
+    tags,
     owner: owner ? { id: owner.toLowerCase().replace(/\s+/g, '-'), name: owner } : undefined,
-    pressure: baseTags.includes('RISK') ? 'high' : 'medium',
-    sourceMode: input.mode,
+    pressure: normalizedTags.includes('risk'.toUpperCase()) ? 'high' : 'medium',
     isNew: true,
-    threadId: options?.continuityObjectId ?? `continuity-${seed}`,
-    linkedEntities: [linkedEntity, operation].filter(Boolean) as string[],
+    threadId: continuityObjectId,
+    linkedEntities: linkedRefs,
     unresolvedDependencies: [],
+    attachments: attachments.length ? attachments : undefined,
+    continuityObject: {
+      id: continuityObjectId,
+      kind: input.mode,
+      title: headline,
+      summary: body || generatedHeadline,
+      capturedAt: timestamp,
+      provenance: {
+        who: owner,
+        what,
+        when: timestamp,
+        linkedEntity,
+        linkedOperation: operation,
+      },
+      source: {
+        mode: input.mode,
+        linkUrl,
+        assetNames: assetNames.length ? assetNames : undefined,
+        notes: body || undefined,
+      },
+    },
+    authorshipTrace: createAuthorshipTrace({
+      author: options?.author ?? owner,
+      surface: input.mode === 'voice-note' ? 'voice' : 'ingest',
+      capturedAt: timestamp,
+    }),
+    lineageRef: createLineageRef({
+      parentId: options?.lineageParentId,
+      existingChain: options?.existingLineageChain,
+    }),
+    sourceMode: input.mode,
   }
 }
 
@@ -97,9 +140,7 @@ export async function normalizeContinuityIngestionWithLLM(
 ): Promise<ContinuityEvent> {
   const base = normalizeContinuityIngestion(input, options)
 
-  if (!input.body?.trim() || input.body.trim().length < 10) {
-    return base
-  }
+  if (!input.body?.trim()) return base
 
   const llm = await llmNormalize(input.body, input.mode, {
     owner: input.owner,
@@ -112,14 +153,17 @@ export async function normalizeContinuityIngestionWithLLM(
   return {
     ...base,
     headline: llm.headline || base.headline,
+    body: llm.summary || base.body,
     summary: llm.summary,
-    pressure: llm.pressure || base.pressure,
-    classification: llm.classification,
-    nextActions: llm.nextActions,
-    confidence: llm.confidence,
     rawTranscript: input.body,
+    pressure: llm.pressure || base.pressure,
     tags: Array.from(new Set([...(base.tags ?? []), ...llm.tags])),
+    nextActions: llm.nextActions,
+    classification: llm.classification,
+    linkedEntities: Array.from(new Set([...(base.linkedEntities ?? []), ...llm.entities])),
+    confidence: llm.confidence,
     normalizedBy: 'claude',
     normalizationVersion: 'v1',
+    sourceMode: input.mode,
   }
 }

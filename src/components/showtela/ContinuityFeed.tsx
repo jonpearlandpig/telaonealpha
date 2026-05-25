@@ -3,38 +3,35 @@ import { ContinuityCard } from './ContinuityCard'
 import type { ActionType } from './FeedActionBar'
 import type { ContinuityFeedItem } from './types'
 
-type Props = { feed: ContinuityEvent[] } | { items: ContinuityFeedItem[]; onCardAction: (itemId: string, action: ActionType) => void }
+type Props =
+  | { feed: ContinuityEvent[]; onFeedTap?: (item: ContinuityEvent) => void }
+  | { items: ContinuityFeedItem[]; onCardAction: (itemId: string, action: ActionType) => void; onFeedTap?: (item: ContinuityEvent) => void }
 
 export function ContinuityFeed(props: Props) {
-  const feed = 'feed' in props
-    ? props.feed
+  const onFeedTap = props.onFeedTap
+  const feed = 'feed' in props ? props.feed
     : props.items.map((item) => ({
-        id: item.id,
-        headline: item.title,
-        body: item.rawTranscript ?? item.summary,
-        summary: item.summary,
-        rawTranscript: item.rawTranscript,
-        timestamp: item.timestamp,
+        id: item.id, headline: item.title, body: item.summary,
+        timestamp: item.timestamp, image: item.image, tags: item.linkedEntities ?? [],
         owner: { id: item.owner, name: item.owner },
-        pressure: item.pressure,
-        classification: item.classification as ContinuityEvent['classification'],
-        nextActions: item.nextActions,
-        confidence: item.confidence,
-        linkedEntities: item.linkedEntities,
       }))
 
   return (
-    <section className="px-5 pb-16">
-      <h2 className="pb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#84663A]">Continuity Feed</h2>
-      <div className="space-y-3">
+    <section className="px-5 pb-32">
+      <div className="mb-5 flex items-center justify-between">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5E5348]">Dispatches</h2>
+      </div>
+      <div className="divide-y divide-[#EDE8E1]">
         {feed.map((item) => (
-          <ContinuityCard key={item.id} item={item} />
+          <button key={item.id} className="w-full text-left" onClick={() => onFeedTap?.(item)}>
+            <ContinuityCard item={item} />
+          </button>
         ))}
-        {feed.length === 0 ? (
+        {feed.length === 0 && (
           <div className="rounded-[18px] border border-dashed border-[#D4C9B4] px-4 py-8 text-center">
             <p className="text-[13px] font-medium text-[#8B847B]">No continuity has entered the runtime.</p>
           </div>
-        ) : null}
+        )}
       </div>
     </section>
   )

@@ -1,26 +1,35 @@
 import { anthropic } from '@/lib/ai/claude'
-import type { ContinuityClassification, PressureLevel } from '@/lib/showtela/types'
 
 export type LLMNormalizationResult = {
   headline: string
   summary: string
   entities: string[]
   tags: string[]
-  pressure: PressureLevel
+  pressure: 'low' | 'medium' | 'high' | 'critical'
   nextActions: string[]
   confidence: number
-  classification: ContinuityClassification
+  classification:
+    | 'venue'
+    | 'staffing'
+    | 'logistics'
+    | 'hospitality'
+    | 'legal'
+    | 'financial'
+    | 'creative'
+    | 'technical'
+    | 'unresolved'
+    | 'update'
+    | 'decision'
 }
 
 const NORMALIZATION_PROMPT = `You are an operational continuity normalizer for ShowTELA.
-You receive raw operational input - voice transcripts, notes, updates - and
-extract structured operational intelligence.
-Respond ONLY with a valid JSON object.
-No preamble.
-No explanation.
-No markdown.
-No backticks.
-Just the JSON object.
+
+You receive raw operational input — voice transcripts, notes, updates — and
+extract structured operational intelligence from them.
+
+Respond ONLY with a valid JSON object. No preamble. No explanation.
+No markdown. No backticks. Just the JSON object.
+
 Required fields:
 - headline: one line, what happened, max 80 characters
 - summary: 2-3 sentences, operational meaning and significance
@@ -28,13 +37,15 @@ Required fields:
 - tags: array of operational category tags in UPPERCASE
 - pressure: "low" | "medium" | "high" | "critical"
 - nextActions: array of concrete next steps implied by this input
-- confidence: number between 0 and 1 representing certainty of interpretation
 - classification: one of venue|staffing|logistics|hospitality|legal|financial|creative|technical|unresolved|update|decision
+
 Pressure guidelines:
 - critical: blocking production, time-sensitive, financial exposure
 - high: needs attention within 24 hours, affects multiple people
 - medium: needs attention this week, operational impact
-- low: informational, no immediate action required`
+- low: informational, no immediate action required
+
+Be concise. Be operational. Surface what matters.`
 
 export async function llmNormalize(
   rawInput: string,
@@ -43,10 +54,10 @@ export async function llmNormalize(
     owner?: string
     operation?: string
     linkedEntity?: string
-  },
+  }
 ): Promise<LLMNormalizationResult | null> {
   if (!process.env.ANTHROPIC_API_KEY) return null
-  if (!rawInput?.trim() || rawInput.trim().length < 10) return null
+  if (!rawInput?.trim()) return null
 
   const contextBlock = context
     ? `\nContext: owner=${context.owner ?? 'unknown'}, operation=${context.operation ?? 'none'}, entity=${context.linkedEntity ?? 'none'}`
@@ -54,7 +65,7 @@ export async function llmNormalize(
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 600,
       system: NORMALIZATION_PROMPT,
       messages: [
@@ -66,13 +77,13 @@ export async function llmNormalize(
     })
 
     const text = response.content
-      .filter((block): block is Extract<(typeof response.content)[number], { type: 'text' }> => block.type === 'text')
-      .map((block) => block.text)
+      .flatMap((block) => (block.type === 'text' ? [block.text] : []))
       .join('')
       .replace(/```json|```/g, '')
       .trim()
 
-    return JSON.parse(text) as LLMNormalizationResult
+    const parsed = JSON.parse(text) as LLMNormalizationResult
+    return parsed
   } catch (err) {
     console.error('[llm-normalize] failed:', err)
     return null

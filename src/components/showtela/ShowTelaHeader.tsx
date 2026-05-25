@@ -1,17 +1,130 @@
-export function ShowTelaHeader() {
+'use client'
+
+type AutoscanSignal = {
+  currentTruth: string
+  mattersNow: string
+  nextMovement: string
+}
+
+export function ShowTelaHeader({
+  userName,
+  unresolvedCount,
+  autoscan,
+  onNextMovementTap,
+  isEmpty,
+  runtimeLabel,
+}: {
+  userName?: string
+  unresolvedCount: number
+  autoscan: AutoscanSignal
+  onNextMovementTap?: () => void
+  isEmpty?: boolean
+  runtimeLabel?: string
+}) {
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  const firstName = userName?.split(' ')[0] ?? 'there'
+
+  const tickerItems = [
+    autoscan.currentTruth,
+    autoscan.mattersNow,
+    autoscan.nextMovement,
+    unresolvedCount > 0 ? `${unresolvedCount} unresolved movement${unresolvedCount === 1 ? '' : 's'} still open` : 'continuity field calm',
+    'governance movement holding steady',
+  ].filter(Boolean)
+  const tickerText = tickerItems.join('  /  ')
+
   return (
-    <header className="px-7 pb-5 pt-[62px]">
-      <div className="flex items-start justify-between gap-6">
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.24em] text-[#C89B2F]">Crusade Runtime</p>
-          <h1 className="mt-[10px] text-[38px] font-semibold leading-[42px] tracking-[-1.2px] text-[#111111]">ShowTELA</h1>
-          <p className="mt-2 text-[18px] leading-7 text-[#6E6A63]">Operational continuity, live.</p>
-        </div>
-        <div className="rounded-2xl border border-black/5 bg-white/70 px-3 py-2 text-right shadow-[0_6px_18px_rgba(17,17,17,0.04)] backdrop-blur-md">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-[#8B847B]">Status</p>
-          <p className="text-[13px] font-medium text-[#111111]">72°F • Hershey</p>
-        </div>
+    <header className="px-5 pb-9 pt-[58px]">
+      <div className="mb-10 flex items-center justify-between">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#C89B2F]">{runtimeLabel ?? 'Operational Runtime'}</p>
+        <button className="relative flex h-12 w-12 items-center justify-center rounded-full bg-black/[0.035]">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+            <path d="M8 2a4 4 0 00-4 4v3l-1 1.5h10L12 9V6a4 4 0 00-4-4zM6.5 13a1.5 1.5 0 003 0" stroke="#141210" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
       </div>
+
+      <div>
+        <h1 className="text-[40px] font-semibold leading-[0.98] tracking-[-1.8px] text-[#141210]">{greeting}, {firstName}.</h1>
+        <p className="mt-2 text-[17px] leading-snug text-[#6E6A63]">
+          {isEmpty ? 'Operations are ready.' : 'Operations are live.'}
+        </p>
+      </div>
+
+      {isEmpty ? (
+        <div className="mt-8 overflow-hidden rounded-[20px] bg-[linear-gradient(160deg,#FCF9F2_0%,#F1E6D0_100%)] px-7 py-6 shadow-[0_10px_28px_rgba(17,17,17,0.05)]">
+          <div className="flex items-center gap-1.5">
+            <p className="text-[11px] font-medium tracking-[0.06em] text-[#8A7351]">TELAtop</p>
+            <span className="telatop-pulse h-2 w-2 flex-shrink-0 rounded-full bg-[#D5C1A1]" />
+          </div>
+          <p className="mt-6 max-w-[34ch] text-[15px] font-semibold leading-[1.35] tracking-[-0.2px] text-[#171411]">Awaiting continuity.</p>
+          <p className="mt-4 max-w-[34ch] text-[12px] leading-[1.55] text-[#6E6A63]">Add a call sheet, production document, or operational update to begin runtime hydration.</p>
+        </div>
+      ) : (
+        <div className="mt-8 overflow-hidden rounded-[20px] bg-[linear-gradient(160deg,#FCF9F2_0%,#F1E6D0_100%)] px-7 py-6 shadow-[0_10px_28px_rgba(17,17,17,0.05)]">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <p className="text-[11px] font-medium tracking-[0.06em] text-[#8A7351]">TELAtop</p>
+              <span className="telatop-pulse h-2 w-2 flex-shrink-0 rounded-full bg-[#D5C1A1]" />
+            </div>
+            <p className="text-[11px] font-medium text-[#A89880]">{unresolvedCount} unresolved</p>
+          </div>
+          <p className="mt-6 max-w-[34ch] text-[15px] font-semibold leading-[1.35] tracking-[-0.2px] text-[#171411]">{autoscan.currentTruth}</p>
+          <p className="mt-4 max-w-[34ch] text-[12px] leading-[1.55] text-[#6E6A63]">{autoscan.mattersNow}</p>
+          {onNextMovementTap ? (
+            <button
+              type="button"
+              onClick={onNextMovementTap}
+              className="mt-4 text-left text-[12px] leading-snug text-[#8A7351] transition-colors hover:text-[#6F541A]"
+            >
+              {autoscan.nextMovement}
+            </button>
+          ) : (
+            <p className="mt-4 text-[12px] leading-snug text-[#8A7351]">{autoscan.nextMovement}</p>
+          )}
+          <div className="mt-7 overflow-hidden border-t border-[#D8CAB4]/70 pt-4">
+            <div className="telatop-ticker flex w-max whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A825F]">
+              <span className="pr-10">{tickerText}</span>
+              <span className="pr-10" aria-hidden="true">{tickerText}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        .telatop-pulse {
+          animation: telatopPulse 2.6s ease-in-out infinite;
+          box-shadow: 0 0 0 rgba(205, 179, 138, 0.35);
+        }
+
+        @keyframes telatopPulse {
+          0%,
+          100% {
+            opacity: 0.5;
+            transform: scale(0.9);
+            box-shadow: 0 0 0 0 rgba(205, 179, 138, 0.16);
+          }
+          50% {
+            opacity: 1;
+            transform: scale(1.05);
+            box-shadow: 0 0 0 4px rgba(205, 179, 138, 0);
+          }
+        }
+
+        .telatop-ticker {
+          animation: telatopTicker 42s linear infinite;
+        }
+
+        @keyframes telatopTicker {
+          0% {
+            transform: translate3d(0, 0, 0);
+          }
+          100% {
+            transform: translate3d(-50%, 0, 0);
+          }
+        }
+      `}</style>
     </header>
-  );
+  )
 }

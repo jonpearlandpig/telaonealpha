@@ -109,5 +109,6 @@ export async function POST() {
     insertedId: ingested.insertedId,
     normalized: ingested.event,
     lineageId: ingested.lineageId,
+    data: ingested.data,
   })
 }

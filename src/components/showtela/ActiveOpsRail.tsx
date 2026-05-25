@@ -1,6 +1,143 @@
-import type { PersonEntity } from '@/lib/showtela/types'
+'use client'
 
-export function ActiveOpsRail(props: { people: PersonEntity[] } | { items: Array<{ id: string; name: string; latest?: string; unresolvedCount: number; image: string }> }) {
-  const people = 'people' in props ? props.people : props.items.map((i) => ({ id: i.id, name: i.name, role: i.latest, unresolvedCount: i.unresolvedCount, updatesCount: 0 }))
-  return <section className='px-5 pb-5'><h2 className='text-xs font-semibold uppercase tracking-[0.18em] text-[#84663A]'>Active Ops</h2><div className='mt-3 flex gap-3 overflow-x-auto pb-1'>{people.map((p) => <button key={p.id} className='min-w-28 rounded-[1.4rem] border border-[#E3D3B6] bg-[#FFF9F0] p-3 text-left shadow-[0_12px_32px_rgba(20,18,14,0.08)]'><div className='mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full border-2 border-[#E0BF82] bg-[radial-gradient(circle_at_35%_30%,#2D2A25,#141210)] text-lg font-semibold text-[#F8E1B0] shadow-[0_0_0_4px_rgba(240,210,154,0.3),0_10px_26px_rgba(0,0,0,0.28)]'>{p.name.slice(0, 1)}</div><div className='text-sm font-semibold text-[#1A1712]'>{p.name}</div><div className='text-xs text-[#6E604F]'>{p.role ?? 'Operator'}</div><div className='mt-1 text-[11px] text-[#8F734A]'>{p.unresolvedCount ?? 0} unresolved • {p.updatesCount ?? 0} updates</div></button>)}</div></section>
+import type { ReactNode } from 'react'
+
+type ActiveRailItem = {
+  id: string
+  name: string
+  latest?: string
+  unresolvedCount: number
+  image: string
+  updatesCount?: number
+}
+
+function facePhoto(url: string): string {
+  if (!url) return url
+  if (url.includes('googleusercontent.com')) {
+    return url.replace(/=s\d+-c$/, '=s400-c')
+  }
+  return url
+}
+
+function CircleShell({
+  children,
+  background,
+  tone = 'light',
+}: {
+  children: ReactNode
+  background: string
+  tone?: 'light' | 'dark'
+}) {
+  return (
+    <div
+      className="flex h-[78px] w-[78px] items-center justify-center rounded-full p-[2.5px] shadow-[0_10px_24px_rgba(17,17,17,0.10)]"
+      style={{ background }}
+    >
+      <div className={`flex h-full w-full items-center justify-center overflow-hidden rounded-full ${tone === 'dark' ? 'bg-[#18140F]' : 'bg-[#F8F6F2]'}`}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+export function ActiveOpsRail({
+  userName,
+  userImage,
+  items,
+  onProfileTap,
+  onTelaTap,
+  onPersonTap,
+  onAddContinuity,
+  isEmpty,
+}: {
+  userName?: string
+  userImage?: string
+  items: ActiveRailItem[]
+  onProfileTap?: () => void
+  onTelaTap?: () => void
+  onPersonTap?: (name: string, role?: string) => void
+  onAddContinuity?: () => void
+  isEmpty?: boolean
+}) {
+  const firstName = userName?.split(' ')[0] ?? 'You'
+
+  return (
+    <section className="px-5 pb-11 pt-6">
+      <div className="mb-6 flex items-center justify-between">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5E5348]">Anchors</h2>
+        {!isEmpty && <button className="text-[11px] font-semibold text-[#C89B2F]">View all</button>}
+      </div>
+      <div className="flex gap-6 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div
+          role="button"
+          tabIndex={0}
+          className="flex w-[92px] flex-shrink-0 flex-col items-center gap-4 p-0"
+          onClick={onProfileTap}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              onProfileTap?.()
+            }
+          }}
+        >
+          <div className="relative">
+            <CircleShell background="linear-gradient(135deg, #D5C4A2 0%, #F6E9C9 55%, #C8A25A 100%)">
+              {userImage
+                ? <img src={facePhoto(userImage)} alt={userName ?? 'You'} className="h-full w-full object-cover" />
+                : <div className="flex h-full w-full items-center justify-center bg-[#1A1712] text-[22px] font-semibold text-[#F8E1B0]">{firstName.slice(0, 1)}</div>}
+            </CircleShell>
+            <button
+              onClick={(event) => {
+                event.stopPropagation()
+                onAddContinuity?.()
+              }}
+              className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#F8F6F2] bg-[#141210] shadow-[0_2px_8px_rgba(0,0,0,0.24)]"
+              aria-label="Add continuity"
+            >
+              <span className="text-[14px] font-semibold leading-none text-white">+</span>
+            </button>
+          </div>
+          <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{firstName}</p>
+        </div>
+
+        {!isEmpty && items.length > 0 && (
+          <button className="flex w-[84px] flex-shrink-0 flex-col items-center gap-3 p-0" onClick={onTelaTap}>
+            <CircleShell background="linear-gradient(140deg, #11100D 0%, #2B2218 48%, #7A5A25 100%)" tone="dark">
+              <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_top,#4A3924_0%,#1B1711_64%,#11100D_100%)] text-[18px] font-semibold text-[#E6D2A8]">
+                T
+              </div>
+            </CircleShell>
+            <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">TELA</p>
+          </button>
+        )}
+
+        {!isEmpty && items.map((p) => {
+          const img = p.image ? facePhoto(p.image) : undefined
+          const unresolved = p.unresolvedCount ?? 0
+          const role = p.latest ?? ''
+          const hasUnresolved = unresolved > 0
+          const ringBg = unresolved >= 2
+            ? 'linear-gradient(135deg, #7A6451 0%, #C7A77A 100%)'
+            : hasUnresolved
+              ? 'linear-gradient(135deg, #B89A52 0%, #D8C080 100%)'
+              : 'linear-gradient(135deg, #D8CCB8 0%, #F5ECE0 100%)'
+
+          return (
+            <button
+              key={p.id}
+              className="flex w-[92px] flex-shrink-0 flex-col items-center gap-4 p-0"
+              onClick={() => onPersonTap?.(p.name, role)}
+            >
+              <CircleShell background={ringBg}>
+                {img
+                  ? <img src={img} alt={p.name} className="h-full w-full object-cover" />
+                  : <div className="flex h-full w-full items-center justify-center text-[22px] font-semibold text-[#6F541A]">{p.name.slice(0, 1)}</div>}
+              </CircleShell>
+              <p className="text-center text-[12px] font-semibold leading-tight text-[#141210]">{p.name.split(' ')[0]}</p>
+            </button>
+          )
+        })}
+      </div>
+    </section>
+  )
 }

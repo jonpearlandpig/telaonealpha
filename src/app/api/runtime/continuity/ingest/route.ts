@@ -19,6 +19,7 @@ export async function POST(req: Request) {
       event: result.event,
       insertedId: result.insertedId,
       lineageId: result.lineageId,
+      data: result.data,
     })
   } catch (err) {
     return NextResponse.json(

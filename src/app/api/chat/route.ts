@@ -1,62 +1,61 @@
 import { getAnthropicClient, buildSystemPrompt, MODEL } from '@/lib/anthropic'
 
 function buildFallbackOperationalReply(question: string, operationalContext?: string) {
-  const lines = (operationalContext ?? '')
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
+  const normalizedQuestion = question.trim().toLowerCase()
+  const unresolvedMatch = operationalContext?.match(/Unresolved items:\s*([^\n]+)/i)
+  const latestMatch = operationalContext?.match(/Latest continuity:\s*([^\n]+)/i)
+  const operationMatch = operationalContext?.match(/Priority operation:\s*([^\n]+)/i)
 
-  const activeOperations = lines.find((line) => line.startsWith('Active operations:'))?.replace('Active operations:', '').trim() ?? 'none'
-  const unresolved = lines.find((line) => line.startsWith('Unresolved items:'))?.replace('Unresolved items:', '').trim() ?? '0'
-  const latest = lines.find((line) => line.startsWith('Latest continuity:'))?.replace('Latest continuity:', '').trim() ?? 'none'
-  const feedLines = lines.filter((line) => line.startsWith('- '))
-  const lower = question.toLowerCase()
-
-  if (lower.includes('blocking') || lower.includes('blocked') || lower.includes('unresolved')) {
-    return unresolved === '0'
-      ? `No unresolved items are currently hydrated. Closest active signal is ${latest}.`
-      : `${unresolved} unresolved items are currently hydrated. Closest active signal is ${latest}.`
+  if (normalizedQuestion.includes('blocking') || normalizedQuestion.includes('attention') || normalizedQuestion.includes('unresolved')) {
+    return [
+      unresolvedMatch ? `${unresolvedMatch[0]}.` : 'No unresolved items are currently hydrated.',
+      operationMatch ? `${operationMatch[0]}.` : null,
+      latestMatch ? `Closest active signal is ${latestMatch[1]}.` : null,
+    ].filter(Boolean).join(' ')
   }
 
-  if (lower.includes('changed') || lower.includes('today')) {
-    return feedLines[0]?.replace(/^- /, '') ?? `Latest continuity is ${latest}.`
+  if (normalizedQuestion.includes('changed') || normalizedQuestion.includes('latest')) {
+    return latestMatch
+      ? `Latest operational movement: ${latestMatch[1]}.`
+      : 'No recent continuity signal is currently hydrated.'
   }
 
-  if (lower.includes('attention') || lower.includes('next')) {
-    return `Active operations: ${activeOperations}. Latest continuity: ${latest}.`
-  }
-
-  return `Active operations: ${activeOperations}. Unresolved items: ${unresolved}. Latest continuity: ${latest}.`
+  return latestMatch
+    ? `Operational context is limited right now. Start with ${latestMatch[1]}.`
+    : 'Operational context is limited right now.'
 }
 
 function streamSingleMessage(text: string) {
   const encoder = new TextEncoder()
-
-  return new Response(
-    new ReadableStream({
-      start(controller) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`))
-        controller.enqueue(encoder.encode('data: [DONE]\n\n'))
-        controller.close()
-      },
-    }),
-    {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        Connection: 'keep-alive',
-      },
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`))
+      controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+      controller.close()
     },
-  )
+  })
 }
 
 export async function POST(req: Request) {
   try {
     const { messages, wikiContext, operationalContext } = await req.json()
+
     const operationalBlock = operationalContext
       ? `\n## Live Operational Context\n${operationalContext}`
       : ''
+
     const systemPrompt = buildSystemPrompt(wikiContext || '') + operationalBlock
+    const fallback = buildFallbackOperationalReply(messages?.at(-1)?.content ?? '', operationalContext)
+
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return new Response(streamSingleMessage(fallback), {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          Connection: 'keep-alive',
+        },
+      })
+    }
 
     let stream
     try {
@@ -66,13 +65,15 @@ export async function POST(req: Request) {
         system: systemPrompt,
         messages,
       })
-    } catch {
-      return streamSingleMessage(
-        buildFallbackOperationalReply(
-          messages?.[messages.length - 1]?.content ?? '',
-          operationalContext,
-        ),
-      )
+    } catch (err) {
+      console.error('[chat] anthropic stream init failed:', err)
+      return new Response(streamSingleMessage(fallback), {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          Connection: 'keep-alive',
+        },
+      })
     }
 
     const encoder = new TextEncoder()

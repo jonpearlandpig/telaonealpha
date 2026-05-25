@@ -1,16 +1,11 @@
-import type { DurableArtifactRow, DurableEntityRow, DurableSnapshotRow } from './schema'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { resolveSupabaseConfig } from './env'
 
-type Store = {
-  artifacts: DurableArtifactRow[]
-  entities: DurableEntityRow[]
-  snapshots: DurableSnapshotRow[]
-  ingestionJobs: Array<Record<string, unknown>>
-}
+let _client: SupabaseClient | null = null
 
-const globalStore: Store = { artifacts: [], entities: [], snapshots: [], ingestionJobs: [] }
-
-export function getSupabaseClient() {
-  return {
-    store: globalStore,
-  }
+export function getSupabaseClient(): SupabaseClient {
+  if (_client) return _client
+  const { url, serviceRoleKey } = resolveSupabaseConfig()
+  _client = createClient(url, serviceRoleKey, { auth: { persistSession: false } })
+  return _client
 }
