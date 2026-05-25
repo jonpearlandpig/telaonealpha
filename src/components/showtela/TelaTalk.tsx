@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import type { ContinuityIngestionInput } from '@/lib/continuity/normalize-ingestion'
 import type { OperationalCalendarEvent } from '@/lib/showtela/calendar'
 import type { ContinuityEvent } from '@/lib/showtela/types'
@@ -45,6 +45,7 @@ export function TelaTalk({
     'What unresolved pressure exists?',
   ]
   const [draft, setDraft] = useState('')
+  const [isAsking, setIsAsking] = useState(false)
   const [thread, setThread] = useState<Array<{ id: string; role: 'user' | 'tela'; text: string }>>([
     {
       id: 'tela-pinned',
@@ -88,42 +89,56 @@ export function TelaTalk({
     }
   }
 
-  function deriveTelaAnswer(question: string) {
-    const lower = question.toLowerCase()
+  const askTELA = useCallback(async (question: string): Promise<string> => {
+    const operationalContext = [
+      `Active people: ${operations.map(o => o.label).join(', ') || 'none'}`,
+      `Unresolved items: ${derivedContext.unresolvedCount} (${derivedContext.blockedCount} blocking)`,
+      derivedContext.latestContinuity
+        ? `Latest continuity: ${derivedContext.latestContinuity.headline}`
+        : '',
+      derivedContext.priorityOperation
+        ? `Priority operation: ${derivedContext.priorityOperation.label} (${derivedContext.priorityOperation.unresolvedCount ?? 0} unresolved)`
+        : '',
+      feed.slice(0, 3).map(e => `- ${e.headline}: ${e.body?.slice(0, 100) ?? ''}`).join('\n'),
+    ].filter(Boolean).join('\n')
 
-    if (lower.includes('venue')) {
-      const venueEvents = calendarEvents.filter((event) => event.type === 'venue' || event.departments.some((department) => department.toLowerCase().includes('venue')))
-      return venueEvents.length
-        ? `Venue movement is attached to ${venueEvents[0].title}. ${venueEvents[0].summary ?? venueEvents[0].telaHint ?? 'TELA is holding it as calendar-linked continuity.'}`
-        : 'No venue-specific movement is derived from the current continuity field yet.'
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: question }],
+          operationalContext,
+          wikiContext: '',
+        }),
+      })
+
+      if (!res.ok || !res.body) return 'TELA is not available right now.'
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let result = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const chunk = decoder.decode(value)
+        const lines = chunk.split('\n').filter(l => l.startsWith('data: '))
+        for (const line of lines) {
+          const json = line.slice(6)
+          if (json === '[DONE]') break
+          try {
+            const parsed = JSON.parse(json) as { text?: string; error?: string }
+            if (parsed.text) result += parsed.text
+          } catch { /* skip malformed chunks */ }
+        }
+      }
+
+      return result || 'No operational signal derived.'
+    } catch {
+      return 'TELA is not available right now.'
     }
-
-    if (lower.includes('changed') || lower.includes('today')) {
-      return derivedContext.latestContinuity
-        ? `${derivedContext.latestContinuity.headline}${derivedContext.latestContinuity.body ? ` - ${derivedContext.latestContinuity.body}` : ''}`
-        : autoscan.mattersNow
-    }
-
-    if (lower.includes('attention') || lower.includes('requires')) {
-      return derivedContext.priorityOperation
-        ? `${derivedContext.priorityOperation.label} requires attention first. It is carrying ${derivedContext.priorityOperation.unresolvedCount ?? 0} unresolved signal${derivedContext.priorityOperation.unresolvedCount === 1 ? '' : 's'}.`
-        : autoscan.nextMovement
-    }
-
-    if (lower.includes('shift')) {
-      return derivedContext.pressureEvents[0]
-        ? `${derivedContext.pressureEvents[0].title} is the clearest operational shift. Pressure is ${derivedContext.pressureEvents[0].pressureState}; continuity is ${derivedContext.pressureEvents[0].continuityState}.`
-        : 'No pressure shift is derived beyond the current autoscan.'
-    }
-
-    if (lower.includes('unresolved') || lower.includes('pressure')) {
-      return derivedContext.unresolvedCount > 0
-        ? `${derivedContext.unresolvedCount} unresolved item${derivedContext.unresolvedCount === 1 ? '' : 's'} remain visible; ${derivedContext.blockedCount} are blocker-level.`
-        : 'No unresolved pressure is currently derived from ShowTELA continuity.'
-    }
-
-    return `${autoscan.currentTruth} ${autoscan.nextMovement}`
-  }
+  }, [derivedContext, feed, operations])
 
   async function submitQuestion(value: string) {
     const question = value.trim()
@@ -131,13 +146,28 @@ export function TelaTalk({
     messageCounter.current += 1
     const messageId = messageCounter.current
     const userMessage = { id: `user-${messageId}`, role: 'user' as const, text: question }
-    if (isQuestionPrompt(question) || !onContinuityIngest) {
-      setThread((current) => [
-        ...current,
-        userMessage,
-        { id: `tela-${messageId}`, role: 'tela', text: deriveTelaAnswer(question) },
-      ])
+
+    if (isQuestionPrompt(question)) {
+      setThread((current) => [...current, userMessage, { id: `tela-${messageId}`, role: 'tela', text: '...' }])
       setDraft('')
+      setIsAsking(true)
+      const answer = await askTELA(question)
+      setIsAsking(false)
+      setThread((current) =>
+        current.map(m => m.id === `tela-${messageId}` ? { ...m, text: answer } : m)
+      )
+      return
+    }
+
+    if (!onContinuityIngest) {
+      setThread((current) => [...current, userMessage, { id: `tela-${messageId}`, role: 'tela', text: '...' }])
+      setDraft('')
+      setIsAsking(true)
+      const answer = await askTELA(question)
+      setIsAsking(false)
+      setThread((current) =>
+        current.map(m => m.id === `tela-${messageId}` ? { ...m, text: answer } : m)
+      )
       return
     }
 
@@ -246,7 +276,13 @@ export function TelaTalk({
                 </span>
               )}
             </div>
-            <p className={`mt-1 text-[13px] leading-relaxed ${message.role === 'tela' ? 'text-[#5E5348]' : 'text-[#F2E6CE]'}`}>{message.text}</p>
+            <p className={`mt-1 text-[13px] leading-relaxed ${message.role === 'tela' ? 'text-[#5E5348]' : 'text-[#F2E6CE]'}`}>
+              {message.text === '...' && isAsking ? (
+                <span className="italic opacity-60">TELA is thinking…</span>
+              ) : (
+                message.text
+              )}
+            </p>
           </div>
         ))}
       </section>

@@ -1,6 +1,7 @@
 import type { ContinuityEvent } from '@/lib/showtela/types'
 import { createAuthorshipTrace } from '@/lib/showtela/telauthorium'
 import { createLineageRef } from '@/lib/showtela/penAndSword'
+import { llmNormalize } from './llm-normalize'
 
 export type ContinuityIngestionMode =
   | 'voice-note'
@@ -29,7 +30,7 @@ export type ContinuityIngestionInput = {
   assetContents?: AssetContent[]
 }
 
-type NormalizeContinuityIngestionOptions = {
+export type NormalizeContinuityIngestionOptions = {
   author?: string
   continuityObjectId?: string
   eventId?: string
@@ -129,5 +130,34 @@ export function normalizeContinuityIngestion(
       parentId: options?.lineageParentId,
       existingChain: options?.existingLineageChain,
     }),
+  }
+}
+
+export async function normalizeContinuityIngestionWithLLM(
+  input: ContinuityIngestionInput,
+  options?: NormalizeContinuityIngestionOptions,
+): Promise<ContinuityEvent> {
+  const base = normalizeContinuityIngestion(input, options)
+
+  if (!input.body?.trim()) return base
+
+  const llm = await llmNormalize(input.body, input.mode, {
+    owner: input.owner,
+    operation: input.operation,
+    linkedEntity: input.linkedEntity,
+  })
+
+  if (!llm) return base
+
+  return {
+    ...base,
+    headline: llm.headline || base.headline,
+    body: llm.summary || base.body,
+    rawTranscript: input.body,
+    pressure: llm.pressure || base.pressure,
+    tags: Array.from(new Set([...(base.tags ?? []), ...llm.tags])),
+    nextActions: llm.nextActions,
+    classification: llm.classification,
+    linkedEntities: Array.from(new Set([...(base.linkedEntities ?? []), ...llm.entities])),
   }
 }

@@ -1,4 +1,4 @@
-export type PressureLevel = 'low' | 'medium' | 'high'
+export type PressureLevel = 'low' | 'medium' | 'high' | 'critical'
 
 export type AuthorshipSurface = 'telegram' | 'voice' | 'ingest' | 'runtime' | 'notion' | 'api'
 
@@ -90,6 +90,9 @@ export type ContinuityEvent = {
   }
   authorshipTrace?: AuthorshipTrace
   lineageRef?: LineageRef
+  rawTranscript?: string
+  nextActions?: string[]
+  classification?: string
 }
 
 export type MediaMemoryType = 'image' | 'pdf' | 'stage_plot' | 'screenshot' | 'bus_schedule' | 'venue_packet' | 'contract' | 'voice_memo'
