@@ -2,10 +2,24 @@ import type { loadDurableContinuity } from './durableMemory'
 import type { reconstructOperationalStateFromReplay } from './replay/reconstructOperationalState'
 import type { OperationalProjection } from './state/model'
 
+// Diagnostics-only record produced by hydrateRuntime().
+// Never exposed to the UI — consumed only by observability/logging paths.
+// Used after SSR inversion (Phase B) to verify old authority paths are dead.
+export type RuntimeDiagnostics = {
+  runtimeAuthoritySource: 'hydrateRuntime' | 'getShowTelaHome' | 'unknown'
+  projectionBuiltFrom: 'events' | 'cache' | 'none'
+  hydrationReplaySequence: number | undefined
+  objectConfirmationCount: number     // distinct object IDs produced by approved-state events
+  unconfirmedObjectCount: number      // distinct object IDs produced only by non-approved events
+  graphAssemblyAgeMs: number | undefined  // undefined until graph assembly enters the hydration path
+  hydratedAt: string
+}
+
 export function buildHydratedRuntimeState(input: {
   durable: Awaited<ReturnType<typeof loadDurableContinuity>>
   replay: ReturnType<typeof reconstructOperationalStateFromReplay>
   operationalProjection: OperationalProjection
+  diagnostics: RuntimeDiagnostics
 }) {
   const unresolved = {
     unresolvedThreads: input.replay.state.activeThreads,
@@ -27,7 +41,11 @@ export function buildHydratedRuntimeState(input: {
     governanceLegality: input.replay.state.governanceLegality,
     operationalProjection: input.operationalProjection,
     snapshots: input.durable.snapshots.filter((snapshot) => snapshot.snapshotKind === 'checkpoint'),
+    entities: input.durable.entities,
     unresolved,
     replay: input.replay,
+    diagnostics: input.diagnostics,
   }
 }
+
+export type HydratedRuntimeState = ReturnType<typeof buildHydratedRuntimeState>

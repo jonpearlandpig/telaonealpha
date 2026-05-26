@@ -2,8 +2,19 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { buildHydratedRuntimeState } from './runtimeHydrationModel'
+import type { RuntimeDiagnostics } from './runtimeHydrationModel'
 import type { ContinuitySnapshot } from './continuitySnapshots'
 import type { OperationalProjection } from './state/model'
+
+const testDiagnostics: RuntimeDiagnostics = {
+  runtimeAuthoritySource: 'hydrateRuntime',
+  projectionBuiltFrom: 'events',
+  hydrationReplaySequence: 3,
+  objectConfirmationCount: 1,
+  unconfirmedObjectCount: 0,
+  graphAssemblyAgeMs: undefined,
+  hydratedAt: '2026-05-26T21:00:00.000Z',
+}
 
 test('buildHydratedRuntimeState returns replay-derived projections only', () => {
   const snapshots: ContinuitySnapshot[] = [{
@@ -99,6 +110,7 @@ test('buildHydratedRuntimeState returns replay-derived projections only', () => 
         readinessLabel: 'No ready state surfaced.',
       },
     } satisfies OperationalProjection,
+    diagnostics: testDiagnostics,
   })
 
   assert.deepEqual(hydrated.activeProjects, ['project:crusade'])

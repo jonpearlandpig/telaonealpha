@@ -24,6 +24,7 @@ export async function persistRuntimeDerivations(event: RuntimeEvent) {
       const { error } = await db.from('operational_objects').upsert(
         mutations.operationalObjects.map((item) => ({
           id: item.id,
+          workspace_id: event.workspaceId ?? null,
           object_type: item.objectType,
           lineage_id: item.lineageId ?? null,
           status: item.status,

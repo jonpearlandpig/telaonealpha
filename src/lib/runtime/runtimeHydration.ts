@@ -1,10 +1,41 @@
 import { createReplayCheckpointSnapshot, selectBestReplayCheckpoint } from './continuitySnapshots'
 import { loadDurableContinuity } from './durableMemory'
 import { getAllReplayEventsForWorkspace } from './eventStore'
+import { deriveOperationalObjects } from './replay/derivedArtifacts'
 import { reconstructOperationalStateFromReplay } from './replay/reconstructOperationalState'
 import { persistSnapshot } from './snapshotPersistence'
 import { buildHydratedRuntimeState } from './runtimeHydrationModel'
+import type { RuntimeDiagnostics } from './runtimeHydrationModel'
 import { buildOperationalProjectionFromEvents } from './state/buildOperationalProjection'
+import { persistCanonicalObjectsFromReplay } from './objects/objectPersistenceWiring'
+import type { RuntimeEvent } from './runtimeTypes'
+
+function buildDiagnostics(
+  events: RuntimeEvent[],
+  replay: ReturnType<typeof reconstructOperationalStateFromReplay>,
+  hasProjection: boolean,
+): RuntimeDiagnostics {
+  // One pass over all events to count objects by confirmation status.
+  // An object ID is "confirmed" if at least one approved-state event produced it.
+  const confirmedIds = new Set<string>()
+  const allIds = new Set<string>()
+  for (const event of events) {
+    for (const obj of deriveOperationalObjects(event)) {
+      allIds.add(obj.id)
+      if (event.governanceState === 'approved') confirmedIds.add(obj.id)
+    }
+  }
+
+  return {
+    runtimeAuthoritySource: 'hydrateRuntime',
+    projectionBuiltFrom: hasProjection ? 'events' : 'none',
+    hydrationReplaySequence: replay.lastReplaySequence,
+    objectConfirmationCount: confirmedIds.size,
+    unconfirmedObjectCount: allIds.size - confirmedIds.size,
+    graphAssemblyAgeMs: undefined,
+    hydratedAt: new Date().toISOString(),
+  }
+}
 
 function snapshotProvenance(sourceId: string) {
   const now = new Date().toISOString()
@@ -29,6 +60,13 @@ export async function hydrateRuntime(workspaceId: string) {
 
   const checkpoint = selectBestReplayCheckpoint(durable.snapshots)
   const replay = reconstructOperationalStateFromReplay(events)
+
+  // Additive: promote replay-derived objects to canonical form and persist.
+  // Runs fire-and-forget — does not block hydration return.
+  void persistCanonicalObjectsFromReplay(workspaceId, events).catch((err) => {
+    console.error('[runtimeHydration] canonical object persistence failed:', String(err))
+  })
+
   const operationalProjection = buildOperationalProjectionFromEvents({
     workspaceId,
     replayEvents: events,
@@ -57,9 +95,20 @@ export async function hydrateRuntime(workspaceId: string) {
     lastReplaySequence: replay.lastReplaySequence ?? null,
   })
 
+  const diagnostics = buildDiagnostics(events, replay, true)
+
+  console.log('[runtimeHydration] diagnostics', {
+    authoritySource: diagnostics.runtimeAuthoritySource,
+    replaySequence: diagnostics.hydrationReplaySequence,
+    confirmedObjects: diagnostics.objectConfirmationCount,
+    unconfirmedObjects: diagnostics.unconfirmedObjectCount,
+    projectionFrom: diagnostics.projectionBuiltFrom,
+  })
+
   return buildHydratedRuntimeState({
     durable,
     replay,
     operationalProjection,
+    diagnostics,
   })
 }
