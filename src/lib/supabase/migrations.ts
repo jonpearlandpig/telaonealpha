@@ -43,10 +43,16 @@ export const SUPABASE_MIGRATIONS = [
   create table if not exists durable_snapshots (
     id text primary key,
     workspace_id text not null,
+    snapshot_kind text not null default 'acceleration',
+    replay_source text not null default 'runtime_events',
     thread_refs text[] not null default '{}',
     entity_refs text[] not null default '{}',
     lineage_refs text[] not null default '{}',
     unresolved_count integer not null default 0,
+    replayed_event_count integer not null default 0,
+    latest_replay_sequence bigint,
+    latest_event_id text,
+    latest_event_at timestamptz,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now(),
     provenance jsonb not null
@@ -69,6 +75,8 @@ export const SUPABASE_MIGRATIONS = [
   `
   create table if not exists runtime_events (
     id text primary key,
+    workspace_id text not null,
+    replay_sequence bigint generated always as identity,
     type text not null,
     event_version integer not null,
     schema_version text not null,
@@ -83,6 +91,9 @@ export const SUPABASE_MIGRATIONS = [
     created_at timestamptz not null default now()
   );
   create index if not exists runtime_events_created_idx on runtime_events (created_at desc);
+  create index if not exists runtime_events_workspace_created_idx on runtime_events (workspace_id, created_at desc);
+  create unique index if not exists runtime_events_replay_sequence_idx on runtime_events (replay_sequence);
+  create index if not exists runtime_events_workspace_replay_idx on runtime_events (workspace_id, replay_sequence asc);
   create index if not exists runtime_events_trace_idx on runtime_events (trace_id, created_at asc);
   create index if not exists runtime_events_lineage_idx on runtime_events (lineage_id, created_at asc);
   `,

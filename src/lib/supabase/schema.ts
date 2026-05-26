@@ -43,10 +43,16 @@ export type DurableEntityRow = {
 export type DurableSnapshotRow = {
   id: string
   workspaceId: string
+  snapshotKind: 'acceleration' | 'checkpoint'
+  replaySource: 'runtime_events'
   threadRefs: string[]
   entityRefs: string[]
   lineageRefs: string[]
   unresolvedCount: number
+  replayedEventCount: number
+  latestReplaySequence?: number
+  latestEventId?: string
+  latestEventAt?: string
   createdAt: string
   updatedAt: string
   provenance: ProvenanceMetadata
@@ -56,6 +62,8 @@ export type RuntimeEventSource = 'user' | 'system' | 'operator' | 'automation'
 
 export type RuntimeEventRow = {
   id: string
+  workspaceId: string
+  replaySequence?: number
   type: string
   eventVersion: number
   schemaVersion: string

@@ -16,6 +16,8 @@ export type RuntimeEventPayload = Record<string, unknown>
 
 export type RuntimeEvent<TPayload extends RuntimeEventPayload = RuntimeEventPayload> = {
   id: string
+  workspaceId?: string
+  replaySequence?: number
   type: string
   eventVersion: number
   schemaVersion: string
@@ -32,6 +34,8 @@ export type RuntimeEvent<TPayload extends RuntimeEventPayload = RuntimeEventPayl
 
 export type RuntimeEventInput<TPayload extends RuntimeEventPayload = RuntimeEventPayload> = {
   id?: string
+  workspaceId?: string
+  replaySequence?: number
   type: string
   eventVersion?: number
   schemaVersion?: string
@@ -58,6 +62,9 @@ export type ReconstructedOperationalState = {
   state: OperationalState
   replayedEventCount: number
   lastEventAt?: string
+  lastReplaySequence?: number
+  checkpointSnapshotId?: string
+  replaySource: 'events'
 }
 
 export type LegalityCheckInput = {
@@ -125,6 +132,8 @@ export function createRuntimeEvent<TPayload extends RuntimeEventPayload>(
 ): RuntimeEvent<TPayload> {
   return {
     id: input.id ?? crypto.randomUUID(),
+    workspaceId: input.workspaceId,
+    replaySequence: input.replaySequence,
     type: input.type,
     eventVersion: input.eventVersion ?? RUNTIME_EVENT_VERSION,
     schemaVersion: input.schemaVersion ?? RUNTIME_EVENT_SCHEMA_VERSION,

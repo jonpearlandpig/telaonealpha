@@ -9,6 +9,7 @@ import {
 } from '@/lib/continuity/ingest-runtime'
 import { bootstrapRuntimeSpine } from '@/lib/runtime/bootstrap'
 import { emitRuntimeEvent } from '@/lib/runtime/eventBus'
+import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
 
 export const dynamic = 'force-dynamic'
 
@@ -97,6 +98,7 @@ export async function POST() {
   })
 
   await emitRuntimeEvent({
+    workspaceId: SHOWTELA_WORKSPACE_ID,
     type: 'continuity.ingested',
     source: 'automation',
     governanceState: 'approved',
@@ -117,6 +119,7 @@ export async function POST() {
   })
 
   await emitRuntimeEvent({
+    workspaceId: SHOWTELA_WORKSPACE_ID,
     type: 'continuity.normalized',
     source: 'automation',
     governanceState: 'approved',

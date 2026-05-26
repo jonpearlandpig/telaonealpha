@@ -1,10 +1,6 @@
 import { ACTIONS } from '../actions'
-import type { OperationalPriority, OperationalState } from '../operationalState'
+import type { OperationalObject, OperationalPriority, OperationalState } from '../operationalState'
 import type { ReconstructedOperationalState, RuntimeEvent } from '../runtimeTypes'
-
-function eventTime(event: RuntimeEvent) {
-  return new Date(event.createdAt).getTime()
-}
 
 function scoreForEvent(event: RuntimeEvent): number {
   if (event.type === 'escalation.triggered') return 45
@@ -34,14 +30,116 @@ function stringValue(value: unknown): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined
 }
 
+function stringRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+}
+
+function projectRefs(event: RuntimeEvent): string[] {
+  const payload = event.payload ?? {}
+  const directProject = stringValue(payload.projectId)
+  const projectIds = stringList(payload.projectIds)
+  const linkedProjects = stringList(payload.linkedEntities).filter((value) => /project|show|tour|crusade|venue/i.test(value))
+  return Array.from(new Set([directProject, ...projectIds, ...linkedProjects].filter(Boolean) as string[]))
+}
+
+function decisionLabel(event: RuntimeEvent): string | undefined {
+  const payload = event.payload ?? {}
+  const headline = stringValue(payload.normalizedHeadline) ?? stringValue(payload.headline) ?? stringValue(payload.title)
+  if (headline) return headline
+  if (event.governanceState === 'approved' && event.executionState === 'completed') return event.type
+  return undefined
+}
+
+function deriveOperationalObjects(event: RuntimeEvent): OperationalObject[] {
+  const payload = stringRecord(event.payload)
+  const createdAt = event.createdAt
+  const objects: OperationalObject[] = []
+  const threadId = stringValue(payload.threadId)
+
+  if (threadId) {
+    objects.push({
+      id: `thread:${threadId}`,
+      objectType: 'continuity-thread',
+      lineageId: event.lineageId,
+      status: event.type === ACTIONS.ARCHIVE_CONTINUITY ? 'archived' : 'active',
+      createdAt,
+      updatedAt: createdAt,
+      payload: {
+        threadId,
+        eventType: event.type,
+        payloadType: event.payloadType,
+      },
+    })
+  }
+
+  if (event.type === 'governance.blocked' || event.type === 'execution.denied' || event.type === 'escalation.triggered') {
+    objects.push({
+      id: `governance:${event.lineageId ?? event.id}`,
+      objectType: 'governance',
+      lineageId: event.lineageId,
+      status: event.type.replace('.', '-'),
+      createdAt,
+      updatedAt: createdAt,
+      payload: {
+        type: event.type,
+        traceId: event.traceId,
+        correlationId: event.correlationId,
+      },
+    })
+  }
+
+  for (const entityId of [stringValue(payload.entityId), ...stringList(payload.linkedEntities)].filter(Boolean) as string[]) {
+    objects.push({
+      id: `entity:${entityId}`,
+      objectType: 'entity',
+      lineageId: event.lineageId,
+      status: 'active',
+      createdAt,
+      updatedAt: createdAt,
+      payload: {
+        entityId,
+        threadId,
+      },
+    })
+  }
+
+  const decision = decisionLabel(event)
+  if (decision) {
+    objects.push({
+      id: `decision:${event.id}`,
+      objectType: 'decision',
+      lineageId: event.lineageId,
+      status: `${event.governanceState}:${event.executionState}`,
+      createdAt,
+      updatedAt: createdAt,
+      payload: {
+        decision,
+        payloadType: event.payloadType,
+      },
+    })
+  }
+
+  return objects
+}
+
 export function reconstructOperationalState(events: RuntimeEvent[]): ReconstructedOperationalState {
-  const ordered = [...events].sort((left, right) => eventTime(left) - eventTime(right) || left.id.localeCompare(right.id))
+  return reconstructOperationalStateFromReplay(events)
+}
+
+export function reconstructOperationalStateFromReplay(
+  events: RuntimeEvent[],
+): ReconstructedOperationalState {
+  const ordered = [...events].sort((left, right) => (left.replaySequence ?? 0) - (right.replaySequence ?? 0))
   const activeThreads = new Set<string>()
+  const activeProjects = new Set<string>()
   const unresolved = new Set<string>()
+  const pinnedContinuity = new Set<string>()
+  const recentDecisionSet = new Set<string>()
   const entities = new Set<string>()
   const lineage = new Set<string>()
   const staleMemory = new Set<string>()
   const priorities = new Map<string, OperationalPriority>()
+  const operationalObjects = new Map<string, OperationalObject>()
   let blockedCount = 0
   let deniedCount = 0
   let escalatedCount = 0
@@ -56,9 +154,12 @@ export function reconstructOperationalState(events: RuntimeEvent[]): Reconstruct
     const linkedEntities = stringList(payload.linkedEntities)
 
     if (threadId) activeThreads.add(threadId)
+    for (const projectRef of projectRefs(event)) activeProjects.add(projectRef)
     if (event.lineageId) lineage.add(event.lineageId)
     if (entityId) entities.add(entityId)
     for (const linkedEntity of linkedEntities) entities.add(linkedEntity)
+    if (stringValue(payload.pinnedId)) pinnedContinuity.add(stringValue(payload.pinnedId)!)
+    if (decisionLabel(event)) recentDecisionSet.add(decisionLabel(event)!)
 
     if (event.type === ACTIONS.CREATE_UNRESOLVED || event.type === 'continuity.ingested') {
       if (unresolvedId) unresolved.add(unresolvedId)
@@ -94,13 +195,24 @@ export function reconstructOperationalState(events: RuntimeEvent[]): Reconstruct
       reason: priorityReason(event),
       score: scoreForEvent(event),
     })
+
+    for (const operationalObject of deriveOperationalObjects(event)) {
+      const current = operationalObjects.get(operationalObject.id)
+      operationalObjects.set(operationalObject.id, current
+        ? { ...current, ...operationalObject, payload: { ...current.payload, ...operationalObject.payload }, updatedAt: operationalObject.updatedAt }
+        : operationalObject)
+    }
   }
 
   const state: OperationalState = {
     activeThreads: [...activeThreads],
+    activeProjects: [...activeProjects].slice(0, 12),
     unresolvedContinuity: [...unresolved],
+    pinnedContinuity: [...pinnedContinuity].slice(0, 12),
+    recentDecisions: [...recentDecisionSet].slice(-12),
     activeEntities: [...entities].slice(0, 12),
     recentLineage: [...lineage].slice(-12),
+    operationalObjects: [...operationalObjects.values()].sort((left, right) => left.updatedAt.localeCompare(right.updatedAt)).slice(-40),
     currentPriorities: [...priorities.values()].sort((left, right) => right.score - left.score).slice(0, 12),
     continuityIntensity: unresolved.size * 10 + Math.min(ordered.length, 25),
     operationalDrift: blockedCount,
@@ -118,5 +230,7 @@ export function reconstructOperationalState(events: RuntimeEvent[]): Reconstruct
     state,
     replayedEventCount: ordered.length,
     lastEventAt: ordered.at(-1)?.createdAt,
+    lastReplaySequence: ordered.at(-1)?.replaySequence,
+    replaySource: 'events',
   }
 }

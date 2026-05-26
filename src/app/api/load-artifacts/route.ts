@@ -4,6 +4,7 @@ import { listWorkspaceArtifacts, listWorkspaceEntities } from '@/lib/supabase/qu
 import type { DurableArtifactRow, DurableEntityRow } from '@/lib/supabase/schema'
 import type { ArtifactRecord } from '@/lib/artifacts/artifactStore'
 import type { EntityRecord, EntityType } from '@/lib/entities/entityEngine'
+import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
 
 const VALID_ENTITY_TYPES = new Set<EntityType>(['person', 'project', 'organization', 'system', 'location', 'ip', 'context'])
 
@@ -68,8 +69,8 @@ export async function GET() {
 
   try {
     const [artifactRows, entityRows] = await Promise.all([
-      listWorkspaceArtifacts('default-workspace'),
-      listWorkspaceEntities('default-workspace'),
+      listWorkspaceArtifacts(SHOWTELA_WORKSPACE_ID),
+      listWorkspaceEntities(SHOWTELA_WORKSPACE_ID),
     ])
     const artifacts = artifactRows.map(toArtifactRecord).filter(Boolean) as ArtifactRecord[]
     const entities = entityRows.map(toEntityRecord)

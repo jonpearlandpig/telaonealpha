@@ -1,0 +1,27 @@
+import type { loadDurableContinuity } from './durableMemory'
+import type { reconstructOperationalStateFromReplay } from './replay/reconstructOperationalState'
+
+export function buildHydratedRuntimeState(input: {
+  durable: Awaited<ReturnType<typeof loadDurableContinuity>>
+  replay: ReturnType<typeof reconstructOperationalStateFromReplay>
+}) {
+  const unresolved = {
+    unresolvedThreads: input.replay.state.activeThreads,
+    unansweredQuestions: [] as string[],
+    stalledProjects: input.replay.state.activeProjects,
+    incompleteArtifacts: input.replay.state.unresolvedContinuity,
+    pendingLineageChains: input.replay.state.recentLineage,
+  }
+
+  return {
+    activeProjects: input.replay.state.activeProjects,
+    activeEntities: input.replay.state.activeEntities,
+    latestLineage: input.replay.state.recentLineage,
+    pinnedContinuity: input.replay.state.pinnedContinuity,
+    recentDecisions: input.replay.state.recentDecisions,
+    operationalObjects: input.replay.state.operationalObjects,
+    snapshots: input.durable.snapshots.filter((snapshot) => snapshot.snapshotKind === 'checkpoint'),
+    unresolved,
+    replay: input.replay,
+  }
+}

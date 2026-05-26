@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { persistDurableContinuity } from '@/lib/runtime/durableMemory'
 import { deterministicArtifactId } from '@/lib/artifacts/artifactStore'
 import { resolveShowTelaDatabase } from '@/lib/showtela/env'
+import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
 
 const NOTION_VERSION = '2022-06-28'
 const notionHeaders = () => ({
@@ -99,7 +100,7 @@ export async function POST(req: NextRequest) {
     submittedBy ? `Submitted by: ${submittedBy}` : null,
   ].filter(Boolean).join('\n')
 
-  persistDurableContinuity('default-workspace', {
+  persistDurableContinuity(SHOWTELA_WORKSPACE_ID, {
     artifacts: [{
       id: artifactId,
       title,

@@ -13,6 +13,8 @@ import {
 
 type RuntimeEventDbRow = {
   id: string
+  workspace_id: string
+  replay_sequence: number
   type: string
   event_version: number
   schema_version: string
@@ -45,6 +47,8 @@ function normalizeExecutionState(value: string): ExecutionState {
 function toRuntimeEvent(row: RuntimeEventDbRow): RuntimeEvent {
   return {
     id: row.id,
+    workspaceId: row.workspace_id,
+    replaySequence: row.replay_sequence,
     type: row.type,
     eventVersion: row.event_version,
     schemaVersion: row.schema_version,
@@ -61,8 +65,13 @@ function toRuntimeEvent(row: RuntimeEventDbRow): RuntimeEvent {
 }
 
 function fromRuntimeEvent(event: RuntimeEvent): RuntimeEventDbRow {
+  if (!event.workspaceId?.trim()) {
+    throw new Error(`Runtime event ${event.id} (${event.type}) is missing workspaceId`)
+  }
+
   return {
     id: event.id,
+    workspace_id: event.workspaceId,
     type: event.type,
     event_version: event.eventVersion,
     schema_version: event.schemaVersion,
@@ -75,6 +84,27 @@ function fromRuntimeEvent(event: RuntimeEvent): RuntimeEventDbRow {
     payload_type: event.payloadType ?? null,
     payload: event.payload ?? null,
     created_at: event.createdAt,
+    replay_sequence: event.replaySequence ?? 0,
+  }
+}
+
+function toRuntimeEventInsert(event: RuntimeEvent): Omit<RuntimeEventDbRow, 'replay_sequence'> {
+  const row = fromRuntimeEvent(event)
+  return {
+    id: row.id,
+    workspace_id: row.workspace_id,
+    type: row.type,
+    event_version: row.event_version,
+    schema_version: row.schema_version,
+    source: row.source,
+    governance_state: row.governance_state,
+    execution_state: row.execution_state,
+    trace_id: row.trace_id,
+    correlation_id: row.correlation_id,
+    lineage_id: row.lineage_id,
+    payload_type: row.payload_type,
+    payload: row.payload,
+    created_at: row.created_at,
   }
 }
 
@@ -90,9 +120,15 @@ function safePersistenceError(scope: string, error: unknown, event?: RuntimeEven
 }
 
 export async function persistRuntimeEvent(event: RuntimeEvent): Promise<RuntimeEventStoreResult> {
+  if (!event.workspaceId?.trim()) {
+    const error = new Error(`Runtime event ${event.id} (${event.type}) rejected: workspaceId is required`)
+    safePersistenceError('persist', error, event)
+    throw error
+  }
+
   try {
     const supabase = getSupabaseServerClient()
-    const { error } = await supabase.from('runtime_events').insert(fromRuntimeEvent(event))
+    const { error } = await supabase.from('runtime_events').insert(toRuntimeEventInsert(event))
     if (error) {
       safePersistenceError('persist', new Error(error.message), event)
       return { persisted: false, eventId: event.id, error: error.message }
@@ -125,6 +161,53 @@ export async function getRecentEvents(limit = 50): Promise<RuntimeEvent[]> {
   }
 }
 
+export async function getReplayEventsForWorkspacePage(params: {
+  workspaceId: string
+  afterReplaySequence?: number
+  limit?: number
+}): Promise<RuntimeEvent[]> {
+  try {
+    const supabase = getSupabaseServerClient()
+    let query = supabase
+      .from('runtime_events')
+      .select('*')
+      .eq('workspace_id', params.workspaceId)
+      .order('replay_sequence', { ascending: true })
+      .limit(params.limit ?? 500)
+
+    if (typeof params.afterReplaySequence === 'number') {
+      query = query.gt('replay_sequence', params.afterReplaySequence)
+    }
+
+    const { data, error } = await query
+
+    if (error) throw new Error(error.message)
+    return ((data ?? []) as RuntimeEventDbRow[]).map(toRuntimeEvent)
+  } catch (error) {
+    safePersistenceError('workspace', error)
+    return []
+  }
+}
+
+export async function getAllReplayEventsForWorkspace(workspaceId: string): Promise<RuntimeEvent[]> {
+  const events: RuntimeEvent[] = []
+  let afterReplaySequence: number | undefined
+
+  while (true) {
+    const page = await getReplayEventsForWorkspacePage({
+      workspaceId,
+      afterReplaySequence,
+      limit: 500,
+    })
+    if (page.length === 0) break
+    events.push(...page)
+    afterReplaySequence = page.at(-1)?.replaySequence
+    if (page.length < 500) break
+  }
+
+  return events
+}
+
 export async function getEventsByTraceId(traceId: string): Promise<RuntimeEvent[]> {
   try {
     const supabase = getSupabaseServerClient()
@@ -132,8 +215,7 @@ export async function getEventsByTraceId(traceId: string): Promise<RuntimeEvent[
       .from('runtime_events')
       .select('*')
       .eq('trace_id', traceId)
-      .order('created_at', { ascending: true })
-      .order('id', { ascending: true })
+      .order('replay_sequence', { ascending: true })
 
     if (error) throw new Error(error.message)
     return ((data ?? []) as RuntimeEventDbRow[]).map(toRuntimeEvent)
@@ -150,8 +232,7 @@ export async function getEventsByLineageId(lineageId: string): Promise<RuntimeEv
       .from('runtime_events')
       .select('*')
       .eq('lineage_id', lineageId)
-      .order('created_at', { ascending: true })
-      .order('id', { ascending: true })
+      .order('replay_sequence', { ascending: true })
 
     if (error) throw new Error(error.message)
     return ((data ?? []) as RuntimeEventDbRow[]).map(toRuntimeEvent)

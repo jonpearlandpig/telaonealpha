@@ -1,6 +1,4 @@
-import { restoreContinuitySnapshot, type ContinuitySnapshot } from './continuitySnapshots'
-import { loadArtifacts } from '@/lib/artifacts/artifactStore'
-import { loadEntities } from '@/lib/entities/entityStore'
+import type { ContinuitySnapshot } from './continuitySnapshots'
 import { buildOperationalState } from './operationalState'
 import { buildAttentionQueue } from './attentionEngine'
 import { detectOperationalChanges } from './changeDetection'
@@ -15,10 +13,8 @@ export function restoreOnSessionOpen(threadId = 'chat-main'): {
   changes: ReturnType<typeof detectOperationalChanges>
   digest: ReturnType<typeof generateOperationalDigest>
 } {
-  const snapshot = restoreContinuitySnapshot()
-  const artifacts = loadArtifacts()
-  const entities = loadEntities()
-  const state = buildOperationalState(artifacts, entities, threadId)
+  const snapshot: ContinuitySnapshot | null = null
+  const state = buildOperationalState([], [], threadId)
   const attention = buildAttentionQueue(state)
   const changes = detectOperationalChanges(previousState, state)
   const digest = generateOperationalDigest(state, attention, changes)

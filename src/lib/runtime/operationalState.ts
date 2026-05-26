@@ -3,12 +3,25 @@ import type { EntityRecord } from '@/lib/entities/entityEngine'
 import { computeMomentum } from './momentumEngine'
 
 export type OperationalPriority = { id: string; reason: string; score: number }
+export type OperationalObject = {
+  id: string
+  objectType: 'continuity-thread' | 'decision' | 'governance' | 'entity'
+  lineageId?: string
+  status: string
+  createdAt: string
+  updatedAt: string
+  payload: Record<string, unknown>
+}
 
 export type OperationalState = {
   activeThreads: string[]
+  activeProjects: string[]
   unresolvedContinuity: string[]
+  pinnedContinuity: string[]
+  recentDecisions: string[]
   activeEntities: string[]
   recentLineage: string[]
+  operationalObjects: OperationalObject[]
   currentPriorities: OperationalPriority[]
   continuityIntensity: number
   operationalDrift: number
@@ -38,9 +51,13 @@ export function buildOperationalState(artifacts: ArtifactRecord[], entities: Ent
 
   return {
     activeThreads,
+    activeProjects: [],
     unresolvedContinuity: unresolvedArtifacts.map((a) => a.id),
+    pinnedContinuity: artifacts.filter((a) => a.pinned).map((a) => a.id).slice(0, 12),
+    recentDecisions: [],
     activeEntities,
     recentLineage: Array.from(new Set(artifacts.map((a) => a.lineageId).filter(Boolean) as string[])).slice(0, 12),
+    operationalObjects: [],
     currentPriorities: priorities,
     continuityIntensity: momentum.unresolvedPersistence + momentum.entityGravity / 5,
     operationalDrift: Math.max(0, artifacts.length - priorities.length),

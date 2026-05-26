@@ -1,12 +1,20 @@
 import type { ArtifactRecord } from '@/lib/artifacts/artifactStore'
 import type { EntityRecord } from '@/lib/entities/entityEngine'
 import type { RankedContinuityContext } from './continuityRetrieval'
+import type { OperationalState } from './operationalState'
+import type { RuntimeEvent } from './runtimeTypes'
 
 const STORAGE_KEY = 'telaone_continuity_snapshots_v1'
 
 export type ContinuitySnapshot = {
   id: string
   createdAt: string
+  snapshotKind?: 'acceleration' | 'checkpoint'
+  replaySource?: 'runtime_events'
+  replayedEventCount?: number
+  latestReplaySequence?: number
+  latestEventId?: string
+  latestEventAt?: string
   threadRefs: string[]
   entityRefs: string[]
   lineageRefs: string[]
@@ -34,20 +42,12 @@ export function deterministicSnapshotId(threadId: string, createdAt: string): st
 }
 
 export function loadContinuitySnapshots(): ContinuitySnapshot[] {
-  if (typeof window === 'undefined') return []
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw) as ContinuitySnapshot[]
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
+  void STORAGE_KEY
+  return []
 }
 
 export function saveContinuitySnapshots(snapshots: ContinuitySnapshot[]): void {
-  if (typeof window === 'undefined') return
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshots))
+  void snapshots
 }
 
 export function createContinuitySnapshot(params: {
@@ -68,6 +68,9 @@ export function createContinuitySnapshot(params: {
   return {
     id: deterministicSnapshotId(params.threadId, createdAt),
     createdAt,
+    snapshotKind: 'acceleration',
+    replaySource: 'runtime_events',
+    replayedEventCount: 0,
     threadRefs,
     entityRefs,
     lineageRefs,
@@ -85,29 +88,91 @@ export function createContinuitySnapshot(params: {
   }
 }
 
+export function createReplayCheckpointSnapshot(params: {
+  workspaceId: string
+  threadId: string
+  state: OperationalState
+  events: RuntimeEvent[]
+  artifacts?: ArtifactRecord[]
+  entities?: EntityRecord[]
+}): ContinuitySnapshot {
+  const latest = params.events.at(-1)
+  const createdAt = latest?.createdAt ?? new Date().toISOString()
+  const lineageRefs = Array.from(new Set(params.events.map((event) => event.lineageId).filter(Boolean) as string[])).slice(-12)
+  const entityRefs = params.state.activeEntities.slice(0, 12)
+  const threadRefs = params.state.activeThreads.slice(0, 12)
+
+  return {
+    id: deterministicSnapshotId(`${params.workspaceId}:${params.threadId}:checkpoint`, createdAt),
+    createdAt,
+    snapshotKind: 'checkpoint',
+    replaySource: 'runtime_events',
+    replayedEventCount: params.events.length,
+    latestReplaySequence: latest?.replaySequence,
+    latestEventId: latest?.id,
+    latestEventAt: latest?.createdAt,
+    threadRefs,
+    entityRefs,
+    lineageRefs,
+    activeArtifacts: (params.artifacts ?? []).slice(0, 8),
+    relatedEntities: (params.entities ?? []).slice(0, 8),
+    unresolvedThreads: params.state.currentPriorities
+      .filter((priority) => priority.reason === 'unresolved continuity')
+      .slice(0, 6)
+      .map((priority) => ({
+        id: priority.id,
+        artifactCount: 1,
+        unresolvedCount: 1,
+        lastActive: createdAt,
+      })),
+    recentLineage: [],
+    activeOperationalContexts: [],
+    continuityMetadata: {
+      unresolvedCount: params.state.unresolvedContinuity.length,
+      pinnedCount: 0,
+      provenanceCount: lineageRefs.length,
+      temporalWeight: Math.max(0, 100 - (Date.now() - new Date(createdAt).getTime()) / 3600000),
+    },
+  }
+}
+
 export function persistContinuitySnapshot(snapshot: ContinuitySnapshot): ContinuitySnapshot[] {
-  const snapshots = loadContinuitySnapshots()
-  const next = [snapshot, ...snapshots].slice(0, 40)
-  saveContinuitySnapshots(next)
-  return next
+  void snapshot
+  return []
 }
 
 export function applyContinuityLifecycle(snapshot: ContinuitySnapshot): number {
   const ageHours = (Date.now() - new Date(snapshot.createdAt).getTime()) / 3600000
   const recencyWeight = Math.max(0, 30 - ageHours / 4)
+  const checkpointWeight = snapshot.snapshotKind === 'checkpoint' ? 20 : 0
   const unresolvedWeight = snapshot.continuityMetadata.unresolvedCount * 8
   const pinnedWeight = snapshot.continuityMetadata.pinnedCount * 5
   const provenanceWeight = snapshot.continuityMetadata.provenanceCount * 4
   const dormantPenalty = ageHours > 120 ? (ageHours - 120) / 3 : 0
-  return recencyWeight + unresolvedWeight + pinnedWeight + provenanceWeight - dormantPenalty
+  return recencyWeight + checkpointWeight + unresolvedWeight + pinnedWeight + provenanceWeight - dormantPenalty
 }
 
 export function restoreContinuitySnapshot(snapshotId?: string): ContinuitySnapshot | null {
-  const snapshots = loadContinuitySnapshots()
-  if (!snapshots.length) return null
-  if (snapshotId) {
-    const explicit = snapshots.find((s) => s.id === snapshotId)
-    if (explicit) return explicit
-  }
-  return [...snapshots].sort((a, b) => applyContinuityLifecycle(b) - applyContinuityLifecycle(a))[0] ?? null
+  void snapshotId
+  return null
+}
+
+export function isReplayCheckpointSnapshot(snapshot: ContinuitySnapshot | null | undefined): snapshot is ContinuitySnapshot {
+  return Boolean(
+    snapshot &&
+      snapshot.snapshotKind === 'checkpoint' &&
+      snapshot.replaySource === 'runtime_events' &&
+      typeof snapshot.replayedEventCount === 'number' &&
+      typeof snapshot.latestReplaySequence === 'number',
+  )
+}
+
+export function selectBestReplayCheckpoint(snapshots: ContinuitySnapshot[]): ContinuitySnapshot | null {
+  return snapshots
+    .filter(isReplayCheckpointSnapshot)
+    .sort((left, right) => {
+      const byEventCount = (right.replayedEventCount ?? 0) - (left.replayedEventCount ?? 0)
+      if (byEventCount !== 0) return byEventCount
+      return new Date(right.latestEventAt ?? right.createdAt).getTime() - new Date(left.latestEventAt ?? left.createdAt).getTime()
+    })[0] ?? null
 }

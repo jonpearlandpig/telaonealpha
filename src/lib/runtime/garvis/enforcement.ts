@@ -5,6 +5,7 @@ import type { EnforcementResult, ExecutionState, GovernanceState, RuntimeEventPa
 import { isOperatorAuthorized } from '../operators/registry'
 
 type EnforcementInput = {
+  workspaceId?: string
   action: RuntimeAction
   governanceState: GovernanceState
   executionState: ExecutionState
@@ -48,6 +49,7 @@ async function emitEnforcementEvent(
   payload: RuntimeEventPayload,
 ) {
   return emitRuntimeEvent({
+    workspaceId: input.workspaceId,
     type,
     source: input.source ?? 'operator',
     governanceState: input.governanceState,
