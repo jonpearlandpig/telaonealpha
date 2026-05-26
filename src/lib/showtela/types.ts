@@ -1,3 +1,5 @@
+import type { OperationalProjection } from '@/lib/runtime/state/model'
+
 export type PressureLevel = 'low' | 'medium' | 'high' | 'critical'
 
 export type AuthorshipSurface = 'telegram' | 'voice' | 'ingest' | 'runtime' | 'notion' | 'api'
@@ -145,6 +147,7 @@ export type ShowTelaHomeData = {
   diagnosticState?: DiagnosticState
   hydration?: ShowTelaHydrationSummary
   runtimeSnapshotMeta?: ShowTelaRuntimeSnapshotMeta
+  operationalProjection?: OperationalProjection
 }
 
 export type ShowTelaHydrationSummary = {

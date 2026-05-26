@@ -4,6 +4,7 @@ import { getAllReplayEventsForWorkspace } from './eventStore'
 import { reconstructOperationalStateFromReplay } from './replay/reconstructOperationalState'
 import { persistSnapshot } from './snapshotPersistence'
 import { buildHydratedRuntimeState } from './runtimeHydrationModel'
+import { buildOperationalProjectionFromEvents } from './state/buildOperationalProjection'
 
 function snapshotProvenance(sourceId: string) {
   const now = new Date().toISOString()
@@ -28,6 +29,11 @@ export async function hydrateRuntime(workspaceId: string) {
 
   const checkpoint = selectBestReplayCheckpoint(durable.snapshots)
   const replay = reconstructOperationalStateFromReplay(events)
+  const operationalProjection = buildOperationalProjectionFromEvents({
+    workspaceId,
+    replayEvents: events,
+    recentEvents: events.slice(-20),
+  })
 
   if (replay.replayedEventCount > 0 && replay.lastReplaySequence !== checkpoint?.latestReplaySequence) {
     const threadId = replay.state.activeThreads[0] ?? 'runtime-replay'
@@ -54,5 +60,6 @@ export async function hydrateRuntime(workspaceId: string) {
   return buildHydratedRuntimeState({
     durable,
     replay,
+    operationalProjection,
   })
 }

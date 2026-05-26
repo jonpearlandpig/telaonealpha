@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import { buildHydratedRuntimeState } from './runtimeHydrationModel'
 import type { ContinuitySnapshot } from './continuitySnapshots'
+import type { OperationalProjection } from './state/model'
 
 test('buildHydratedRuntimeState returns replay-derived projections only', () => {
   const snapshots: ContinuitySnapshot[] = [{
@@ -64,6 +65,40 @@ test('buildHydratedRuntimeState returns replay-derived projections only', () => 
       lastReplaySequence: 3,
       replaySource: 'events',
     },
+    operationalProjection: {
+      workspaceId: 'tela-showtela',
+      showId: 'crusade',
+      projectionVersion: 'operational-projection.v1',
+      generatedAt: '2026-05-24T17:40:00.000Z',
+      derivedAt: '2026-05-24T17:40:00.000Z',
+      derivationVersion: 'operational-state.v1',
+      derivedFromEventCount: 3,
+      replayCursor: 3,
+      states: [],
+      blockers: [],
+      movement: [],
+      readiness: [],
+      escalations: [],
+      dependencyChains: [],
+      groupedTopology: {
+        critical: 0,
+        high: 0,
+        medium: 0,
+        low: 0,
+        blockers: 0,
+        movement: 0,
+        readiness: 0,
+        escalations: 0,
+      },
+      summary: {
+        currentTruth: 'Operational field is calm.',
+        mattersNow: 'No blocker chain has been materialized.',
+        nextMovement: 'Await next runtime movement.',
+        blockersLabel: 'No blocker currently dominates.',
+        movementLabel: 'No active movement surfaced.',
+        readinessLabel: 'No ready state surfaced.',
+      },
+    } satisfies OperationalProjection,
   })
 
   assert.deepEqual(hydrated.activeProjects, ['project:crusade'])
@@ -73,5 +108,6 @@ test('buildHydratedRuntimeState returns replay-derived projections only', () => 
   assert.deepEqual(hydrated.latestLineage, ['lineage-a'])
   assert.deepEqual(hydrated.unresolved.incompleteArtifacts, ['unresolved-a'])
   assert.equal(hydrated.operationalObjects.length, 1)
+  assert.equal(hydrated.operationalProjection.projectionVersion, 'operational-projection.v1')
   assert.equal(hydrated.replay.replaySource, 'events')
 })

@@ -7,9 +7,9 @@ import { isCanonicalReplaceSnapshot } from './runtimeSnapshot'
 import { threadContinuity } from './threadContinuity'
 import { cleanBody, extractUnresolvedMarkers, validateAndFilter, validateContinuityEventRecord, validateOperationRecord, validatePersonRecord } from './normalizeNotionRecord'
 import { getShowTelaCacheSchemaCompatibility, readShowTelaCache, readShowTelaCacheRow, writeShowTelaCache } from '@/lib/supabase/operationalCache'
+import { getOperationalProjection } from '@/lib/runtime/state/stateProjectionStore'
 import type { ShowTelaHomeData, ShowTelaHydrationSummary } from './types'
-import { buildShowTelaVM } from './buildViewModel'
-import { deriveStatesFromVM, persistStates } from './operationalState'
+import { SHOWTELA_WORKSPACE_ID } from './runtimeIds'
 
 function emptyShowTelaHomeData(): ShowTelaHomeData {
   return {
@@ -48,6 +48,16 @@ function hydrationSummary(
     durableArtifactsCompatible: getShowTelaCacheSchemaCompatibility().compatible,
     missingRequiredEnv: env.missingRequired,
     invalidDatabaseIds: env.invalidDatabaseIds,
+  }
+}
+
+async function attachOperationalProjection(data: ShowTelaHomeData): Promise<ShowTelaHomeData> {
+  try {
+    const operationalProjection = await getOperationalProjection(SHOWTELA_WORKSPACE_ID)
+    return { ...data, operationalProjection }
+  } catch (error) {
+    console.error('[showtela:hydration] operational projection unavailable:', String(error))
+    return data
   }
 }
 
@@ -182,8 +192,7 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
         diagnosticState: 'persistence-connected' as const,
         hydration: hydrationSummary(recovered, { connectedToSupabase: true, cacheSource: 'supabase' }),
       }
-      persistStates(deriveStatesFromVM(buildShowTelaVM(recoveredResult))).catch(console.error)
-      return recoveredResult
+      return attachOperationalProjection(recoveredResult)
     }
     if (cached) {
       console.log('SSR_CACHE_HIT', {
@@ -205,8 +214,7 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
         diagnosticState: 'persistence-connected' as const,
         hydration: hydrationSummary(cached, { connectedToSupabase: true, cacheSource: 'supabase' }),
       }
-      persistStates(deriveStatesFromVM(buildShowTelaVM(cachedResult))).catch(console.error)
-      return cachedResult
+      return attachOperationalProjection(cachedResult)
     }
     console.log('[TELA:TRACE] getShowTelaHome — no canonical snapshot in Supabase, serving empty operational shell')
   } catch (err) {
@@ -215,7 +223,7 @@ export async function getShowTelaHome(): Promise<ShowTelaHomeData> {
 
   console.warn('[TELA:TRACE] getShowTelaHome serving EMPTY STATE — source:empty reason:canonical-runtime-missing')
   const empty = emptyShowTelaHomeData()
-  return { ...empty, source: 'empty', diagnosticState: 'notion-unavailable', hydration: hydrationSummary(empty, { cacheSource: 'empty' }) }
+  return attachOperationalProjection({ ...empty, source: 'empty', diagnosticState: 'notion-unavailable', hydration: hydrationSummary(empty, { cacheSource: 'empty' }) })
 }
 
 // API route path: home refresh is canonical-runtime only.
@@ -245,12 +253,12 @@ export async function refreshShowTelaFromNotion(): Promise<ShowTelaHomeData> {
         overwriteMode: canonicalCached.runtimeSnapshotMeta?.overwriteMode ?? null,
         haltedBefore: 'notion-fetch',
       })
-      return {
+      return attachOperationalProjection({
         ...canonicalCached,
         source: 'supabase',
         diagnosticState: 'persistence-connected',
         hydration: hydrationSummary(canonicalCached, { connectedToSupabase: true, cacheSource: 'supabase' }),
-      }
+      })
     }
     if (effectiveCached) {
       console.log('[TELA:TRACE] refreshShowTelaFromNotion returning cached runtime without Notion refresh', {
@@ -260,12 +268,12 @@ export async function refreshShowTelaFromNotion(): Promise<ShowTelaHomeData> {
         overwriteMode: effectiveCached.runtimeSnapshotMeta?.overwriteMode ?? null,
         refreshOrder: ['supabase-cache-read', 'durable-canonical-recovery', 'cache-return'],
       })
-      return {
+      return attachOperationalProjection({
         ...effectiveCached,
         source: effectiveCached.source ?? 'supabase',
         diagnosticState: effectiveCached.diagnosticState ?? 'persistence-connected',
         hydration: hydrationSummary(effectiveCached, { connectedToSupabase: true, cacheSource: 'supabase' }),
-      }
+      })
     }
   } catch (err) {
     console.error('[showtela] refresh error:', String(err))
@@ -273,12 +281,12 @@ export async function refreshShowTelaFromNotion(): Promise<ShowTelaHomeData> {
     try {
       const cached = await readShowTelaCache()
       if (cached) {
-        return {
+        return attachOperationalProjection({
           ...cached,
           source: 'supabase',
           diagnosticState: 'notion-unavailable',
           hydration: hydrationSummary(cached, { connectedToSupabase: true, cacheSource: 'supabase' }),
-        }
+        })
       }
     } catch {
       // both failed
@@ -287,7 +295,7 @@ export async function refreshShowTelaFromNotion(): Promise<ShowTelaHomeData> {
 
   console.warn('[showtela] refresh: no canonical ShowTELA runtime available — serving empty state')
   const empty = emptyShowTelaHomeData()
-  return { ...empty, source: 'empty', diagnosticState: 'notion-unavailable', hydration: hydrationSummary(empty, { cacheSource: 'empty' }) }
+  return attachOperationalProjection({ ...empty, source: 'empty', diagnosticState: 'notion-unavailable', hydration: hydrationSummary(empty, { cacheSource: 'empty' }) })
 }
 
 export async function forceRefreshShowTelaFromNotion(): Promise<{ data: ShowTelaHomeData; summary: ShowTelaHydrationSummary; probes: Awaited<ReturnType<typeof probeShowTelaNotionDatabases>> }> {
@@ -299,7 +307,7 @@ export async function forceRefreshShowTelaFromNotion(): Promise<{ data: ShowTela
     const empty = emptyShowTelaHomeData()
     const summary = hydrationSummary(empty, { cacheSource: 'empty', connectedToNotion: false })
     console.warn('[showtela:force-refresh] no live Notion data returned')
-    return { data: { ...empty, source: 'empty', diagnosticState: 'notion-unavailable', hydration: summary }, summary, probes }
+    return { data: await attachOperationalProjection({ ...empty, source: 'empty', diagnosticState: 'notion-unavailable', hydration: summary }), summary, probes }
   }
 
   let supabaseWriteOk = false
@@ -319,7 +327,7 @@ export async function forceRefreshShowTelaFromNotion(): Promise<{ data: ShowTela
   })
 
   return {
-    data: { ...data, source: 'notion', diagnosticState: supabaseWriteOk ? 'persistence-connected' : 'persistence-failed', hydration: summary },
+    data: await attachOperationalProjection({ ...data, source: 'notion', diagnosticState: supabaseWriteOk ? 'persistence-connected' : 'persistence-failed', hydration: summary }),
     summary,
     probes,
   }

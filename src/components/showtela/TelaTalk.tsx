@@ -4,6 +4,7 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import type { ContinuityIngestionInput } from '@/lib/continuity/normalize-ingestion'
 import type { OperationalCalendarEvent } from '@/lib/showtela/calendar'
 import type { ContinuityEvent } from '@/lib/showtela/types'
+import type { OperationalProjection } from '@/lib/runtime/state/model'
 import type { OperationEntity, UnresolvedItem } from './types'
 
 type AutoscanAction = {
@@ -29,6 +30,7 @@ export function TelaTalk({
   calendarEvents = [],
   submittedBy,
   onContinuityIngest,
+  operationalProjection,
 }: {
   autoscan: AutoscanSummary
   feed?: ContinuityEvent[]
@@ -37,6 +39,7 @@ export function TelaTalk({
   calendarEvents?: OperationalCalendarEvent[]
   submittedBy?: string
   onContinuityIngest?: (input: ContinuityIngestionInput) => Promise<boolean>
+  operationalProjection?: OperationalProjection
 }) {
   const promptOptions = [
     'What changed today?',
@@ -50,7 +53,7 @@ export function TelaTalk({
     {
       id: 'tela-pinned',
       role: 'tela',
-      text: `${autoscan.currentTruth} ${autoscan.mattersNow} ${autoscan.nextMovement}`,
+      text: `${operationalProjection?.summary.currentTruth ?? autoscan.currentTruth} ${operationalProjection?.summary.mattersNow ?? autoscan.mattersNow} ${operationalProjection?.summary.nextMovement ?? autoscan.nextMovement}`,
     },
   ])
   const messageCounter = useRef(0)
@@ -91,6 +94,10 @@ export function TelaTalk({
 
   const askTELA = useCallback(async (question: string): Promise<string> => {
     const operationalContext = [
+      `Blockers: ${operationalProjection?.blockers.map((state) => state.stateLabel).join('; ') || 'none'}`,
+      `Movement: ${operationalProjection?.movement.map((state) => state.stateLabel).join('; ') || 'none'}`,
+      `Readiness: ${operationalProjection?.readiness.map((state) => state.stateLabel).join('; ') || 'none'}`,
+      `Dependency chains: ${operationalProjection?.dependencyChains.slice(0, 2).map((chain) => chain.join(' -> ')).join(' | ') || 'none'}`,
       `Active people: ${operations.map(o => o.label).join(', ') || 'none'}`,
       `Unresolved items: ${derivedContext.unresolvedCount} (${derivedContext.blockedCount} blocking)`,
       derivedContext.latestContinuity
@@ -138,7 +145,7 @@ export function TelaTalk({
     } catch {
       return 'TELA is not available right now.'
     }
-  }, [derivedContext, feed, operations])
+  }, [derivedContext, feed, operations, operationalProjection])
 
   async function submitQuestion(value: string) {
     const question = value.trim()

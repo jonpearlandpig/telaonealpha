@@ -116,3 +116,34 @@ export type LineageGraphRow = {
   relationType: string
   createdAt: string
 }
+
+export type OperationalStateRow = {
+  stateId: string
+  workspaceId: string
+  showId: string
+  entityId: string
+  entityType: string
+  entityName: string
+  stateCode: string
+  stateLabel: string
+  stateEmoji?: string
+  severity: string
+  lifecycleState: string
+  triggerDetail: string
+  resolutionAction?: string
+  resolutionOwner?: string
+  dependencyIds: string[]
+  dependencyChain: string[]
+  reasoningChain: string[]
+  derivationSource?: string
+  isActive: boolean
+  stateEnteredAt: string
+  stateUpdatedAt: string
+  derivationVersion: string
+  derivedAt: string
+  explanation?: string
+  sourceEventIds: string[]
+  traceId?: string
+  projectionVersion: string
+  lineageIds: string[]
+}

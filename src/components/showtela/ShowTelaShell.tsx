@@ -21,6 +21,7 @@ import { PearlDropVoice } from './PearlDropVoice'
 import { TelaTalk } from './TelaTalk'
 import type { ShowTelaViewModel, UnresolvedItem, UnresolvedPressure } from './types'
 import type { ContinuityEvent } from '@/lib/showtela/types'
+import type { OperationalProjection, OperationalStateRecord } from '@/lib/runtime/state/model'
 
 type Tab = 'home' | 'play' | 'messages' | 'calendar' | 'profile'
 type Sheet = { type: 'person'; name: string; role?: string } | { type: 'feed'; item: ContinuityEvent } | { type: 'operation'; name: string } | { type: 'unresolved' } | null
@@ -92,6 +93,22 @@ function mapVmFeedItem(item: ShowTelaViewModel['feed'][number]): ContinuityEvent
   }
 }
 
+function stateTone(state: OperationalStateRecord['severity']) {
+  if (state === 'critical') return 'border-[#C89B2F]/30 bg-[#1F1A12] text-[#F6EEDB]'
+  if (state === 'high') return 'border-[#D2B47A]/35 bg-[#2A2217] text-[#F6EEDB]'
+  if (state === 'medium') return 'border-[#E2D7C7] bg-white text-[#171411]'
+  return 'border-[#D7E3D1] bg-[#F2F7EF] text-[#20311F]'
+}
+
+function projectionCards(projection?: OperationalProjection) {
+  if (!projection) return []
+  return [
+    ...projection.blockers.slice(0, 2),
+    ...projection.movement.slice(0, 1),
+    ...projection.readiness.slice(0, 1),
+  ]
+}
+
 export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { name: string; email: string; image: string } }) {
   const router = useRouter()
   const initialSurface = getInitialSurfaceState()
@@ -110,10 +127,12 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
   const activeOpsData = vm.activeOps
   const runtimeTimeline = vm.runtimeTimeline
   const unresolvedItemsState = vmUnresolved
+  const operationalProjection = vm.operationalProjection
   const latestTimeline = runtimeTimeline?.[0]
   const unresolvedPressure = derivePressure(unresolvedItemsState)
   const priorityOperation = operations[0]
   const recentFeedItem = feed[0]
+  const operationalCards = projectionCards(operationalProjection)
   const activeOperators = useMemo(() => activeOpsData.map((item) => item.name), [activeOpsData])
   const userFirstName = user?.name?.split(' ')[0]?.toLowerCase()
   const visibleActiveOps = activeOpsData.filter((item) => {
@@ -131,17 +150,26 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
     })
 
   const autoscan = {
-    currentTruth: priorityOperation
-      ? (priorityOperation.unresolvedCount ?? 0) > 0
-        ? `${priorityOperation.label} currently carries the highest unresolved operational pressure.`
-        : `${priorityOperation.label} is operational. Field is clear.`
-      : 'Operational pressure is evenly distributed across the field.',
-    mattersNow: latestTimeline
+    currentTruth: operationalProjection?.summary.currentTruth ?? (
+      priorityOperation
+        ? (priorityOperation.unresolvedCount ?? 0) > 0
+          ? `${priorityOperation.label} currently carries the highest unresolved operational pressure.`
+          : `${priorityOperation.label} is operational. Field is clear.`
+        : 'Operational pressure is evenly distributed across the field.'
+    ),
+    mattersNow: operationalProjection?.summary.mattersNow ?? (
+      latestTimeline
       ? `${latestTimeline.summary} stabilized most recently${latestTimeline.timestamp ? ` at ${formatTimelineTime(latestTimeline.timestamp)}` : ''}${latestTimeline.actor ? ` through ${latestTimeline.actor}` : ''}.`
-      : 'No new continuity drift surfaced in the latest autoscan.',
-    nextMovement: priorityOperation?.latest
-      ? `Next meaningful movement is ${priorityOperation.latest.toLowerCase()}.`
-      : 'Next meaningful movement is confirming the highest-pressure thread.',
+      : 'No new continuity drift surfaced in the latest autoscan.'
+    ),
+    nextMovement: operationalProjection?.summary.nextMovement ?? (
+      priorityOperation?.latest
+        ? `Next meaningful movement is ${priorityOperation.latest.toLowerCase()}.`
+        : 'Next meaningful movement is confirming the highest-pressure thread.'
+    ),
+    blockersLabel: operationalProjection?.summary.blockersLabel,
+    movementLabel: operationalProjection?.summary.movementLabel,
+    readinessLabel: operationalProjection?.summary.readinessLabel,
     suggestedActions: [
       {
         id: 'pressure',
@@ -243,12 +271,33 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
             <>
               <ShowTelaHeader
                 userName={user?.name}
-                unresolvedCount={unresolvedPressure.unresolvedCount}
                 autoscan={autoscan}
                 onNextMovementTap={priorityOperation ? () => setSheet({ type: 'operation', name: priorityOperation.label }) : undefined}
                 isEmpty={false}
                 runtimeLabel={runtimeLabel}
+                statusLabel={operationalProjection ? `${operationalProjection.groupedTopology.blockers} blockers · ${operationalProjection.groupedTopology.movement} moving · ${operationalProjection.groupedTopology.readiness} ready` : undefined}
               />
+              {operationalCards.length > 0 && (
+                <section className="px-5 pb-5">
+                  <div className="grid gap-3">
+                    {operationalCards.map((state) => (
+                      <article
+                        key={state.stateId}
+                        className={`rounded-[22px] border px-5 py-4 shadow-[0_12px_24px_rgba(17,17,17,0.05)] ${stateTone(state.severity)}`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] opacity-70">{state.stateCode.replaceAll('_', ' ')}</p>
+                            <p className="mt-2 text-[16px] font-semibold leading-snug">{state.stateLabel}</p>
+                            <p className="mt-2 text-[12px] leading-relaxed opacity-80">{state.explanation ?? state.triggerDetail}</p>
+                          </div>
+                          <p className="text-[11px] font-semibold opacity-70">{state.lifecycle}</p>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              )}
               <ActiveOpsRail
                 userName={user?.name}
                 userImage={user?.image}
@@ -261,7 +310,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
               />
               <CalendarWeekRail events={calendarEvents} baseDate={calendarBaseDate} onOpenCalendar={() => setTab('calendar')} isEmpty={false} />
               <CrusadeOperationsRail items={operations} unresolvedItems={unresolvedItemsState} onOperationTap={(name) => setSheet({ type: 'operation', name })} />
-              <UnresolvedPressureCard pressure={unresolvedPressure} onOpen={() => setSheet({ type: 'unresolved' })} />
+              <UnresolvedPressureCard pressure={unresolvedPressure} projection={operationalProjection} onOpen={() => setSheet({ type: 'unresolved' })} />
               <ContinuityFeed feed={feed} onFeedTap={(item) => setSheet({ type: 'feed', item })} />
             </>
           )}
@@ -291,6 +340,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
               calendarEvents={calendarEvents}
               submittedBy={user?.name}
               onContinuityIngest={submitContinuity}
+              operationalProjection={operationalProjection}
             />
           )}
 

@@ -1,26 +1,24 @@
 import { NextResponse } from 'next/server'
-import { getSupabaseClient } from '@/lib/supabase/client'
+import { getOperationalProjection } from '@/lib/runtime/state/stateProjectionStore'
+import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    const { data, error } = await getSupabaseClient()
-      .from('operational_states')
-      .select('*')
-      .eq('workspace_id', 'pearlandpig')
-      .eq('show_id', 'crusade')
-      .eq('is_active', true)
-      .order('state_entered_at', { ascending: false })
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-    const rows = data ?? []
+    const projection = await getOperationalProjection(SHOWTELA_WORKSPACE_ID)
     return NextResponse.json({
-      states: rows,
-      critical: rows.filter((s: { severity: string }) => s.severity === 'critical').length,
-      high: rows.filter((s: { severity: string }) => s.severity === 'high').length,
-      evaluatedAt: new Date().toISOString(),
+      states: projection.states,
+      blockers: projection.blockers,
+      movement: projection.movement,
+      readiness: projection.readiness,
+      escalations: projection.escalations,
+      groupedTopology: projection.groupedTopology,
+      summary: projection.summary,
+      derivedFromEventCount: projection.derivedFromEventCount,
+      projectionVersion: projection.projectionVersion,
+      generatedAt: projection.generatedAt,
+      replayCursor: projection.replayCursor ?? null,
     })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })

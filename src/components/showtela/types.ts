@@ -1,4 +1,5 @@
 import type { ContinuityEvent, ShowTelaHydrationSummary, ShowTelaRuntimeSnapshotMeta } from '@/lib/showtela/types'
+import type { OperationalProjection } from '@/lib/runtime/state/model'
 
 export interface PersonItem {
   id: string
@@ -61,6 +62,7 @@ export interface ShowTelaViewModel {
   diagnosticState?: string
   hydration?: ShowTelaHydrationSummary
   runtimeSnapshotMeta?: ShowTelaRuntimeSnapshotMeta
+  operationalProjection?: OperationalProjection
 }
 
 export type ActionType = 'resolve' | 'escalate' | 'comment' | 'archive'
