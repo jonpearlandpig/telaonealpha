@@ -13,7 +13,7 @@ import {
   tryCreateContinuityEventRecord,
   createRuntimeContinuityArtifact,
   extractContinuityEntities,
-} from '@/lib/showtela/runtimeContinuity'
+} from '@/lib/showtela/continuityRecord'
 import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
 
 export async function ingestCanonicalContinuity(

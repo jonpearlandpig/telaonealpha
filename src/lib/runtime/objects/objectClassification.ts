@@ -13,9 +13,9 @@
 //   - Notion field values
 //   - UI-layer heuristics
 //
-// Replaces (in Phase 4):
-//   - runtimeContinuity.ts::deriveUnresolvedFromEvent (text-pattern pressure)
-//   - runtimeContinuity.ts::synthesizeOperationalStateFromEvent (ingest-layer cognition)
+// Replaces (completed in Phase D):
+//   - deriveUnresolvedFromEvent (text-pattern pressure) — deleted
+//   - synthesizeOperationalStateFromEvent (ingest-layer cognition) — deleted
 //   - showtela/pressure.ts (Notion-based pressure)
 
 import type { CanonicalOperationalObject } from './operationalObjects'
