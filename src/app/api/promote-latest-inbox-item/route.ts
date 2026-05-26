@@ -7,7 +7,6 @@ import {
   ingestCanonicalContinuity,
   resolveInboxDatabaseId,
 } from '@/lib/continuity/ingest-runtime'
-import { bootstrapRuntimeSpine } from '@/lib/runtime/bootstrap'
 import { emitRuntimeEvent } from '@/lib/runtime/eventBus'
 import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
 
@@ -79,11 +78,11 @@ export async function POST() {
     )
   }
 
-  bootstrapRuntimeSpine()
   const traceId = crypto.randomUUID()
   const correlationId = newest.id
   const sourceMode = extractInboxSelect(properties['Source'])?.toLowerCase() === 'voice' ? 'voice-note' : 'quick-update'
 
+  // ingestCanonicalContinuity now emits continuity.ingested internally via bootstrapRuntimeSpine
   const ingested = await ingestCanonicalContinuity({
     mode: sourceMode,
     headline: title,
@@ -99,27 +98,6 @@ export async function POST() {
 
   await emitRuntimeEvent({
     workspaceId: SHOWTELA_WORKSPACE_ID,
-    type: 'continuity.ingested',
-    source: 'automation',
-    governanceState: 'approved',
-    executionState: 'completed',
-    traceId,
-    correlationId,
-    lineageId: ingested.lineageId,
-    payloadType: 'continuity.inbox-item',
-    payload: {
-      notionPageId: newest.id,
-      headline: title,
-      body,
-      insertedId: ingested.insertedId,
-      threadId: ingested.event.threadId,
-      linkedEntities: ingested.event.linkedEntities ?? [],
-      sourceMode,
-    },
-  })
-
-  await emitRuntimeEvent({
-    workspaceId: SHOWTELA_WORKSPACE_ID,
     type: 'continuity.normalized',
     source: 'automation',
     governanceState: 'approved',
@@ -130,15 +108,11 @@ export async function POST() {
     payloadType: 'continuity.normalized-event',
     payload: {
       notionPageId: newest.id,
-      insertedId: ingested.insertedId,
-      eventId: ingested.event.id,
-      threadId: ingested.event.threadId,
-      linkedEntities: ingested.event.linkedEntities ?? [],
-      linkedThreads: ingested.event.linkedThreads ?? [],
-      normalizedHeadline: ingested.event.headline,
+      insertedId: ingested.eventId,
+      normalizedHeadline: title,
       schemaVersion: 'runtime.v1',
       eventVersion: 1,
-      sourceMode: ingested.event.sourceMode ?? sourceMode,
+      sourceMode,
     },
   })
 
@@ -160,9 +134,7 @@ export async function POST() {
 
   return NextResponse.json({
     success: true,
-    insertedId: ingested.insertedId,
-    normalized: ingested.event,
+    insertedId: ingested.eventId,
     lineageId: ingested.lineageId,
-    data: ingested.data,
   })
 }
