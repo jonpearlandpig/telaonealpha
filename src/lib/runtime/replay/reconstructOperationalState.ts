@@ -1,6 +1,7 @@
 import { ACTIONS } from '../actions'
-import type { OperationalObject, OperationalPriority, OperationalState } from '../operationalState'
+import type { GovernanceLegalityState, LineageEdge, OperationalObject, OperationalPriority, OperationalRoutingPlan, OperationalState } from '../operationalState'
 import type { ReconstructedOperationalState, RuntimeEvent } from '../runtimeTypes'
+import { decisionLabel, deriveOperationalObjects, projectRefs, stringList, stringRecord, stringValue } from './derivedArtifacts'
 
 function scoreForEvent(event: RuntimeEvent): number {
   if (event.type === 'escalation.triggered') return 45
@@ -21,105 +22,76 @@ function priorityReason(event: RuntimeEvent): string {
   return 'runtime event'
 }
 
-function stringList(value: unknown): string[] {
-  if (!Array.isArray(value)) return []
-  return value.filter((item): item is string => typeof item === 'string')
-}
-
-function stringValue(value: unknown): string | undefined {
-  return typeof value === 'string' && value.length > 0 ? value : undefined
-}
-
-function stringRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
-}
-
-function projectRefs(event: RuntimeEvent): string[] {
-  const payload = event.payload ?? {}
-  const directProject = stringValue(payload.projectId)
-  const projectIds = stringList(payload.projectIds)
-  const linkedProjects = stringList(payload.linkedEntities).filter((value) => /project|show|tour|crusade|venue/i.test(value))
-  return Array.from(new Set([directProject, ...projectIds, ...linkedProjects].filter(Boolean) as string[]))
-}
-
-function decisionLabel(event: RuntimeEvent): string | undefined {
-  const payload = event.payload ?? {}
-  const headline = stringValue(payload.normalizedHeadline) ?? stringValue(payload.headline) ?? stringValue(payload.title)
-  if (headline) return headline
-  if (event.governanceState === 'approved' && event.executionState === 'completed') return event.type
-  return undefined
-}
-
-function deriveOperationalObjects(event: RuntimeEvent): OperationalObject[] {
+function lineageEdgesForEvent(event: RuntimeEvent): LineageEdge[] {
   const payload = stringRecord(event.payload)
-  const createdAt = event.createdAt
-  const objects: OperationalObject[] = []
-  const threadId = stringValue(payload.threadId)
+  const parentLineageId = stringValue(payload.parentLineageId)
+  const relationType = stringValue(payload.relationType) ?? (parentLineageId ? 'lineage-parent' : 'lineage-root')
 
-  if (threadId) {
-    objects.push({
-      id: `thread:${threadId}`,
-      objectType: 'continuity-thread',
+  if (event.lineageId) {
+    return [{
+      id: `edge:${event.id}`,
       lineageId: event.lineageId,
-      status: event.type === ACTIONS.ARCHIVE_CONTINUITY ? 'archived' : 'active',
-      createdAt,
-      updatedAt: createdAt,
-      payload: {
-        threadId,
-        eventType: event.type,
-        payloadType: event.payloadType,
-      },
-    })
+      parentLineageId,
+      eventId: event.id,
+      relationType,
+      createdAt: event.createdAt,
+    }]
   }
 
-  if (event.type === 'governance.blocked' || event.type === 'execution.denied' || event.type === 'escalation.triggered') {
-    objects.push({
-      id: `governance:${event.lineageId ?? event.id}`,
-      objectType: 'governance',
-      lineageId: event.lineageId,
-      status: event.type.replace('.', '-'),
-      createdAt,
-      updatedAt: createdAt,
-      payload: {
-        type: event.type,
-        traceId: event.traceId,
-        correlationId: event.correlationId,
-      },
-    })
-  }
+  const lineageRef = stringRecord(payload.lineageRef)
+  const lineageId = stringValue(lineageRef.lineageId)
+  if (!lineageId) return []
 
-  for (const entityId of [stringValue(payload.entityId), ...stringList(payload.linkedEntities)].filter(Boolean) as string[]) {
-    objects.push({
-      id: `entity:${entityId}`,
-      objectType: 'entity',
-      lineageId: event.lineageId,
-      status: 'active',
-      createdAt,
-      updatedAt: createdAt,
-      payload: {
-        entityId,
-        threadId,
-      },
-    })
-  }
+  return [{
+    id: `edge:${event.id}`,
+    lineageId,
+    parentLineageId: stringValue(lineageRef.parentId) ?? parentLineageId,
+    eventId: event.id,
+    relationType,
+    createdAt: event.createdAt,
+  }]
+}
 
-  const decision = decisionLabel(event)
-  if (decision) {
-    objects.push({
-      id: `decision:${event.id}`,
-      objectType: 'decision',
-      lineageId: event.lineageId,
-      status: `${event.governanceState}:${event.executionState}`,
-      createdAt,
-      updatedAt: createdAt,
-      payload: {
-        decision,
-        payloadType: event.payloadType,
-      },
-    })
-  }
+function routingPlanForEvent(event: RuntimeEvent): OperationalRoutingPlan | null {
+  if (event.type !== 'routing.plan.created') return null
+  const payload = stringRecord(event.payload)
+  const selectedOperators = stringList(payload.selectedOperators)
+  const escalationPath = stringList(payload.escalationPath)
+  const action = stringValue(payload.action)
+  const rollbackClass = stringValue(payload.rollbackClass)
+  const governanceState = stringValue(payload.governanceState)
+  const legal = payload.legal === true
+  const id = stringValue(payload.routingPlanId) ?? event.id
 
-  return objects
+  if (!action || !rollbackClass || !governanceState) return null
+
+  return {
+    id,
+    action,
+    rollbackClass,
+    selectedOperators,
+    escalationPath,
+    governanceState,
+    legal,
+    lineageId: event.lineageId,
+    createdAt: event.createdAt,
+  }
+}
+
+function governanceLegalityForEvent(event: RuntimeEvent): GovernanceLegalityState | null {
+  if (event.type !== 'governance.validated') return null
+  const payload = stringRecord(event.payload)
+  const action = stringValue(payload.action)
+  if (!action) return null
+
+  return {
+    action,
+    allowed: payload.allowed === true,
+    requiredAuthority: stringValue(payload.requiredAuthority),
+    denialReason: stringValue(payload.denialReason),
+    source: payload.source === 'pen-and-sword' ? 'pen-and-sword' : 'flightpath',
+    checkedAt: event.createdAt,
+  }
 }
 
 export function reconstructOperationalState(events: RuntimeEvent[]): ReconstructedOperationalState {
@@ -140,6 +112,9 @@ export function reconstructOperationalStateFromReplay(
   const staleMemory = new Set<string>()
   const priorities = new Map<string, OperationalPriority>()
   const operationalObjects = new Map<string, OperationalObject>()
+  const routingPlans = new Map<string, OperationalRoutingPlan>()
+  const lineageGraph = new Map<string, LineageEdge>()
+  const governanceLegality = new Map<string, GovernanceLegalityState>()
   let blockedCount = 0
   let deniedCount = 0
   let escalatedCount = 0
@@ -202,6 +177,16 @@ export function reconstructOperationalStateFromReplay(
         ? { ...current, ...operationalObject, payload: { ...current.payload, ...operationalObject.payload }, updatedAt: operationalObject.updatedAt }
         : operationalObject)
     }
+
+    const routingPlan = routingPlanForEvent(event)
+    if (routingPlan) routingPlans.set(routingPlan.id, routingPlan)
+
+    const legality = governanceLegalityForEvent(event)
+    if (legality) governanceLegality.set(`${legality.source}:${legality.action}:${event.id}`, legality)
+
+    for (const edge of lineageEdgesForEvent(event)) {
+      lineageGraph.set(edge.id, edge)
+    }
   }
 
   const state: OperationalState = {
@@ -213,10 +198,13 @@ export function reconstructOperationalStateFromReplay(
     activeEntities: [...entities].slice(0, 12),
     recentLineage: [...lineage].slice(-12),
     operationalObjects: [...operationalObjects.values()].sort((left, right) => left.updatedAt.localeCompare(right.updatedAt)).slice(-40),
+    routingPlans: [...routingPlans.values()].sort((left, right) => left.createdAt.localeCompare(right.createdAt)).slice(-12),
+    lineageGraph: [...lineageGraph.values()].sort((left, right) => left.createdAt.localeCompare(right.createdAt)).slice(-20),
     currentPriorities: [...priorities.values()].sort((left, right) => right.score - left.score).slice(0, 12),
     continuityIntensity: unresolved.size * 10 + Math.min(ordered.length, 25),
     operationalDrift: blockedCount,
     staleImportantMemory: [...staleMemory].slice(0, 12),
+    governanceLegality: [...governanceLegality.values()].sort((left, right) => left.checkedAt.localeCompare(right.checkedAt)).slice(-12),
     governanceOutcomes: {
       blocked: blockedCount,
       denied: deniedCount,

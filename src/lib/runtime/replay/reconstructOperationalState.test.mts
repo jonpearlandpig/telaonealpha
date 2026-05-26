@@ -96,3 +96,48 @@ test('reconstructOperationalStateFromReplay ignores snapshot checkpoint state as
   assert.deepEqual(replayed.state.recentLineage, ['lineage-live'])
   assert.deepEqual(replayed.state.unresolvedContinuity, ['unresolved-live'])
 })
+
+test('reconstructOperationalStateFromReplay preserves routing plans, legality checks, and lineage edges for orchestration replay', () => {
+  const replayed = reconstructOperationalStateFromReplay([
+    event({
+      id: 'evt-route',
+      replaySequence: 11,
+      type: 'routing.plan.created',
+      createdAt: '2026-05-26T15:29:00.000Z',
+      lineageId: 'lineage-child',
+      payload: {
+        action: ACTIONS.GENERATE_REPORT,
+        routingPlanId: 'plan-1',
+        selectedOperators: ['mose-router', 'garvis-enforcement'],
+        sequence: [{ order: 1, operatorId: 'mose-router', action: ACTIONS.GENERATE_REPORT }],
+        rollbackClass: 'none',
+        escalationPath: ['mose-router', 'flightpath-engine', 'garvis-enforcement'],
+        governanceState: 'approved',
+        legal: true,
+        parentLineageId: 'lineage-root',
+        rightsValidation: { allowed: true },
+      },
+    }),
+    event({
+      id: 'evt-legal',
+      replaySequence: 12,
+      type: 'governance.validated',
+      createdAt: '2026-05-26T15:29:01.000Z',
+      lineageId: 'lineage-child',
+      payload: {
+        action: ACTIONS.GENERATE_REPORT,
+        allowed: true,
+        requiredAuthority: 'S0',
+        source: 'pen-and-sword',
+      },
+    }),
+  ])
+
+  assert.equal(replayed.state.routingPlans.length, 1)
+  assert.equal(replayed.state.routingPlans[0]?.id, 'plan-1')
+  assert.deepEqual(replayed.state.routingPlans[0]?.escalationPath, ['mose-router', 'flightpath-engine', 'garvis-enforcement'])
+  assert.equal(replayed.state.governanceLegality[0]?.source, 'pen-and-sword')
+  assert.equal(replayed.state.lineageGraph[0]?.parentLineageId, 'lineage-root')
+  assert.equal(replayed.state.operationalObjects.some((item) => item.objectType === 'routing-plan'), true)
+  assert.equal(replayed.state.operationalObjects.some((item) => item.objectType === 'authorship-guard'), true)
+})

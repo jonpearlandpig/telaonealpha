@@ -41,10 +41,13 @@ test('buildHydratedRuntimeState returns replay-derived projections only', () => 
       updatedAt: '2026-05-24T17:40:00.000Z',
       payload: { threadId: 'thread-a' },
     }],
+    routingPlans: [],
+    lineageGraph: [],
     currentPriorities: [{ id: 'unresolved-a', reason: 'unresolved continuity', score: 35 }],
     continuityIntensity: 12,
     operationalDrift: 0,
     staleImportantMemory: [],
+    governanceLegality: [],
     governanceOutcomes: { blocked: 0, denied: 0, escalated: 0, pending: 0 },
   }
 

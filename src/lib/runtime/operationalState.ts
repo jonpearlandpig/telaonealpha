@@ -5,12 +5,42 @@ import { computeMomentum } from './momentumEngine'
 export type OperationalPriority = { id: string; reason: string; score: number }
 export type OperationalObject = {
   id: string
-  objectType: 'continuity-thread' | 'decision' | 'governance' | 'entity'
+  objectType: 'continuity-thread' | 'decision' | 'governance' | 'entity' | 'routing-plan' | 'legality-check' | 'execution' | 'authorship-guard'
   lineageId?: string
   status: string
   createdAt: string
   updatedAt: string
   payload: Record<string, unknown>
+}
+
+export type OperationalRoutingPlan = {
+  id: string
+  action: string
+  rollbackClass: string
+  selectedOperators: string[]
+  escalationPath: string[]
+  governanceState: string
+  legal: boolean
+  lineageId?: string
+  createdAt: string
+}
+
+export type LineageEdge = {
+  id: string
+  lineageId: string
+  parentLineageId?: string
+  eventId?: string
+  relationType: string
+  createdAt: string
+}
+
+export type GovernanceLegalityState = {
+  action: string
+  allowed: boolean
+  requiredAuthority?: string
+  denialReason?: string
+  source: 'flightpath' | 'pen-and-sword'
+  checkedAt: string
 }
 
 export type OperationalState = {
@@ -22,10 +52,13 @@ export type OperationalState = {
   activeEntities: string[]
   recentLineage: string[]
   operationalObjects: OperationalObject[]
+  routingPlans: OperationalRoutingPlan[]
+  lineageGraph: LineageEdge[]
   currentPriorities: OperationalPriority[]
   continuityIntensity: number
   operationalDrift: number
   staleImportantMemory: string[]
+  governanceLegality: GovernanceLegalityState[]
   governanceOutcomes?: {
     blocked: number
     denied: number
@@ -58,10 +91,13 @@ export function buildOperationalState(artifacts: ArtifactRecord[], entities: Ent
     activeEntities,
     recentLineage: Array.from(new Set(artifacts.map((a) => a.lineageId).filter(Boolean) as string[])).slice(0, 12),
     operationalObjects: [],
+    routingPlans: [],
+    lineageGraph: [],
     currentPriorities: priorities,
     continuityIntensity: momentum.unresolvedPersistence + momentum.entityGravity / 5,
     operationalDrift: Math.max(0, artifacts.length - priorities.length),
     staleImportantMemory: momentum.dormantImportant.map((a) => a.id),
+    governanceLegality: [],
     governanceOutcomes: {
       blocked: 0,
       denied: 0,
