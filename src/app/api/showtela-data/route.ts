@@ -1,24 +1,27 @@
 import { NextResponse } from 'next/server'
-import { getShowTelaHome } from '@/lib/showtela/hydration'
+import { hydrateRuntime } from '@/lib/runtime/runtimeHydration'
+import { buildShowTelaVMFromHydratedState } from '@/lib/showtela/buildViewModel'
+import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const data = await getShowTelaHome()
+  const state = await hydrateRuntime(SHOWTELA_WORKSPACE_ID)
+  const vm = buildShowTelaVMFromHydratedState(state)
   return NextResponse.json({
     hasLiveData: Boolean(
-      data.activeOps.length ||
-      data.fluencyPartners.length ||
-      data.operations.length ||
-      data.unresolved.length ||
-      data.continuityFeed.length
+      vm.activeOps.length ||
+      vm.fluencyPartners.length ||
+      vm.crusadeOperations.length ||
+      vm.unresolved.length ||
+      vm.feed.length
     ),
-    source: data.source,
-    diagnosticState: data.diagnosticState,
-    activeOps: data.activeOps.map(p => ({ name: p.name, role: p.role })),
-    fluencyPartners: data.fluencyPartners.map(p => ({ name: p.name, role: p.role })),
-    operations: data.operations.map(o => ({ name: o.title, status: o.status })),
-    unresolved: data.unresolved.map(u => ({ title: u.title, severity: u.severity })),
-    feed: data.continuityFeed.slice(0, 5).map(e => ({ headline: e.headline, owner: e.owner?.name })),
+    source: vm.source,
+    diagnosticState: vm.diagnosticState,
+    activeOps: vm.activeOps.map(p => ({ name: p.name, role: p.latest })),
+    fluencyPartners: vm.fluencyPartners.map(p => ({ name: p.name, role: p.latest })),
+    operations: vm.crusadeOperations.map(o => ({ name: o.name, status: o.label })),
+    unresolved: vm.unresolved.map(u => ({ title: u.title, severity: u.severity })),
+    feed: vm.feed.slice(0, 5).map(e => ({ headline: e.title, owner: e.owner })),
   }, { headers: { 'Cache-Control': 'no-store' } })
 }

@@ -1,6 +1,7 @@
 import { ShowTelaRuntime } from '@/components/showtela/ShowTelaRuntime'
-import { getShowTelaHome } from '@/lib/showtela/hydration'
-import { buildShowTelaVM } from '@/lib/showtela/buildViewModel'
+import { hydrateRuntime } from '@/lib/runtime/runtimeHydration'
+import { buildShowTelaVMFromHydratedState } from '@/lib/showtela/buildViewModel'
+import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
 import { getSession } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
@@ -11,8 +12,8 @@ function upgradeGooglePhoto(url: string): string {
 }
 
 export default async function ShowTelaHome() {
-  const [data, session] = await Promise.all([
-    getShowTelaHome(),
+  const [state, session] = await Promise.all([
+    hydrateRuntime(SHOWTELA_WORKSPACE_ID),
     getSession(),
   ])
 
@@ -24,7 +25,7 @@ export default async function ShowTelaHome() {
     image: userImage ?? session.image,
   } : undefined
 
-  const vm = buildShowTelaVM(data)
+  const vm = buildShowTelaVMFromHydratedState(state)
 
   // Apply user-specific avatar and sort current user to front — server-only since it needs session
   if (session) {
