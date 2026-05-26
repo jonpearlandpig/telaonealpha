@@ -6,7 +6,7 @@ import type { OperationalProjection } from './state/model'
 // Never exposed to the UI — consumed only by observability/logging paths.
 // Used after SSR inversion (Phase B) to verify old authority paths are dead.
 export type RuntimeDiagnostics = {
-  runtimeAuthoritySource: 'hydrateRuntime' | 'getShowTelaHome' | 'unknown'
+  runtimeAuthoritySource: 'hydrateRuntime' | 'unknown'
   projectionBuiltFrom: 'events' | 'cache' | 'none'
   hydrationReplaySequence: number | undefined
   objectConfirmationCount: number     // distinct object IDs produced by approved-state events

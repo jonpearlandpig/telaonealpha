@@ -127,12 +127,11 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
   const activeOpsData = vm.activeOps
   const runtimeTimeline = vm.runtimeTimeline
   const unresolvedItemsState = vmUnresolved
-  const operationalProjection = vm.operationalProjection
   const latestTimeline = runtimeTimeline?.[0]
   const unresolvedPressure = derivePressure(unresolvedItemsState)
   const priorityOperation = operations[0]
   const recentFeedItem = feed[0]
-  const operationalCards = projectionCards(operationalProjection)
+  const operationalCards = projectionCards(undefined)
   const activeOperators = useMemo(() => activeOpsData.map((item) => item.name), [activeOpsData])
   const userFirstName = user?.name?.split(' ')[0]?.toLowerCase()
   const visibleActiveOps = activeOpsData.filter((item) => {
@@ -150,26 +149,20 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
     })
 
   const autoscan = {
-    currentTruth: operationalProjection?.summary.currentTruth ?? (
-      priorityOperation
+    currentTruth: priorityOperation
         ? (priorityOperation.unresolvedCount ?? 0) > 0
           ? `${priorityOperation.label} currently carries the highest unresolved operational pressure.`
           : `${priorityOperation.label} is operational. Field is clear.`
-        : 'Operational pressure is evenly distributed across the field.'
-    ),
-    mattersNow: operationalProjection?.summary.mattersNow ?? (
-      latestTimeline
+        : 'Operational pressure is evenly distributed across the field.',
+    mattersNow: latestTimeline
       ? `${latestTimeline.summary} stabilized most recently${latestTimeline.timestamp ? ` at ${formatTimelineTime(latestTimeline.timestamp)}` : ''}${latestTimeline.actor ? ` through ${latestTimeline.actor}` : ''}.`
-      : 'No new continuity drift surfaced in the latest autoscan.'
-    ),
-    nextMovement: operationalProjection?.summary.nextMovement ?? (
-      priorityOperation?.latest
+      : 'No new continuity drift surfaced in the latest autoscan.',
+    nextMovement: priorityOperation?.latest
         ? `Next meaningful movement is ${priorityOperation.latest.toLowerCase()}.`
-        : 'Next meaningful movement is confirming the highest-pressure thread.'
-    ),
-    blockersLabel: operationalProjection?.summary.blockersLabel,
-    movementLabel: operationalProjection?.summary.movementLabel,
-    readinessLabel: operationalProjection?.summary.readinessLabel,
+        : 'Next meaningful movement is confirming the highest-pressure thread.',
+    blockersLabel: undefined,
+    movementLabel: undefined,
+    readinessLabel: undefined,
     suggestedActions: [
       {
         id: 'pressure',
@@ -275,7 +268,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
                 onNextMovementTap={priorityOperation ? () => setSheet({ type: 'operation', name: priorityOperation.label }) : undefined}
                 isEmpty={false}
                 runtimeLabel={runtimeLabel}
-                statusLabel={operationalProjection ? `${operationalProjection.groupedTopology.blockers} blockers · ${operationalProjection.groupedTopology.movement} moving · ${operationalProjection.groupedTopology.readiness} ready` : undefined}
+                statusLabel={undefined}
               />
               {operationalCards.length > 0 && (
                 <section className="px-5 pb-5">
@@ -310,7 +303,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
               />
               <CalendarWeekRail events={calendarEvents} baseDate={calendarBaseDate} onOpenCalendar={() => setTab('calendar')} isEmpty={false} />
               <CrusadeOperationsRail items={operations} unresolvedItems={unresolvedItemsState} onOperationTap={(name) => setSheet({ type: 'operation', name })} />
-              <UnresolvedPressureCard pressure={unresolvedPressure} projection={operationalProjection} onOpen={() => setSheet({ type: 'unresolved' })} />
+              <UnresolvedPressureCard pressure={unresolvedPressure} onOpen={() => setSheet({ type: 'unresolved' })} />
               <ContinuityFeed feed={feed} onFeedTap={(item) => setSheet({ type: 'feed', item })} />
             </>
           )}
@@ -340,7 +333,6 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
               calendarEvents={calendarEvents}
               submittedBy={user?.name}
               onContinuityIngest={submitContinuity}
-              operationalProjection={operationalProjection}
             />
           )}
 
