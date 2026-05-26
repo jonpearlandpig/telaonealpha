@@ -99,7 +99,7 @@ export async function POST() {
   await emitRuntimeEvent({
     type: 'continuity.ingested',
     source: 'automation',
-    governanceState: 'constitutional',
+    governanceState: 'approved',
     executionState: 'completed',
     traceId,
     correlationId,
@@ -119,7 +119,7 @@ export async function POST() {
   await emitRuntimeEvent({
     type: 'continuity.normalized',
     source: 'automation',
-    governanceState: 'constitutional',
+    governanceState: 'approved',
     executionState: 'completed',
     traceId,
     correlationId,

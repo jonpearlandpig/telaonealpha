@@ -1,3 +1,5 @@
+import crypto from 'crypto'
+
 import type { LineageRef } from './types'
 
 export type { LineageRef }
@@ -6,7 +8,7 @@ export function createLineageRef(params: {
   parentId?: string
   existingChain?: readonly string[]
 }): LineageRef {
-  const lineageId = `lref_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`
+  const lineageId = `lref_${crypto.randomUUID()}`
   const chain = Object.freeze([...(params.existingChain ?? []), lineageId]) as readonly string[]
   return {
     lineageId,

@@ -2,7 +2,14 @@ import 'server-only'
 
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import type { RuntimeEventRow } from '@/lib/supabase/schema'
-import type { RuntimeEvent, RuntimeEventStoreResult } from './runtimeTypes'
+import {
+  isExecutionState,
+  isGovernanceState,
+  type ExecutionState,
+  type GovernanceState,
+  type RuntimeEvent,
+  type RuntimeEventStoreResult,
+} from './runtimeTypes'
 
 type RuntimeEventDbRow = {
   id: string
@@ -20,6 +27,21 @@ type RuntimeEventDbRow = {
   created_at: string
 }
 
+function normalizeGovernanceState(value: string): GovernanceState {
+  if (isGovernanceState(value)) return value
+  if (value === 'constitutional' || value === 'validated' || value === 'review') return 'approved'
+  if (value === 'immutable') return 'escalated'
+  if (value === 'exploratory') return 'pending'
+  return 'pending'
+}
+
+function normalizeExecutionState(value: string): ExecutionState {
+  if (isExecutionState(value)) return value
+  if (value === 'rolled_back' || value === 'rejected') return 'rolled-back'
+  if (value === 'active') return 'queued'
+  return value === 'completed' ? 'completed' : 'failed'
+}
+
 function toRuntimeEvent(row: RuntimeEventDbRow): RuntimeEvent {
   return {
     id: row.id,
@@ -27,8 +49,8 @@ function toRuntimeEvent(row: RuntimeEventDbRow): RuntimeEvent {
     eventVersion: row.event_version,
     schemaVersion: row.schema_version,
     source: row.source,
-    governanceState: row.governance_state,
-    executionState: row.execution_state,
+    governanceState: normalizeGovernanceState(row.governance_state),
+    executionState: normalizeExecutionState(row.execution_state),
     traceId: row.trace_id ?? undefined,
     correlationId: row.correlation_id ?? undefined,
     lineageId: row.lineage_id ?? undefined,

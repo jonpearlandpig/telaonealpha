@@ -1,3 +1,4 @@
+import { ACTIONS } from '../actions'
 import type { OperationalPriority, OperationalState } from '../operationalState'
 import type { ReconstructedOperationalState, RuntimeEvent } from '../runtimeTypes'
 
@@ -6,15 +7,17 @@ function eventTime(event: RuntimeEvent) {
 }
 
 function scoreForEvent(event: RuntimeEvent): number {
+  if (event.type === 'escalation.triggered') return 45
   if (event.type === 'execution.denied' || event.type === 'governance.blocked') return 40
   if (event.type === 'continuity.normalized') return 30
   if (event.type === 'continuity.ingested') return 24
   if (event.type.includes('unresolved')) return 35
-  if (event.executionState === 'active') return 20
+  if (event.executionState === 'queued') return 20
   return 12
 }
 
 function priorityReason(event: RuntimeEvent): string {
+  if (event.type === 'escalation.triggered') return 'governance escalated'
   if (event.type.includes('unresolved')) return 'unresolved continuity'
   if (event.type === 'governance.blocked') return 'governance blocked'
   if (event.type === 'execution.denied') return 'execution denied'
@@ -40,11 +43,15 @@ export function reconstructOperationalState(events: RuntimeEvent[]): Reconstruct
   const staleMemory = new Set<string>()
   const priorities = new Map<string, OperationalPriority>()
   let blockedCount = 0
+  let deniedCount = 0
+  let escalatedCount = 0
+  let pendingCount = 0
+  let lastEscalationAt: string | undefined
 
   for (const event of ordered) {
     const payload = event.payload ?? {}
     const threadId = stringValue(payload.threadId)
-    const unresolvedId = stringValue(payload.unresolvedId) ?? (event.type === 'create.unresolved' ? event.id : undefined)
+    const unresolvedId = stringValue(payload.unresolvedId) ?? (event.type === ACTIONS.CREATE_UNRESOLVED ? event.id : undefined)
     const entityId = stringValue(payload.entityId)
     const linkedEntities = stringList(payload.linkedEntities)
 
@@ -53,20 +60,33 @@ export function reconstructOperationalState(events: RuntimeEvent[]): Reconstruct
     if (entityId) entities.add(entityId)
     for (const linkedEntity of linkedEntities) entities.add(linkedEntity)
 
-    if (event.type === 'create.unresolved' || event.type === 'continuity.ingested') {
+    if (event.type === ACTIONS.CREATE_UNRESOLVED || event.type === 'continuity.ingested') {
       if (unresolvedId) unresolved.add(unresolvedId)
     }
 
-    if (event.type === 'resolve.unresolved' && unresolvedId) {
+    if (event.type === ACTIONS.RESOLVE_UNRESOLVED && unresolvedId) {
       unresolved.delete(unresolvedId)
     }
 
-    if (event.type === 'archive.continuity' && event.lineageId) {
+    if (event.type === ACTIONS.ARCHIVE_CONTINUITY && event.lineageId) {
       staleMemory.add(event.lineageId)
     }
 
-    if (event.type === 'governance.blocked' || event.type === 'execution.denied') {
+    if (event.governanceState === 'pending' || event.executionState === 'queued') {
+      pendingCount += 1
+    }
+
+    if (event.type === 'governance.blocked') {
       blockedCount += 1
+    }
+
+    if (event.type === 'execution.denied') {
+      deniedCount += 1
+    }
+
+    if (event.type === 'escalation.triggered') {
+      escalatedCount += 1
+      lastEscalationAt = event.createdAt
     }
 
     priorities.set(event.id, {
@@ -85,6 +105,13 @@ export function reconstructOperationalState(events: RuntimeEvent[]): Reconstruct
     continuityIntensity: unresolved.size * 10 + Math.min(ordered.length, 25),
     operationalDrift: blockedCount,
     staleImportantMemory: [...staleMemory].slice(0, 12),
+    governanceOutcomes: {
+      blocked: blockedCount,
+      denied: deniedCount,
+      escalated: escalatedCount,
+      pending: pendingCount,
+      lastEscalationAt,
+    },
   }
 
   return {

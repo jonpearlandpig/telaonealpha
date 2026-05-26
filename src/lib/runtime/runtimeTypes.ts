@@ -5,8 +5,12 @@ import type { AuthorityLevel, RuntimeAction } from './actions'
 
 export const RUNTIME_EVENT_SCHEMA_VERSION = 'runtime.v1'
 export const RUNTIME_EVENT_VERSION = 1
+export const GOVERNANCE_STATES = ['approved', 'blocked', 'escalated', 'pending'] as const
+export const EXECUTION_STATES = ['queued', 'completed', 'failed', 'rolled-back'] as const
 
 export type RuntimeEventSource = 'user' | 'system' | 'operator' | 'automation'
+export type GovernanceState = (typeof GOVERNANCE_STATES)[number]
+export type ExecutionState = (typeof EXECUTION_STATES)[number]
 
 export type RuntimeEventPayload = Record<string, unknown>
 
@@ -16,8 +20,8 @@ export type RuntimeEvent<TPayload extends RuntimeEventPayload = RuntimeEventPayl
   eventVersion: number
   schemaVersion: string
   source: RuntimeEventSource
-  governanceState: string
-  executionState: string
+  governanceState: GovernanceState
+  executionState: ExecutionState
   traceId?: string
   correlationId?: string
   lineageId?: string
@@ -32,8 +36,8 @@ export type RuntimeEventInput<TPayload extends RuntimeEventPayload = RuntimeEven
   eventVersion?: number
   schemaVersion?: string
   source: RuntimeEventSource
-  governanceState: string
-  executionState: string
+  governanceState: GovernanceState
+  executionState: ExecutionState
   traceId?: string
   correlationId?: string
   lineageId?: string
@@ -58,15 +62,16 @@ export type ReconstructedOperationalState = {
 
 export type LegalityCheckInput = {
   action: RuntimeAction
-  governanceState: string
-  executionState: string
+  governanceState: GovernanceState
+  executionState: ExecutionState
   authority: AuthorityLevel
+  previousAction?: RuntimeAction
 }
 
 export type LegalityCheckResult = {
   allowed: boolean
-  governanceState: string
-  executionState: string
+  governanceState: GovernanceState
+  executionState: ExecutionState
   action: RuntimeAction
   requiredAuthority: AuthorityLevel
   allowedNextActions: RuntimeAction[]
@@ -77,9 +82,11 @@ export type LegalityCheckResult = {
 export type OperatorDefinition = {
   id: string
   label: string
+  domain: 'continuity' | 'flightpath' | 'mose' | 'garvis'
   authorityFloor: AuthorityLevel
   capabilities: RuntimeAction[]
-  governanceStates: string[]
+  governanceStates: GovernanceState[]
+  rollbackCeiling: RollbackClass
 }
 
 export type RoutingPlanStep = {
@@ -96,13 +103,21 @@ export type RoutingPlan = {
   sequence: RoutingPlanStep[]
   rollbackClass: RollbackClass
   escalationPath: string[]
-  governanceState: string
+  governanceState: GovernanceState
 }
 
 export type EnforcementResult = {
   allowed: boolean
   reason?: string
   emittedEventIds: string[]
+}
+
+export function isGovernanceState(value: string): value is GovernanceState {
+  return GOVERNANCE_STATES.includes(value as GovernanceState)
+}
+
+export function isExecutionState(value: string): value is ExecutionState {
+  return EXECUTION_STATES.includes(value as ExecutionState)
 }
 
 export function createRuntimeEvent<TPayload extends RuntimeEventPayload>(

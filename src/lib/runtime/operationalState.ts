@@ -13,6 +13,13 @@ export type OperationalState = {
   continuityIntensity: number
   operationalDrift: number
   staleImportantMemory: string[]
+  governanceOutcomes?: {
+    blocked: number
+    denied: number
+    escalated: number
+    pending: number
+    lastEscalationAt?: string
+  }
 }
 
 export function buildOperationalState(artifacts: ArtifactRecord[], entities: EntityRecord[], currentThreadId?: string): OperationalState {
@@ -38,5 +45,11 @@ export function buildOperationalState(artifacts: ArtifactRecord[], entities: Ent
     continuityIntensity: momentum.unresolvedPersistence + momentum.entityGravity / 5,
     operationalDrift: Math.max(0, artifacts.length - priorities.length),
     staleImportantMemory: momentum.dormantImportant.map((a) => a.id),
+    governanceOutcomes: {
+      blocked: 0,
+      denied: 0,
+      escalated: 0,
+      pending: 0,
+    },
   }
 }
