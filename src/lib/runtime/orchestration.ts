@@ -24,6 +24,7 @@ type ProtectedClassification = {
 
 type OrchestrationInput = {
   workspaceId: string
+  showId?: string
   action: RuntimeAction
   authority: AuthorityLevel
   governanceState: GovernanceState
@@ -53,6 +54,8 @@ type OrchestrationInput = {
     required: boolean
     approvedBy?: string[]
     minimumApprovers?: number
+    requiredApprovers?: string[]
+    requiredAuthorityAlignment?: AuthorityLevel[]
   }
 }
 
@@ -301,6 +304,7 @@ export async function orchestrateRuntimeAction(input: OrchestrationInput): Promi
 
   const enforcement = await enforceRuntimeAction({
     workspaceId: input.workspaceId,
+    showId: input.showId,
     action: input.action,
     governanceState: input.governanceState,
     executionState: input.executionState,

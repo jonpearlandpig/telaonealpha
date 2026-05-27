@@ -48,6 +48,11 @@ function enforcementRowsForEvent(event: RuntimeEvent): EnforcementActionRow[] {
     'operator.execution.approved',
     'operator.execution.completed',
     'operator.analysis.completed',
+    'governance.escalation.propagated',
+    'governance.escalation.resolved',
+    'governance.nil.blocked',
+    'governance.two-key.blocked',
+    'runtime.rollback.signaled',
   ].includes(event.type)) {
     return []
   }

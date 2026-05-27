@@ -58,7 +58,11 @@ export function deriveOperationalObjects(event: RuntimeEvent): OperationalObject
     event.type === 'execution.denied' ||
     event.type === 'escalation.triggered' ||
     event.type === 'operator.blocked' ||
-    event.type === 'operator.escalated'
+    event.type === 'operator.escalated' ||
+    event.type === 'governance.escalation.propagated' ||
+    event.type === 'governance.nil.blocked' ||
+    event.type === 'governance.two-key.blocked' ||
+    event.type === 'runtime.rollback.signaled'
   ) {
     objects.push({
       id: `governance:${event.lineageId ?? event.id}`,
