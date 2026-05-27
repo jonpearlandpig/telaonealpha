@@ -4,8 +4,8 @@ import type { ReconstructedOperationalState, RuntimeEvent } from '../runtimeType
 import { decisionLabel, deriveOperationalObjects, projectRefs, stringList, stringRecord, stringValue } from './derivedArtifacts'
 
 function scoreForEvent(event: RuntimeEvent): number {
-  if (event.type === 'escalation.triggered') return 45
-  if (event.type === 'execution.denied' || event.type === 'governance.blocked') return 40
+  if (event.type === 'escalation.triggered' || event.type === 'operator.escalated') return 45
+  if (event.type === 'execution.denied' || event.type === 'governance.blocked' || event.type === 'operator.blocked') return 40
   if (event.type === 'continuity.normalized') return 30
   if (event.type === 'continuity.ingested') return 24
   if (event.type.includes('unresolved')) return 35
@@ -14,9 +14,9 @@ function scoreForEvent(event: RuntimeEvent): number {
 }
 
 function priorityReason(event: RuntimeEvent): string {
-  if (event.type === 'escalation.triggered') return 'governance escalated'
+  if (event.type === 'escalation.triggered' || event.type === 'operator.escalated') return 'governance escalated'
   if (event.type.includes('unresolved')) return 'unresolved continuity'
-  if (event.type === 'governance.blocked') return 'governance blocked'
+  if (event.type === 'governance.blocked' || event.type === 'operator.blocked') return 'governance blocked'
   if (event.type === 'execution.denied') return 'execution denied'
   if (event.type === 'continuity.normalized') return 'normalized continuity'
   return 'runtime event'
@@ -53,7 +53,7 @@ function lineageEdgesForEvent(event: RuntimeEvent): LineageEdge[] {
 }
 
 function routingPlanForEvent(event: RuntimeEvent): OperationalRoutingPlan | null {
-  if (event.type !== 'routing.plan.created') return null
+  if (event.type !== 'routing.plan.created' && event.type !== 'operator.analysis.completed') return null
   const payload = stringRecord(event.payload)
   const selectedOperators = stringList(payload.selectedOperators)
   const escalationPath = stringList(payload.escalationPath)
@@ -79,7 +79,7 @@ function routingPlanForEvent(event: RuntimeEvent): OperationalRoutingPlan | null
 }
 
 function governanceLegalityForEvent(event: RuntimeEvent): GovernanceLegalityState | null {
-  if (event.type !== 'governance.validated') return null
+  if (event.type !== 'governance.validated' && event.type !== 'operator.analysis.completed') return null
   const payload = stringRecord(event.payload)
   const action = stringValue(payload.action)
   if (!action) return null
@@ -152,7 +152,7 @@ export function reconstructOperationalStateFromReplay(
       pendingCount += 1
     }
 
-    if (event.type === 'governance.blocked') {
+    if (event.type === 'governance.blocked' || event.type === 'operator.blocked') {
       blockedCount += 1
     }
 
@@ -160,7 +160,7 @@ export function reconstructOperationalStateFromReplay(
       deniedCount += 1
     }
 
-    if (event.type === 'escalation.triggered') {
+    if (event.type === 'escalation.triggered' || event.type === 'operator.escalated') {
       escalatedCount += 1
       lastEscalationAt = event.createdAt
     }

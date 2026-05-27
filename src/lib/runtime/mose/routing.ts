@@ -3,7 +3,7 @@ import crypto from 'crypto'
 import { ACTIONS, AUTHORITY_RANK, type AuthorityLevel, type RuntimeAction } from '../actions'
 import { evaluateActionLegality } from '../flightpath/legalityEngine'
 import { getOperatorsByDomain, getOperatorsForAction, getRollbackCeiling, isOperatorAuthorized } from '../operators/registry'
-import type { ExecutionState, GovernanceState, RoutingPlan } from '../runtimeTypes'
+import type { ConstitutionalSystemId, ExecutionState, GovernanceState, RoutingPlan, RoutingSignal } from '../runtimeTypes'
 
 type RoutingInput = {
   action: RuntimeAction
@@ -17,6 +17,10 @@ function rollbackClassFor(action: RuntimeAction): RoutingPlan['rollbackClass'] {
   if (action === ACTIONS.ARCHIVE_CONTINUITY || action === ACTIONS.EXECUTE_OPERATIONAL_ACTION) return 'hard'
   if (action === ACTIONS.GENERATE_REPORT) return 'none'
   return 'soft'
+}
+
+function constitutionalSystems(): ConstitutionalSystemId[] {
+  return ['telauthorium', 'pen-and-sword', 'the-ledger']
 }
 
 export function createRoutingPlan(input: RoutingInput): RoutingPlan {
@@ -51,6 +55,7 @@ export function createRoutingPlan(input: RoutingInput): RoutingPlan {
       return domainDelta !== 0 ? domainDelta : left.id.localeCompare(right.id)
     })
 
+  // TEMP SIGNAL ROUTING LAYER
   const governanceSequence = legality.allowed
     ? getOperatorsByDomain('mose')
     : [...getOperatorsByDomain('mose'), ...getOperatorsByDomain('garvis')]
@@ -60,6 +65,35 @@ export function createRoutingPlan(input: RoutingInput): RoutingPlan {
   const sequenceOperators = legality.allowed
     ? selectedOperators
     : governanceSequence.filter((operator) => selectedOperators.some((selected) => selected.id === operator.id) || operator.domain === 'garvis')
+  const triggeringSignals: RoutingSignal[] = [
+    {
+      kind: 'action-capability',
+      value: input.action,
+      triggeredBy: `Operators advertising ${input.action}`,
+    },
+    {
+      kind: 'governance-state',
+      value: input.governanceState,
+      triggeredBy: `Governance state ${input.governanceState} constrained the route`,
+    },
+    {
+      kind: 'authority-floor',
+      value: input.authority,
+      triggeredBy: `Authority ${input.authority} admitted only operators at or below that floor`,
+    },
+    {
+      kind: 'rollback-class',
+      value: targetRollbackClass,
+      triggeredBy: `Rollback ceiling had to satisfy ${targetRollbackClass}`,
+    },
+    {
+      kind: 'legality',
+      value: legality.allowed ? 'allowed' : 'blocked',
+      triggeredBy: legality.allowed
+        ? 'Flightpath legality accepted the action'
+        : legality.denialReason ?? 'Flightpath legality rejected the action',
+    },
+  ]
 
   return {
     id: crypto.randomUUID(),
@@ -72,5 +106,15 @@ export function createRoutingPlan(input: RoutingInput): RoutingPlan {
     rollbackClass: targetRollbackClass,
     escalationPath,
     governanceState: input.governanceState,
+    explanation: {
+      summary: legality.allowed
+        ? `${input.action} routed through ${sequenceOperators.map((operator) => operator.id).join(', ')}`
+        : `${input.action} diverted into governed escalation`,
+      selectedBecause: sequenceOperators.map((operator) =>
+        `${operator.id} matched ${input.action}, satisfied ${input.governanceState}, and respected ${targetRollbackClass} rollback constraints`),
+      triggeringSignals,
+      governancePath: escalationPath,
+    },
+    constitutionalSystems: constitutionalSystems(),
   }
 }

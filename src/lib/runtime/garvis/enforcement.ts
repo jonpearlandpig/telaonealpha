@@ -43,7 +43,7 @@ function twoKeySatisfied(input: EnforcementInput) {
 }
 
 async function emitEnforcementEvent(
-  type: 'governance.blocked' | 'execution.denied' | 'escalation.triggered',
+  type: 'operator.blocked' | 'operator.escalated',
   input: EnforcementInput,
   payloadType: string,
   payload: RuntimeEventPayload,
@@ -96,19 +96,8 @@ export async function enforceRuntimeAction(input: EnforcementInput): Promise<Enf
     `Execution denied for ${input.action}.`
   const governanceBlocked = isGovernanceBlock(input.governanceState, denialReason) || !twoKeyOk || nilProtected
 
-  const denied = await emitEnforcementEvent('execution.denied', input, 'enforcement.result', {
-    action: input.action,
-    operatorId: input.operatorId,
-    requiredAuthority: legality.requiredAuthority,
-    denialReason,
-    twoKeyRequired: requiresTwoKey(input),
-    approvedBy: input.twoKey?.approvedBy ?? [],
-    nilProtected,
-  })
-  emittedEventIds.push(denied.id)
-
-  if (governanceBlocked) {
-    const blocked = await emitEnforcementEvent('governance.blocked', input, 'enforcement.governance', {
+  if (governanceBlocked || !legality.allowed || !operatorAuthorized) {
+    const blocked = await emitEnforcementEvent('operator.blocked', input, 'operator.blocked', {
       action: input.action,
       operatorId: input.operatorId,
       requiredAuthority: legality.requiredAuthority,
@@ -121,7 +110,7 @@ export async function enforceRuntimeAction(input: EnforcementInput): Promise<Enf
   }
 
   if (legality.escalationRequired || !twoKeyOk || nilProtected) {
-    const escalation = await emitEnforcementEvent('escalation.triggered', input, 'enforcement.escalation', {
+    const escalation = await emitEnforcementEvent('operator.escalated', input, 'operator.escalated', {
       action: input.action,
       operatorId: input.operatorId,
       reason: denialReason,

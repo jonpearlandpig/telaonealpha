@@ -2,6 +2,7 @@ import { createReplayCheckpointSnapshot, selectBestReplayCheckpoint } from './co
 import { loadDurableContinuity } from './durableMemory'
 import { getAllReplayEventsForWorkspace } from './eventStore'
 import { deriveOperationalObjects } from './replay/derivedArtifacts'
+import { verifyReplayConvergence } from './replay/replayConvergence'
 import { reconstructOperationalStateFromReplay } from './replay/reconstructOperationalState'
 import { persistSnapshot } from './snapshotPersistence'
 import { buildHydratedRuntimeState } from './runtimeHydrationModel'
@@ -11,6 +12,7 @@ import { persistCanonicalObjectsFromReplay } from './objects/objectPersistenceWi
 import type { RuntimeEvent } from './runtimeTypes'
 
 function buildDiagnostics(
+  workspaceId: string,
   events: RuntimeEvent[],
   replay: ReturnType<typeof reconstructOperationalStateFromReplay>,
   hasProjection: boolean,
@@ -26,12 +28,24 @@ function buildDiagnostics(
     }
   }
 
+  const convergence = verifyReplayConvergence({
+    workspaceId,
+    events,
+  })
+
   return {
     runtimeAuthoritySource: 'hydrateRuntime',
     projectionBuiltFrom: hasProjection ? 'events' : 'none',
     hydrationReplaySequence: replay.lastReplaySequence,
     objectConfirmationCount: confirmedIds.size,
     unconfirmedObjectCount: allIds.size - confirmedIds.size,
+    replayChecksum: convergence.replayChecksum,
+    restorationChecksum: convergence.restorationChecksum,
+    replayConverged: convergence.replayConverged,
+    hydrationPassCount: convergence.hydrationPassCount,
+    replayDriftDetected: convergence.replayDriftDetected,
+    deterministicRestoration: convergence.deterministicRestoration,
+    reconciliationConflictCount: convergence.reconciliationConflictCount,
     graphAssemblyAgeMs: undefined,
     hydratedAt: new Date().toISOString(),
   }
@@ -95,13 +109,17 @@ export async function hydrateRuntime(workspaceId: string) {
     lastReplaySequence: replay.lastReplaySequence ?? null,
   })
 
-  const diagnostics = buildDiagnostics(events, replay, true)
+  const diagnostics = buildDiagnostics(workspaceId, events, replay, true)
 
   console.log('[runtimeHydration] diagnostics', {
     authoritySource: diagnostics.runtimeAuthoritySource,
     replaySequence: diagnostics.hydrationReplaySequence,
     confirmedObjects: diagnostics.objectConfirmationCount,
     unconfirmedObjects: diagnostics.unconfirmedObjectCount,
+    replayChecksum: diagnostics.replayChecksum,
+    restorationChecksum: diagnostics.restorationChecksum,
+    replayConverged: diagnostics.replayConverged,
+    replayDriftDetected: diagnostics.replayDriftDetected,
     projectionFrom: diagnostics.projectionBuiltFrom,
   })
 

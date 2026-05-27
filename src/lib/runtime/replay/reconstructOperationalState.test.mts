@@ -47,7 +47,7 @@ test('reconstructOperationalStateFromReplay orders strictly by replaySequence an
     event({
       id: 'evt-2',
       replaySequence: 2,
-      type: 'governance.blocked',
+      type: 'operator.blocked',
       createdAt: '2026-05-24T17:39:00.000Z',
       lineageId: 'lineage-a',
       payload: { threadId: 'thread-a', linkedEntities: ['project:crusade'] },
@@ -102,7 +102,7 @@ test('reconstructOperationalStateFromReplay preserves routing plans, legality ch
     event({
       id: 'evt-route',
       replaySequence: 11,
-      type: 'routing.plan.created',
+      type: 'operator.analysis.completed',
       createdAt: '2026-05-26T15:29:00.000Z',
       lineageId: 'lineage-child',
       payload: {
@@ -114,21 +114,16 @@ test('reconstructOperationalStateFromReplay preserves routing plans, legality ch
         escalationPath: ['mose-router', 'flightpath-engine', 'garvis-enforcement'],
         governanceState: 'approved',
         legal: true,
-        parentLineageId: 'lineage-root',
-        rightsValidation: { allowed: true },
-      },
-    }),
-    event({
-      id: 'evt-legal',
-      replaySequence: 12,
-      type: 'governance.validated',
-      createdAt: '2026-05-26T15:29:01.000Z',
-      lineageId: 'lineage-child',
-      payload: {
-        action: ACTIONS.GENERATE_REPORT,
-        allowed: true,
+        explanation: {
+          summary: 'generate.report routed through mose-router',
+          selectedBecause: ['mose-router matched generate.report'],
+          triggeringSignals: [{ kind: 'action-capability', value: ACTIONS.GENERATE_REPORT, triggeredBy: 'Operators advertising generate.report' }],
+          governancePath: ['mose-router', 'flightpath-engine', 'garvis-enforcement'],
+        },
         requiredAuthority: 'S0',
         source: 'pen-and-sword',
+        parentLineageId: 'lineage-root',
+        rightsValidation: { allowed: true },
       },
     }),
   ])

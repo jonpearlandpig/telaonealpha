@@ -53,7 +53,13 @@ export function deriveOperationalObjects(event: RuntimeEvent): OperationalObject
     })
   }
 
-  if (event.type === 'governance.blocked' || event.type === 'execution.denied' || event.type === 'escalation.triggered') {
+  if (
+    event.type === 'governance.blocked' ||
+    event.type === 'execution.denied' ||
+    event.type === 'escalation.triggered' ||
+    event.type === 'operator.blocked' ||
+    event.type === 'operator.escalated'
+  ) {
     objects.push({
       id: `governance:${event.lineageId ?? event.id}`,
       objectType: 'governance',
@@ -69,7 +75,7 @@ export function deriveOperationalObjects(event: RuntimeEvent): OperationalObject
     })
   }
 
-  if (event.type === 'routing.plan.created') {
+  if (event.type === 'routing.plan.created' || event.type === 'operator.analysis.completed') {
     objects.push({
       id: `routing:${event.payload?.routingPlanId ?? event.id}`,
       objectType: 'routing-plan',
@@ -81,7 +87,7 @@ export function deriveOperationalObjects(event: RuntimeEvent): OperationalObject
     })
   }
 
-  if (event.type === 'governance.validated') {
+  if (event.type === 'governance.validated' || event.type === 'operator.analysis.completed') {
     objects.push({
       id: `legality:${event.payload?.action ?? event.id}`,
       objectType: 'legality-check',
@@ -93,12 +99,12 @@ export function deriveOperationalObjects(event: RuntimeEvent): OperationalObject
     })
   }
 
-  if (event.type === 'execution.authorized') {
+  if (event.type === 'execution.authorized' || event.type === 'operator.execution.approved' || event.type === 'operator.execution.completed') {
     objects.push({
       id: `execution:${event.payload?.action ?? event.id}`,
       objectType: 'execution',
       lineageId: event.lineageId,
-      status: 'authorized',
+      status: event.type === 'operator.execution.completed' ? 'completed' : 'authorized',
       createdAt,
       updatedAt: createdAt,
       payload,

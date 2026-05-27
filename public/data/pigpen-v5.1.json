@@ -1,0 +1,198 @@
+{
+  "registryVersion": "5.1",
+  "schemaVersion": "pigpen.registry.v1",
+  "generatedAt": "2026-05-20T00:00:00.000Z",
+  "runtimeClass": "governed-runtime-topology",
+  "modules": [
+    {
+      "id": "telauthorium",
+      "label": "Telauthorium",
+      "runtimeClass": "constitutional-system",
+      "domain": "authorship",
+      "authorityLevel": "S4",
+      "rollbackLevel": "none",
+      "auditLevel": "sovereign",
+      "allowedActions": [
+        "guard.authorship",
+        "verify.authorship-surface"
+      ],
+      "restrictedActions": [
+        "execute.operational-action",
+        "generate.report"
+      ],
+      "activeStatus": true,
+      "moduleHealth": "active",
+      "moduleStatus": "active",
+      "governanceStates": [
+        "approved",
+        "pending",
+        "escalated"
+      ],
+      "escalationTargets": [
+        "the-ledger"
+      ]
+    },
+    {
+      "id": "pen-and-sword",
+      "label": "Pen & Sword",
+      "runtimeClass": "constitutional-system",
+      "domain": "lineage",
+      "authorityLevel": "S4",
+      "rollbackLevel": "none",
+      "auditLevel": "sovereign",
+      "allowedActions": [
+        "validate.lineage",
+        "validate.execution-integrity"
+      ],
+      "restrictedActions": [
+        "archive.continuity"
+      ],
+      "activeStatus": true,
+      "moduleHealth": "active",
+      "moduleStatus": "active",
+      "governanceStates": [
+        "approved",
+        "pending",
+        "escalated"
+      ],
+      "escalationTargets": [
+        "the-ledger"
+      ]
+    },
+    {
+      "id": "the-ledger",
+      "label": "The Ledger",
+      "runtimeClass": "constitutional-system",
+      "domain": "ledger",
+      "authorityLevel": "S4",
+      "rollbackLevel": "none",
+      "auditLevel": "sovereign",
+      "allowedActions": [
+        "record.invocation-lifecycle",
+        "record.registry-observability"
+      ],
+      "restrictedActions": [],
+      "activeStatus": true,
+      "moduleHealth": "active",
+      "moduleStatus": "active",
+      "governanceStates": [
+        "approved",
+        "pending",
+        "escalated",
+        "blocked"
+      ],
+      "escalationTargets": []
+    },
+    {
+      "id": "continuity-operator",
+      "label": "Continuity Operator",
+      "runtimeClass": "operator",
+      "domain": "continuity",
+      "authorityLevel": "S0",
+      "rollbackLevel": "soft",
+      "auditLevel": "standard",
+      "allowedActions": [
+        "ingest.continuity",
+        "promote.inbox",
+        "update.entity",
+        "create.unresolved"
+      ],
+      "restrictedActions": [
+        "archive.continuity"
+      ],
+      "activeStatus": true,
+      "moduleHealth": "active",
+      "moduleStatus": "active",
+      "governanceStates": [
+        "pending",
+        "approved"
+      ],
+      "escalationTargets": [
+        "mose-router",
+        "garvis-enforcement"
+      ]
+    },
+    {
+      "id": "flightpath-engine",
+      "label": "Flightpath Legality Engine",
+      "runtimeClass": "operator",
+      "domain": "flightpath",
+      "authorityLevel": "S1",
+      "rollbackLevel": "hard",
+      "auditLevel": "elevated",
+      "allowedActions": [
+        "generate.call-sheet",
+        "confirm.staffing",
+        "execute.operational-action"
+      ],
+      "restrictedActions": [
+        "promote.inbox"
+      ],
+      "activeStatus": true,
+      "moduleHealth": "active",
+      "moduleStatus": "active",
+      "governanceStates": [
+        "approved",
+        "escalated"
+      ],
+      "escalationTargets": [
+        "garvis-enforcement"
+      ]
+    },
+    {
+      "id": "mose-router",
+      "label": "MOSE Router",
+      "runtimeClass": "operator",
+      "domain": "mose",
+      "authorityLevel": "S1",
+      "rollbackLevel": "soft",
+      "auditLevel": "standard",
+      "allowedActions": [
+        "schedule.meeting",
+        "initiate.venue-brief",
+        "activate.fluency-partner"
+      ],
+      "restrictedActions": [
+        "archive.continuity"
+      ],
+      "activeStatus": true,
+      "moduleHealth": "degraded",
+      "moduleStatus": "degraded",
+      "governanceStates": [
+        "approved",
+        "escalated"
+      ],
+      "escalationTargets": [
+        "flightpath-engine",
+        "garvis-enforcement"
+      ]
+    },
+    {
+      "id": "garvis-enforcement",
+      "label": "GARVIS Enforcement",
+      "runtimeClass": "operator",
+      "domain": "garvis",
+      "authorityLevel": "S2",
+      "rollbackLevel": "hard",
+      "auditLevel": "elevated",
+      "allowedActions": [
+        "resolve.unresolved",
+        "generate.report",
+        "archive.continuity"
+      ],
+      "restrictedActions": [],
+      "activeStatus": true,
+      "moduleHealth": "active",
+      "moduleStatus": "active",
+      "governanceStates": [
+        "approved",
+        "blocked",
+        "escalated"
+      ],
+      "escalationTargets": [
+        "runtime-governance-lead",
+        "sovereign-authority"
+      ]
+    }
+  ]
+}

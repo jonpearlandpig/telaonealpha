@@ -12,6 +12,13 @@ const testDiagnostics: RuntimeDiagnostics = {
   hydrationReplaySequence: 3,
   objectConfirmationCount: 1,
   unconfirmedObjectCount: 0,
+  replayChecksum: 'checksum-a',
+  restorationChecksum: 'checksum-a',
+  replayConverged: true,
+  hydrationPassCount: 2,
+  replayDriftDetected: false,
+  deterministicRestoration: true,
+  reconciliationConflictCount: 0,
   graphAssemblyAgeMs: undefined,
   hydratedAt: '2026-05-26T21:00:00.000Z',
 }

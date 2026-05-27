@@ -7,10 +7,21 @@ export const RUNTIME_EVENT_SCHEMA_VERSION = 'runtime.v1'
 export const RUNTIME_EVENT_VERSION = 1
 export const GOVERNANCE_STATES = ['approved', 'blocked', 'escalated', 'pending'] as const
 export const EXECUTION_STATES = ['queued', 'completed', 'failed', 'rolled-back'] as const
+export const OPERATOR_LIFECYCLE_EVENT_TYPES = [
+  'operator.invoked',
+  'operator.analysis.completed',
+  'operator.blocked',
+  'operator.escalated',
+  'operator.recommendation.generated',
+  'operator.execution.approved',
+  'operator.execution.completed',
+] as const
 
 export type RuntimeEventSource = 'user' | 'system' | 'operator' | 'automation'
 export type GovernanceState = (typeof GOVERNANCE_STATES)[number]
 export type ExecutionState = (typeof EXECUTION_STATES)[number]
+export type OperatorLifecycleEventType = (typeof OPERATOR_LIFECYCLE_EVENT_TYPES)[number]
+export type ConstitutionalSystemId = 'telauthorium' | 'pen-and-sword' | 'the-ledger'
 
 export type RuntimeEventPayload = Record<string, unknown>
 
@@ -102,6 +113,19 @@ export type RoutingPlanStep = {
   action: RuntimeAction
 }
 
+export type RoutingSignal = {
+  kind: 'action-capability' | 'governance-state' | 'authority-floor' | 'rollback-class' | 'legality'
+  value: string
+  triggeredBy: string
+}
+
+export type RoutingExplanation = {
+  summary: string
+  selectedBecause: string[]
+  triggeringSignals: RoutingSignal[]
+  governancePath: string[]
+}
+
 export type RollbackClass = 'none' | 'soft' | 'hard'
 
 export type RoutingPlan = {
@@ -111,12 +135,47 @@ export type RoutingPlan = {
   rollbackClass: RollbackClass
   escalationPath: string[]
   governanceState: GovernanceState
+  explanation: RoutingExplanation
+  constitutionalSystems: ConstitutionalSystemId[]
 }
 
 export type EnforcementResult = {
   allowed: boolean
   reason?: string
   emittedEventIds: string[]
+}
+
+export type InvocationObservation = {
+  code: string
+  detail: string
+}
+
+export type InvocationRecommendation = {
+  action: RuntimeAction
+  operatorId: string
+  rationale: string
+}
+
+export type ConstitutionalSystemState = {
+  id: ConstitutionalSystemId
+  role: 'constitutional-middleware'
+  invoked: boolean
+  detail: string
+}
+
+export type InvocationGovernanceState = {
+  current: GovernanceState
+  authority: AuthorityLevel
+  constitutionalSystems: ConstitutionalSystemState[]
+}
+
+export type OperatorInvocationOutput = {
+  observations: InvocationObservation[]
+  recommendations: InvocationRecommendation[]
+  blockers: string[]
+  confidence: number
+  governanceState: InvocationGovernanceState
+  escalationRequired: boolean
 }
 
 export function isGovernanceState(value: string): value is GovernanceState {

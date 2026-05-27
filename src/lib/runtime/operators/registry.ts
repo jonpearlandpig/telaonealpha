@@ -1,44 +1,29 @@
 import { ACTIONS, AUTHORITY_RANK, type AuthorityLevel, type RuntimeAction } from '../actions'
+import { loadCanonicalRegistry } from '../registry/registryLoader'
 import type { OperatorDefinition } from '../runtimeTypes'
 
-export const OPERATOR_REGISTRY: readonly OperatorDefinition[] = [
-  {
-    id: 'continuity-operator',
-    label: 'Continuity Operator',
-    domain: 'continuity',
-    authorityFloor: 'S0',
-    capabilities: [ACTIONS.INGEST_CONTINUITY, ACTIONS.PROMOTE_INBOX, ACTIONS.UPDATE_ENTITY, ACTIONS.CREATE_UNRESOLVED],
-    governanceStates: ['pending', 'approved'],
-    rollbackCeiling: 'soft',
-  },
-  {
-    id: 'flightpath-engine',
-    label: 'Flightpath Legality Engine',
-    domain: 'flightpath',
-    authorityFloor: 'S1',
-    capabilities: [ACTIONS.GENERATE_CALL_SHEET, ACTIONS.CONFIRM_STAFFING, ACTIONS.EXECUTE_OPERATIONAL_ACTION],
-    governanceStates: ['approved', 'escalated'],
-    rollbackCeiling: 'hard',
-  },
-  {
-    id: 'mose-router',
-    label: 'MOSE Router',
-    domain: 'mose',
-    authorityFloor: 'S1',
-    capabilities: [ACTIONS.SCHEDULE_MEETING, ACTIONS.INITIATE_VENUE_BRIEF, ACTIONS.ACTIVATE_FLUENCY_PARTNER],
-    governanceStates: ['approved', 'escalated'],
-    rollbackCeiling: 'soft',
-  },
-  {
-    id: 'garvis-enforcement',
-    label: 'GARVIS Enforcement',
-    domain: 'garvis',
-    authorityFloor: 'S2',
-    capabilities: [ACTIONS.RESOLVE_UNRESOLVED, ACTIONS.GENERATE_REPORT, ACTIONS.ARCHIVE_CONTINUITY],
-    governanceStates: ['approved', 'blocked', 'escalated'],
-    rollbackCeiling: 'hard',
-  },
-]
+const RUNTIME_ACTION_SET = new Set<string>(Object.values(ACTIONS))
+
+function isRuntimeAction(action: string): action is RuntimeAction {
+  return RUNTIME_ACTION_SET.has(action)
+}
+
+function loadOperatorRegistry(): readonly OperatorDefinition[] {
+  return loadCanonicalRegistry().modules
+    .filter((module) => module.runtimeClass === 'operator')
+    .map((module) => ({
+      id: module.id,
+      label: module.label,
+      domain: module.domain as OperatorDefinition['domain'],
+      authorityFloor: module.authorityLevel as AuthorityLevel,
+      capabilities: module.allowedActions.filter(isRuntimeAction),
+      governanceStates: [...module.governanceStates],
+      rollbackCeiling: module.rollbackLevel,
+    }))
+    .sort((left, right) => left.id.localeCompare(right.id))
+}
+
+export const OPERATOR_REGISTRY: readonly OperatorDefinition[] = loadOperatorRegistry()
 
 export function getOperatorsForAction(action: RuntimeAction): OperatorDefinition[] {
   return OPERATOR_REGISTRY.filter((operator) => operator.capabilities.includes(action)).sort((left, right) => left.id.localeCompare(right.id))

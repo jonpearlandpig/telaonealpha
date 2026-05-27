@@ -8,16 +8,16 @@ const routingEvent: RuntimeEvent = {
   id: 'evt-routing',
   workspaceId: 'tela-showtela',
   replaySequence: 7,
-  type: 'routing.plan.created',
+  type: 'operator.analysis.completed',
   eventVersion: 1,
   schemaVersion: 'runtime.v1',
   source: 'operator',
   governanceState: 'approved',
-  executionState: 'queued',
+  executionState: 'completed',
   traceId: 'trace-1',
   correlationId: 'corr-1',
   lineageId: 'lineage-child',
-  payloadType: 'routing.plan',
+  payloadType: 'operator.analysis',
   createdAt: '2026-05-26T15:29:00.000Z',
   payload: {
     action: 'generate.report',
@@ -28,12 +28,13 @@ const routingEvent: RuntimeEvent = {
     escalationPath: ['mose-router', 'flightpath-engine', 'garvis-enforcement'],
     governanceState: 'approved',
     legal: true,
+    source: 'pen-and-sword',
     parentLineageId: 'lineage-root',
     rightsValidation: { allowed: true },
   },
 }
 
-test('buildPersistenceMutationsForEvent produces routing, lineage, enforcement-free, and operational writes', () => {
+test('buildPersistenceMutationsForEvent persists canonical operator analysis for replay-safe routing and legality', () => {
   const writes = buildPersistenceMutationsForEvent(routingEvent)
 
   assert.equal(writes.routingPlans.length, 1)
@@ -45,7 +46,9 @@ test('buildPersistenceMutationsForEvent produces routing, lineage, enforcement-f
   assert.equal(writes.lineageGraph[0]?.lineageId, 'lineage-child')
   assert.equal(writes.lineageGraph[0]?.parentLineageId, 'lineage-root')
 
-  assert.equal(writes.enforcementActions.length, 0)
+  assert.equal(writes.enforcementActions.length, 1)
+  assert.equal(writes.enforcementActions[0]?.decision, 'operator.analysis.completed')
   assert.equal(writes.operationalObjects.some((item) => item.objectType === 'routing-plan'), true)
   assert.equal(writes.operationalObjects.some((item) => item.objectType === 'authorship-guard'), true)
+  assert.equal(writes.operationalObjects.some((item) => item.objectType === 'legality-check'), true)
 })

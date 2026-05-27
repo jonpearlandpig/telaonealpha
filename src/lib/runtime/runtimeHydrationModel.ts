@@ -11,6 +11,13 @@ export type RuntimeDiagnostics = {
   hydrationReplaySequence: number | undefined
   objectConfirmationCount: number     // distinct object IDs produced by approved-state events
   unconfirmedObjectCount: number      // distinct object IDs produced only by non-approved events
+  replayChecksum: string
+  restorationChecksum: string
+  replayConverged: boolean
+  hydrationPassCount: number
+  replayDriftDetected: boolean
+  deterministicRestoration: boolean
+  reconciliationConflictCount: number
   graphAssemblyAgeMs: number | undefined  // undefined until graph assembly enters the hydration path
   hydratedAt: string
 }

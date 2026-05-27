@@ -1,13 +1,17 @@
-import { createAuthorshipTrace, type AuthorshipSurface } from '@/lib/showtela/telauthorium'
-import { createLineageRef, validateExecutionIntegrity } from '@/lib/showtela/penAndSword'
+import type { AuthorshipSurface } from '@/lib/showtela/types'
+import { executeConstitutionalMiddleware } from '@/lib/constitutional/runtime/constitutionalMiddleware'
+import { invokeConstitutionalMiddleware } from '@/lib/constitutional/runtime/constitutionalInvocation'
+import type { ConstitutionalInvocationResult, ConstitutionalMiddlewareResult } from '@/lib/constitutional/runtime/constitutionalTypes'
 import { evaluateActionLegality } from './flightpath/legalityEngine'
 import { createRoutingPlan } from './mose/routing'
 import type { AuthorityLevel, RuntimeAction } from './actions'
 import type {
+  ConstitutionalSystemState,
   EnforcementResult,
   ExecutionState,
   GovernanceState,
   LegalityCheckResult,
+  OperatorInvocationOutput,
   RoutingPlan,
   RuntimeEventSource,
 } from './runtimeTypes'
@@ -54,11 +58,13 @@ type OrchestrationInput = {
 
 export type OrchestrationEnvelope = {
   protectedAction: boolean
-  authorshipTrace?: ReturnType<typeof createAuthorshipTrace>
-  lineageRef?: ReturnType<typeof createLineageRef>
-  rightsValidation?: ReturnType<typeof validateExecutionIntegrity>
+  authorshipTrace: ConstitutionalInvocationResult['authorshipTrace']
+  lineageRef: ConstitutionalInvocationResult['lineageRef']
+  rightsValidation?: ConstitutionalInvocationResult['rightsValidation']
   legality: LegalityCheckResult
   routingPlan: RoutingPlan
+  constitutionalSystems: ConstitutionalSystemState[]
+  invocationOutput: OperatorInvocationOutput
 }
 
 export type OrchestrationResult = {
@@ -66,9 +72,11 @@ export type OrchestrationResult = {
   legality: LegalityCheckResult
   enforcement: EnforcementResult
   protectedAction: boolean
-  authorshipTrace?: ReturnType<typeof createAuthorshipTrace>
-  lineageRef?: ReturnType<typeof createLineageRef>
-  rightsValidation?: ReturnType<typeof validateExecutionIntegrity>
+  authorshipTrace: ConstitutionalInvocationResult['authorshipTrace']
+  lineageRef: ConstitutionalInvocationResult['lineageRef']
+  rightsValidation?: ConstitutionalInvocationResult['rightsValidation']
+  constitutionalSystems: ConstitutionalSystemState[]
+  invocationOutput: OperatorInvocationOutput
 }
 
 function isProtectedAction(input: OrchestrationInput) {
@@ -78,30 +86,23 @@ function isProtectedAction(input: OrchestrationInput) {
     input.classification?.authorshipSensitive === true
 }
 
-export function buildOrchestrationEnvelope(input: OrchestrationInput): OrchestrationEnvelope {
+export function buildOrchestrationEnvelope(
+  input: OrchestrationInput,
+  constitutional = executeConstitutionalMiddleware({
+    workspaceId: input.workspaceId,
+    action: input.action,
+    authority: input.authority,
+    governanceState: input.governanceState,
+    executionState: input.executionState,
+    source: input.source,
+    traceId: input.traceId,
+    correlationId: input.correlationId,
+    payload: input.payload,
+    authorship: input.authorship,
+    classification: input.classification,
+  }),
+): OrchestrationEnvelope {
   const protectedAction = isProtectedAction(input)
-  const authorshipTrace = protectedAction
-    ? createAuthorshipTrace({
-        author: input.authorship?.author,
-        surface: input.authorship?.surface ?? 'runtime',
-      })
-    : undefined
-  const lineageRef = protectedAction
-    ? createLineageRef({
-        parentId: input.authorship?.parentLineageId,
-        existingChain: input.authorship?.existingLineageChain,
-      })
-    : undefined
-  const rightsValidation = protectedAction
-    ? validateExecutionIntegrity({
-        rightsInheritance: input.authorship?.rightsInheritance,
-        nilRestricted: input.authorship?.nilRestricted,
-        nilReason: input.authorship?.nilReason,
-        authority: input.authority,
-        governanceState: input.governanceState,
-      })
-    : undefined
-
   const legality = evaluateActionLegality({
     action: input.action,
     governanceState: input.governanceState,
@@ -117,15 +118,68 @@ export function buildOrchestrationEnvelope(input: OrchestrationInput): Orchestra
     authority: input.authority,
     previousAction: input.previousAction,
   })
+  const constitutionalSystems = toConstitutionalSystemStates(constitutional)
+  const denialReason = envelopeDenialReason(legality, constitutional)
+  const invocationOutput: OperatorInvocationOutput = {
+    observations: [
+      {
+        code: constitutional.legitimacy === 'confirmed' ? 'constitutional-confirmed' : 'constitutional-blocked',
+        detail: constitutional.legitimacy === 'confirmed'
+          ? `Constitutional path ${constitutional.constitutionalPath.join(' -> ')} confirmed legitimacy`
+          : denialReason ?? 'Constitutional middleware blocked legitimacy',
+      },
+      {
+        code: legality.allowed ? 'legality-allowed' : 'legality-blocked',
+        detail: legality.allowed
+          ? `${input.action} satisfied legality and authority checks`
+          : denialReason ?? `${input.action} failed legality checks`,
+      },
+      {
+        code: 'routing-selected',
+        detail: routingPlan.explanation.summary,
+      },
+    ],
+    recommendations: routingPlan.sequence.map((step) => ({
+      action: step.action,
+      operatorId: step.operatorId,
+      rationale: routingPlan.explanation.selectedBecause[step.order - 1] ?? routingPlan.explanation.summary,
+    })),
+    blockers: denialReason ? [denialReason] : [],
+    confidence: legality.allowed && constitutional.legalityConfirmed ? 0.93 : 0.41,
+    governanceState: {
+      current: legality.allowed && constitutional.legalityConfirmed ? input.governanceState : 'blocked',
+      authority: input.authority,
+      constitutionalSystems,
+    },
+    escalationRequired: legality.escalationRequired || constitutional.escalationRequired,
+  }
 
   return {
     protectedAction,
-    authorshipTrace,
-    lineageRef,
-    rightsValidation,
+    authorshipTrace: constitutional.authorshipTrace,
+    lineageRef: constitutional.lineageRef,
+    rightsValidation: constitutional.rightsValidation,
     legality,
     routingPlan,
+    constitutionalSystems,
+    invocationOutput,
   }
+}
+
+function toConstitutionalSystemStates(constitutional: ConstitutionalMiddlewareResult): ConstitutionalSystemState[] {
+  return constitutional.constitutionalSystems.map((system) => ({
+    id: system.id,
+    role: 'constitutional-middleware',
+    invoked: true,
+    detail: system.reason,
+  }))
+}
+
+function envelopeDenialReason(
+  legality: LegalityCheckResult,
+  constitutional?: ConstitutionalMiddlewareResult,
+) {
+  return constitutional?.blockingReason ?? constitutional?.rightsValidation?.denialReason ?? legality.denialReason
 }
 
 export async function orchestrateRuntimeAction(input: OrchestrationInput): Promise<OrchestrationResult> {
@@ -136,61 +190,112 @@ export async function orchestrateRuntimeAction(input: OrchestrationInput): Promi
   ])
 
   bootstrapRuntimeSpine()
-  const envelope = buildOrchestrationEnvelope(input)
-  const lineageId = envelope.lineageRef?.lineageId ?? input.authorship?.parentLineageId
+  const constitutional = await invokeConstitutionalMiddleware({
+    workspaceId: input.workspaceId,
+    action: input.action,
+    authority: input.authority,
+    governanceState: input.governanceState,
+    executionState: input.executionState,
+    source: input.source,
+    traceId: input.traceId,
+    correlationId: input.correlationId,
+    payload: input.payload,
+    authorship: input.authorship,
+    classification: input.classification,
+  })
+  const envelope = buildOrchestrationEnvelope(input, constitutional)
+  const lineageId = constitutional.lineageRef.lineageId
   const eventPayload = {
     ...input.payload,
     action: input.action,
+    operatorId: input.operatorId ?? envelope.routingPlan.selectedOperators[0] ?? 'unassigned-operator',
     threadId: input.threadId,
     entityId: input.entityId,
     projectId: input.projectId,
     linkedEntities: input.linkedEntities,
-    parentLineageId: input.authorship?.parentLineageId,
+    parentLineageId: constitutional.lineageRef.parentId,
     authorshipTrace: envelope.authorshipTrace,
     lineageRef: envelope.lineageRef,
     rightsValidation: envelope.rightsValidation,
+    constitutionalSystems: envelope.constitutionalSystems,
+  }
+
+  if (!constitutional.legalityConfirmed || constitutional.legitimacy !== 'confirmed') {
+    return {
+      routingPlan: envelope.routingPlan,
+      legality: envelope.legality,
+      enforcement: {
+        allowed: false,
+        reason: constitutional.blockingReason ?? envelope.legality.denialReason ?? 'Constitutional legitimacy blocked runtime invocation.',
+        emittedEventIds: constitutional.emittedEventIds,
+      },
+      protectedAction: envelope.protectedAction,
+      authorshipTrace: envelope.authorshipTrace,
+      lineageRef: envelope.lineageRef,
+      rightsValidation: envelope.rightsValidation,
+      constitutionalSystems: envelope.constitutionalSystems,
+      invocationOutput: envelope.invocationOutput,
+    }
   }
 
   await emitRuntimeEvent({
     workspaceId: input.workspaceId,
-    type: 'governance.validated',
+    type: 'operator.invoked',
     source: input.source ?? 'operator',
-    governanceState: envelope.legality.allowed ? input.governanceState : 'blocked',
-    executionState: envelope.legality.allowed ? 'completed' : 'failed',
+    governanceState: input.governanceState,
+    executionState: 'queued',
     traceId: input.traceId,
     correlationId: input.correlationId,
     lineageId,
-    payloadType: 'governance.validation',
+    payloadType: 'operator.invocation',
     payload: {
       ...eventPayload,
-      action: input.action,
-      allowed: envelope.legality.allowed && (envelope.rightsValidation?.allowed ?? true),
-      requiredAuthority: envelope.legality.requiredAuthority,
-      denialReason: envelope.rightsValidation?.denialReason ?? envelope.legality.denialReason,
-      source: envelope.rightsValidation ? 'pen-and-sword' : 'flightpath',
+      invokedBy: 'governed-runtime-orchestration',
+      governancePath: envelope.routingPlan.explanation.governancePath,
     },
   })
 
   await emitRuntimeEvent({
     workspaceId: input.workspaceId,
-    type: 'routing.plan.created',
+    type: 'operator.analysis.completed',
     source: input.source ?? 'operator',
-    governanceState: input.governanceState,
-    executionState: input.executionState,
+    governanceState: envelope.invocationOutput.governanceState.current,
+    executionState: envelope.legality.allowed ? 'completed' : 'failed',
     traceId: input.traceId,
     correlationId: input.correlationId,
     lineageId,
-    payloadType: 'routing.plan',
+    payloadType: 'operator.analysis',
     payload: {
       ...eventPayload,
       routingPlanId: envelope.routingPlan.id,
-      action: input.action,
       selectedOperators: envelope.routingPlan.selectedOperators,
       sequence: envelope.routingPlan.sequence,
       rollbackClass: envelope.routingPlan.rollbackClass,
       escalationPath: envelope.routingPlan.escalationPath,
       governanceState: envelope.routingPlan.governanceState,
-      legal: envelope.legality.allowed && (envelope.rightsValidation?.allowed ?? true),
+      legal: envelope.legality.allowed && constitutional.legalityConfirmed,
+      explanation: envelope.routingPlan.explanation,
+      requiredAuthority: envelope.legality.requiredAuthority,
+      denialReason: constitutional.blockingReason ?? envelope.legality.denialReason,
+      source: constitutional.rightsValidation ? 'pen-and-sword' : 'flightpath',
+      output: envelope.invocationOutput,
+    },
+  })
+
+  await emitRuntimeEvent({
+    workspaceId: input.workspaceId,
+    type: 'operator.recommendation.generated',
+    source: input.source ?? 'operator',
+    governanceState: envelope.invocationOutput.governanceState.current,
+    executionState: envelope.legality.allowed ? 'queued' : 'failed',
+    traceId: input.traceId,
+    correlationId: input.correlationId,
+    lineageId,
+    payloadType: 'operator.recommendation',
+    payload: {
+      ...eventPayload,
+      routingPlanId: envelope.routingPlan.id,
+      output: envelope.invocationOutput,
     },
   })
 
@@ -208,29 +313,49 @@ export async function orchestrateRuntimeAction(input: OrchestrationInput): Promi
     previousAction: input.previousAction,
     twoKey: input.twoKey,
     nilProtection: {
-      protected: envelope.rightsValidation?.nilRestricted === true || envelope.rightsValidation?.allowed === false,
-      reason: envelope.rightsValidation?.denialReason,
+      protected: constitutional.rightsValidation?.nilRestricted === true || constitutional.rightsValidation?.allowed === false,
+      reason: constitutional.rightsValidation?.denialReason,
     },
   })
 
   if (enforcement.allowed) {
     await emitRuntimeEvent({
       workspaceId: input.workspaceId,
-      type: 'execution.authorized',
+      type: 'operator.execution.approved',
       source: input.source ?? 'operator',
       governanceState: input.governanceState,
-      executionState: 'completed',
+      executionState: 'queued',
       traceId: input.traceId,
       correlationId: input.correlationId,
       lineageId,
-      payloadType: 'execution.authorization',
+      payloadType: 'operator.execution',
       payload: {
         ...eventPayload,
-        action: input.action,
         routingPlanId: envelope.routingPlan.id,
         selectedOperators: envelope.routingPlan.selectedOperators,
+        output: envelope.invocationOutput,
       },
     })
+
+    if (input.executionState === 'completed') {
+      await emitRuntimeEvent({
+        workspaceId: input.workspaceId,
+        type: 'operator.execution.completed',
+        source: input.source ?? 'operator',
+        governanceState: input.governanceState,
+        executionState: 'completed',
+        traceId: input.traceId,
+        correlationId: input.correlationId,
+        lineageId,
+        payloadType: 'operator.execution',
+        payload: {
+          ...eventPayload,
+          routingPlanId: envelope.routingPlan.id,
+          selectedOperators: envelope.routingPlan.selectedOperators,
+          output: envelope.invocationOutput,
+        },
+      })
+    }
   }
 
   return {
@@ -241,5 +366,7 @@ export async function orchestrateRuntimeAction(input: OrchestrationInput): Promi
     authorshipTrace: envelope.authorshipTrace,
     lineageRef: envelope.lineageRef,
     rightsValidation: envelope.rightsValidation,
+    constitutionalSystems: envelope.constitutionalSystems,
+    invocationOutput: envelope.invocationOutput,
   }
 }

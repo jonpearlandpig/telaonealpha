@@ -15,7 +15,7 @@ export type RuntimePersistenceMutations = {
 }
 
 function routingPlanRowsForEvent(event: RuntimeEvent): RoutingPlanRow[] {
-  if (event.type !== 'routing.plan.created') return []
+  if (event.type !== 'routing.plan.created' && event.type !== 'operator.analysis.completed') return []
   const payload = stringRecord(event.payload)
   const action = stringValue(payload.action)
   const governanceState = stringValue(payload.governanceState)
@@ -37,7 +37,18 @@ function routingPlanRowsForEvent(event: RuntimeEvent): RoutingPlanRow[] {
 }
 
 function enforcementRowsForEvent(event: RuntimeEvent): EnforcementActionRow[] {
-  if (!['execution.denied', 'governance.blocked', 'escalation.triggered', 'execution.authorized', 'governance.validated'].includes(event.type)) {
+  if (![
+    'execution.denied',
+    'governance.blocked',
+    'escalation.triggered',
+    'execution.authorized',
+    'governance.validated',
+    'operator.blocked',
+    'operator.escalated',
+    'operator.execution.approved',
+    'operator.execution.completed',
+    'operator.analysis.completed',
+  ].includes(event.type)) {
     return []
   }
 
