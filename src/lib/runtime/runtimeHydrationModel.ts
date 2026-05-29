@@ -1,6 +1,27 @@
 import type { loadDurableContinuity } from './durableMemory'
 import type { reconstructOperationalStateFromReplay } from './replay/reconstructOperationalState'
 import type { OperationalProjection } from './state/model'
+import type { ContinuityEvent } from '@/lib/showtela/types'
+
+type ArtifactStructureParsed = {
+  continuityEvent?: ContinuityEvent
+}
+
+function extractContinuityFeedFromArtifacts(
+  artifacts: Awaited<ReturnType<typeof loadDurableContinuity>>['artifacts'],
+): ContinuityEvent[] {
+  const feed: ContinuityEvent[] = []
+  for (const artifact of artifacts) {
+    if (!artifact.structure) continue
+    try {
+      const parsed = JSON.parse(artifact.structure) as ArtifactStructureParsed
+      if (parsed.continuityEvent?.headline) feed.push(parsed.continuityEvent)
+    } catch {
+      // malformed structure — skip
+    }
+  }
+  return feed.sort((a, b) => (b.timestamp ?? '').localeCompare(a.timestamp ?? ''))
+}
 
 // Diagnostics-only record produced by hydrateRuntime().
 // Never exposed to the UI — consumed only by observability/logging paths.
@@ -49,6 +70,7 @@ export function buildHydratedRuntimeState(input: {
     operationalProjection: input.operationalProjection,
     snapshots: input.durable.snapshots.filter((snapshot) => snapshot.snapshotKind === 'checkpoint'),
     entities: input.durable.entities,
+    continuityFeed: extractContinuityFeedFromArtifacts(input.durable.artifacts),
     unresolved,
     replay: input.replay,
     diagnostics: input.diagnostics,
