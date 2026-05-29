@@ -1,7 +1,8 @@
 import { deterministicArtifactId, type ArtifactRecord } from '@/lib/artifacts/artifactStore'
 import { createConstitutionalEvent } from '@/lib/constitutional/create-event'
 import type { ConstitutionalEvent } from '@/lib/constitutional/types'
-import { extractEntities, type EntityRecord, type EntityType } from '@/lib/entities/entityEngine'
+import { extractEntities, type AuthoritySource, type EntityRecord, type EntityType } from '@/lib/entities/entityEngine'
+import { classifyLinkedEntity, TRUST_RANK } from './anchorDirectory'
 import {
   SHOWTELA_RUNTIME_ARTIFACT_GROUP_ID,
   SHOWTELA_RUNTIME_THREAD_ID,
@@ -43,7 +44,14 @@ function dedupeEntities(entities: EntityRecord[]) {
   return [...merged.values()]
 }
 
-function namedEntity(name: string, type: EntityType, artifact: ArtifactRecord, timestamp: string): EntityRecord {
+function namedEntity(
+  name: string,
+  type: EntityType,
+  artifact: ArtifactRecord,
+  timestamp: string,
+  trustRank: number,
+  authoritySource: AuthoritySource,
+): EntityRecord {
   const id = `${type}:${slugify(name)}`
   return {
     id,
@@ -60,23 +68,41 @@ function namedEntity(name: string, type: EntityType, artifact: ArtifactRecord, t
     relatedArtifacts: [artifact.id],
     relatedThreads: [artifact.threadId],
     temporalClusters: [timestamp.slice(0, 10)],
+    trustRank,
+    authoritySource,
   }
 }
 
 function manualEntities(event: ContinuityEvent, artifact: ArtifactRecord): EntityRecord[] {
   const timestamp = event.timestamp ?? artifact.createdAt
-  const refs = [
-    event.owner?.name ? { name: event.owner.name, type: 'person' as const } : null,
-    ...(event.linkedEntities ?? []).map((name) => ({
-      name,
-      type: name.toLowerCase().includes('crusade') || name.toLowerCase().includes('venue') ? 'project' as const : 'person' as const,
-    })),
-  ].filter(Boolean) as Array<{ name: string; type: EntityType }>
+  const results: EntityRecord[] = []
 
-  return refs
-    .map((item) => ({ ...item, name: item.name.trim() }))
-    .filter((item) => item.name.length > 0)
-    .map((item) => namedEntity(item.name, item.type, artifact, timestamp))
+  // Owner field — always person, document authority
+  if (event.owner?.name?.trim()) {
+    results.push(namedEntity(
+      event.owner.name.trim(), 'person', artifact, timestamp,
+      TRUST_RANK['document'], 'document',
+    ))
+  }
+
+  // Operation dropdown (Crusade) — always operation, document authority
+  const linkedOperation = event.continuityObject?.provenance?.linkedOperation?.trim()
+  if (linkedOperation) {
+    results.push(namedEntity(
+      linkedOperation, 'operation', artifact, timestamp,
+      TRUST_RANK['document'], 'document',
+    ))
+  }
+
+  // Linked entities — classify by content, never default to person
+  for (const rawName of event.linkedEntities ?? []) {
+    const name = rawName.trim()
+    if (!name) continue
+    const { type, trustRank, authoritySource } = classifyLinkedEntity(name)
+    results.push(namedEntity(name, type, artifact, timestamp, trustRank, authoritySource))
+  }
+
+  return results
 }
 
 function serializeRuntimeMetadata(input: {
@@ -168,7 +194,10 @@ export function createRuntimeContinuityArtifact(input: {
       input.event.owner?.name,
       ...(input.event.linkedEntities ?? []),
     ].filter(Boolean) as string[])),
-    projects: input.event.linkedEntities?.filter((item) => item.toLowerCase().includes('crusade') || item.toLowerCase().includes('venue')) ?? [],
+    projects: input.event.linkedEntities?.filter((item) => {
+      const classified = classifyLinkedEntity(item)
+      return classified.type === 'operation' || classified.type === 'project'
+    }) ?? [],
     lineageId: input.event.lineageRef?.lineageId,
     artifactGroupId: SHOWTELA_RUNTIME_ARTIFACT_GROUP_ID,
     createdAt,
