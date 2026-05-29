@@ -1,6 +1,7 @@
 import type { ArtifactRecord } from '@/lib/artifacts/artifactStore'
 
-export type EntityType = 'person' | 'project' | 'organization' | 'system' | 'location' | 'ip' | 'context'
+export type EntityType = 'person' | 'project' | 'organization' | 'system' | 'location' | 'ip' | 'context' | 'operation'
+export type AuthoritySource = 'anchor-directory' | 'document' | 'llm' | 'regex' | 'tentative'
 export type EntityRecord = {
   id: string
   name: string
@@ -16,6 +17,8 @@ export type EntityRecord = {
   relatedArtifacts: string[]
   relatedThreads: string[]
   temporalClusters: string[]
+  trustRank?: number
+  authoritySource?: AuthoritySource
 }
 
 const PATTERNS: Array<{ type: EntityType; regex: RegExp }> = [
