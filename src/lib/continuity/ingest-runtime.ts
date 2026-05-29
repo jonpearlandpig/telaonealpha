@@ -27,7 +27,8 @@ export async function ingestCanonicalContinuity(
     .filter(f => f.content.trim().length > 0)
     .map(f => f.content.trim())
 
-  const headlineSeed = input.headline?.trim() || input.body?.trim() || 'continuity'
+  const firstAssetName = input.assetContents?.[0]?.name ?? input.assetNames?.[0]
+  const headlineSeed = input.headline?.trim() || input.body?.trim() || firstAssetName || 'continuity'
   const ocid = createContinuityOcid(headlineSeed, timestamp)
 
   const event = await normalizeContinuityIngestionWithLLM(input, {

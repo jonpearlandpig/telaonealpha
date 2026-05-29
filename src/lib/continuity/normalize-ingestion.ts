@@ -140,13 +140,24 @@ export async function normalizeContinuityIngestionWithLLM(
 ): Promise<ContinuityEvent> {
   const base = normalizeContinuityIngestion(input, options)
 
-  if (!input.body?.trim()) return base
+  const fileContents = (input.assetContents ?? [])
+    .map(f => f.content.trim())
+    .filter(Boolean)
 
-  const llm = await llmNormalize(input.body, input.mode, {
-    owner: input.owner,
-    operation: input.operation,
-    linkedEntity: input.linkedEntity,
-  })
+  const hasBody = Boolean(input.body?.trim())
+  const hasFileContent = fileContents.length > 0
+  if (!hasBody && !hasFileContent) return base
+
+  const llm = await llmNormalize(
+    input.body ?? '',
+    input.mode,
+    {
+      owner: input.owner,
+      operation: input.operation,
+      linkedEntity: input.linkedEntity,
+    },
+    fileContents,
+  )
 
   if (!llm) return base
 
