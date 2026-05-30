@@ -14,6 +14,12 @@ import { deleteEntityRow, upsertEntityRow } from '@/lib/supabase/queries'
 //   4. Ambiguous names (detected as 'context'/tentative) are NOT touched — they may be real people.
 
 export async function GET(req: Request): Promise<NextResponse> {
+  const adminSecret = process.env.ADMIN_MIGRATION_SECRET
+  const authHeader = (req as Request & { headers: Headers }).headers.get('authorization')
+  if (!adminSecret || authHeader !== `Bearer ${adminSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(req.url)
   const apply = searchParams.get('apply') === 'true'
 
