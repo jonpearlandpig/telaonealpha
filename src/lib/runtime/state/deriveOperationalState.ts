@@ -2,6 +2,7 @@ import crypto from 'crypto'
 
 import type { OperationalObject } from '../operationalState'
 import type { ReconstructedOperationalState, RuntimeEvent } from '../runtimeTypes'
+import { INFRASTRUCTURE_EVENT_TYPES } from '../replay/derivedArtifacts'
 import { buildDependencyGraph, calculateDependencyPressure, findDependencyChains } from './dependencyGraph'
 import { explainState } from './explainState'
 import { inferHeuristicState } from './heuristics'
@@ -147,7 +148,7 @@ export function deriveOperationalState(input: {
   const states = [
     ...input.operationalObjects.map((object) => recordFromObject(object, dependencyGraph, now)),
     ...input.recentEvents
-      .filter((event) => event.governanceState !== 'approved' || event.executionState === 'queued' || event.type.includes('continuity') || event.type.includes('unresolved'))
+      .filter((event) => !INFRASTRUCTURE_EVENT_TYPES.has(event.type) && (event.governanceState !== 'approved' || event.executionState === 'queued' || event.type.includes('continuity') || event.type.includes('unresolved')))
       .map((event) => recordFromEvent(event, dependencyGraph, now)),
   ]
     .filter((state, index, collection) =>
