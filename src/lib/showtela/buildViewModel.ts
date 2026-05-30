@@ -119,7 +119,7 @@ export function buildShowTelaVMFromHydratedState(
 
   // Departments from rider — context entities tagged rider-department
   const departments: OperationEntity[] = state.entities
-    .filter(e => e.type === 'context' && e.operationalContexts?.includes('rider-department'))
+    .filter(e => e.id.startsWith('rider-dept:'))
     .slice(0, 16)
     .map((e, i) => ({
       id: `dept:${i}:${e.id}`,

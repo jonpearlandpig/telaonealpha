@@ -45,7 +45,7 @@ function personEntity(name: string, artifactId: string, timestamp: string): Enti
 
 function departmentEntity(name: string, artifactId: string, timestamp: string): EntityRecord {
   return {
-    id: `context:${slugify(name)}`,
+    id: `rider-dept:${slugify(name)}`,  // prefix persists through Supabase — operationalContexts field is not in schema
     name,
     type: 'context',
     aliases: [],
