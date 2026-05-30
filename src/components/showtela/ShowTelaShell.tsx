@@ -511,7 +511,9 @@ export function ShowTelaShell({ vm, user, briefing, focus, replay, projection, s
   const userFirstName = user?.name?.split(' ')[0]?.toLowerCase()
   const visibleActiveOps = activeOpsData.filter((item) => {
     if (!userFirstName) return true
-    return item.name.toLowerCase() !== userFirstName && !item.name.toLowerCase().includes(userFirstName)
+    // Match on first word only — substring would catch "Jack Jones" when user is "Jon"
+    const itemFirst = item.name.split(' ')[0]?.toLowerCase()
+    return itemFirst !== userFirstName
   })
 
   const isEmpty = feed.length === 0 && activeOpsData.length === 0

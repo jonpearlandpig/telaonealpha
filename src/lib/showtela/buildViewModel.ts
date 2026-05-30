@@ -27,7 +27,6 @@ export function buildShowTelaVMFromHydratedState(
 
   const activeOps: PersonItem[] = personEntities
     .filter(e => e.authoritySource != null && PERSON_AUTHORITY_ALLOWED.has(e.authoritySource))
-    .slice(0, 8)
     .map(e => ({
       id: e.id,
       name: e.name,

@@ -25,10 +25,60 @@ function isLikelyName(candidate: string): boolean {
   return true
 }
 
+function extractFromMarkdownTable(lines: string[], seen: Set<string>): ExtractedPerson[] {
+  const persons: ExtractedPerson[] = []
+
+  // Find header row: a line with multiple | separators containing "Name"
+  let nameColIdx = -1
+  let roleColIdx = -1
+  let headerFound = false
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (!trimmed.startsWith('|')) continue
+    // Skip separator rows like |---|---|
+    if (/^\|[-|\s:]+\|/.test(trimmed)) continue
+
+    const cells = trimmed.split('|').map(c => c.trim()).filter((_, i) => i > 0 && _ !== '')
+    // Remove trailing empty from split
+    if (cells.length < 2) continue
+
+    if (!headerFound) {
+      // Detect header row
+      const lowerCells = cells.map(c => c.toLowerCase())
+      const ni = lowerCells.findIndex(c => c === 'name' || c === 'contact' || c === 'person')
+      if (ni !== -1) {
+        nameColIdx = ni
+        roleColIdx = lowerCells.findIndex(c => c === 'role' || c === 'title' || c === 'position')
+        headerFound = true
+      }
+      continue
+    }
+
+    // Data row
+    if (nameColIdx === -1 || nameColIdx >= cells.length) continue
+    const name = cells[nameColIdx]
+    if (!name || !isLikelyName(name) || seen.has(name.toLowerCase())) continue
+
+    seen.add(name.toLowerCase())
+    const role = roleColIdx !== -1 && roleColIdx < cells.length ? cells[roleColIdx] : undefined
+    persons.push({ name, role: role?.length ? role : undefined })
+  }
+
+  return persons
+}
+
 export function extractPersonsFromAnchorDirectory(content: string): ExtractedPerson[] {
   const seen = new Set<string>()
   const persons: ExtractedPerson[] = []
   const lines = content.split('\n')
+
+  // Detect markdown table format: majority of non-empty lines start with '|'
+  const nonEmpty = lines.filter(l => l.trim().length > 0)
+  const pipeLines = nonEmpty.filter(l => l.trim().startsWith('|'))
+  if (pipeLines.length > nonEmpty.length / 2) {
+    return extractFromMarkdownTable(lines, seen)
+  }
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim()
