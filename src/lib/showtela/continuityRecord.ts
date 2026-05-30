@@ -1,7 +1,7 @@
 import { deterministicArtifactId, type ArtifactRecord } from '@/lib/artifacts/artifactStore'
 import { createConstitutionalEvent } from '@/lib/constitutional/create-event'
 import type { ConstitutionalEvent } from '@/lib/constitutional/types'
-import { extractEntities, type AuthoritySource, type EntityRecord, type EntityType } from '@/lib/entities/entityEngine'
+import { extractEntities, isAuthorizedPersonEntity, type AuthoritySource, type EntityRecord, type EntityType } from '@/lib/entities/entityEngine'
 import { classifyLinkedEntity, TRUST_RANK } from './anchorDirectory'
 import {
   SHOWTELA_RUNTIME_ARTIFACT_GROUP_ID,
@@ -77,11 +77,11 @@ function manualEntities(event: ContinuityEvent, artifact: ArtifactRecord): Entit
   const timestamp = event.timestamp ?? artifact.createdAt
   const results: EntityRecord[] = []
 
-  // Owner field — always person, document authority
+  // Owner field — person entity at owner authority (explicit user-supplied identity)
   if (event.owner?.name?.trim()) {
     results.push(namedEntity(
       event.owner.name.trim(), 'person', artifact, timestamp,
-      TRUST_RANK['document'], 'document',
+      TRUST_RANK['owner'], 'owner',
     ))
   }
 
@@ -213,5 +213,5 @@ export function createRuntimeContinuityArtifact(input: {
 
 export function extractContinuityEntities(event: ContinuityEvent, artifact: ArtifactRecord) {
   const extracted = extractEntities(artifact.text ?? `${event.headline}\n${event.body ?? ''}`, artifact)
-  return dedupeEntities([...extracted, ...manualEntities(event, artifact)])
+  return dedupeEntities([...extracted, ...manualEntities(event, artifact)]).filter(isAuthorizedPersonEntity)
 }

@@ -5,6 +5,9 @@ import type { AuthoritySource, EntityType } from '@/lib/entities/entityEngine'
 // Every other source is subordinate.
 export const TRUST_RANK: Record<AuthoritySource, number> = {
   'anchor-directory': 1.0,
+  'verified': 0.95,
+  'owner': 0.9,
+  'manual': 0.85,
   'document': 0.8,
   'llm': 0.6,
   'regex': 0.4,

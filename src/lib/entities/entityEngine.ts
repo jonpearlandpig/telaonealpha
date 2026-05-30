@@ -1,7 +1,18 @@
 import type { ArtifactRecord } from '@/lib/artifacts/artifactStore'
 
 export type EntityType = 'person' | 'project' | 'organization' | 'system' | 'location' | 'ip' | 'context' | 'operation'
-export type AuthoritySource = 'anchor-directory' | 'document' | 'llm' | 'regex' | 'tentative'
+export type AuthoritySource = 'anchor-directory' | 'owner' | 'manual' | 'verified' | 'document' | 'llm' | 'regex' | 'tentative'
+
+// Person entities are sovereign data. Only explicitly authorized sources may create them.
+// regex and llm are excluded — they produce venue names, department names, and stopword fragments.
+export const PERSON_AUTHORITY_ALLOWED = new Set<AuthoritySource>([
+  'anchor-directory', 'owner', 'manual', 'verified',
+])
+
+export function isAuthorizedPersonEntity(entity: EntityRecord): boolean {
+  if (entity.type !== 'person') return true
+  return PERSON_AUTHORITY_ALLOWED.has(entity.authoritySource as AuthoritySource)
+}
 export type EntityRecord = {
   id: string
   name: string
@@ -27,7 +38,8 @@ const PATTERNS: Array<{ type: EntityType; regex: RegExp }> = [
   { type: 'system', regex: /\b(?:TELA|AKB|Pearl Box|Notion|Runtime|ContinuityMap)\b/gi },
   { type: 'organization', regex: /\b(?:OpenAI|Google|Microsoft|Vercel)\b/gi },
   { type: 'project', regex: /\b(?:flightpath|tourtext|teladex|crusade)\b/gi },
-  { type: 'person', regex: /\b([A-Z][a-z]+\s[A-Z][a-z]+)\b/g },
+  // person pattern intentionally absent — regex has no authority to classify people.
+  // Person entities may only be created by anchorDirectoryExtractor, owner fields, or manual authorship.
   { type: 'context', regex: /\b(?:deployment|handoff|review|timeline|export|incident)\b/gi },
 ]
 
