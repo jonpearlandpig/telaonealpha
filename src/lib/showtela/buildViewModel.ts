@@ -44,7 +44,8 @@ export function buildShowTelaVMFromHydratedState(
   const activeOps: PersonItem[] = personEntities
     .filter(e =>
       activeEntityIds.has(e.id) ||
-      activeEntityNamesFromFeed.has(e.name.toLowerCase().trim()),
+      activeEntityNamesFromFeed.has(e.name.toLowerCase().trim()) ||
+      e.authoritySource === 'anchor-directory',
     )
     .slice(0, 8)
     .map(e => ({
@@ -116,6 +117,19 @@ export function buildShowTelaVMFromHydratedState(
           unresolvedCount: 0,
         }))
 
+  // Departments from rider — context entities tagged rider-department
+  const departments: OperationEntity[] = state.entities
+    .filter(e => e.type === 'context' && e.operationalContexts?.includes('rider-department'))
+    .slice(0, 16)
+    .map((e, i) => ({
+      id: `dept:${i}:${e.id}`,
+      name: e.name,
+      label: 'active',
+      image: '',
+      latest: e.lastSeen,
+      unresolvedCount: e.unresolvedLinks,
+    }))
+
   // Unresolved items from replay reconstruction
   const unresolved: UnresolvedItem[] = state.unresolved.incompleteArtifacts.map(id => ({
     id: `unresolved:${id}`,
@@ -183,6 +197,7 @@ export function buildShowTelaVMFromHydratedState(
     activeOps,
     fluencyPartners: [],  // no fluency partner classification in replay layer yet
     crusadeOperations,
+    departments,
     unresolvedPressure,
     unresolved,
     feed,

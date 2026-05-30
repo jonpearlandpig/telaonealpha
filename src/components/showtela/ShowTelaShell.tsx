@@ -19,7 +19,8 @@ import { OperationSheet } from './sheets/OperationSheet'
 import { UnresolvedSheet } from './sheets/UnresolvedSheet'
 import { PearlDropVoice } from './PearlDropVoice'
 import { TelaTalk } from './TelaTalk'
-import type { ShowTelaViewModel, UnresolvedItem, UnresolvedPressure } from './types'
+import type { ShowTelaViewModel, OperationEntity, UnresolvedItem, UnresolvedPressure } from './types'
+import type { DocumentHydration } from '@/lib/continuity/documentIngest'
 import type { ContinuityEvent } from '@/lib/showtela/types'
 import type { OperationalProjection, OperationalStateRecord } from '@/lib/runtime/state/model'
 import type { OperationalBrief } from '@/lib/briefing/types'
@@ -237,6 +238,110 @@ function ReplayCard({ replay }: { replay: ReplayOutput }) {
   )
 }
 
+function DepartmentsRail({ departments }: { departments: OperationEntity[] }) {
+  if (!departments.length) return null
+  return (
+    <section className="px-5 pb-5">
+      <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">
+        Departments
+      </p>
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {departments.map((dept) => (
+          <div
+            key={dept.id}
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#DED4C4] bg-white px-3 py-1.5"
+          >
+            <span className="text-[12px] font-semibold text-[#171411]">{dept.name}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function TELAwhyCard({
+  crewCount,
+  departmentCount,
+  calendarCount,
+  readiness,
+  lastFeedItem,
+}: {
+  crewCount: number
+  departmentCount: number
+  calendarCount: number
+  readiness: number
+  lastFeedItem?: { timestamp: string; owner: string }
+}) {
+  if (!crewCount && !departmentCount && !calendarCount) return null
+  return (
+    <section className="px-5 pb-5">
+      <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">
+        Runtime Evidence
+      </p>
+      <div className="divide-y divide-[#F0EAE0] overflow-hidden rounded-[22px] border border-[#E2D7C7] bg-white">
+        {crewCount > 0 && (
+          <div className="flex items-center justify-between px-4 py-3">
+            <p className="text-[13px] text-[#171411]">Crew members</p>
+            <p className="text-[13px] font-semibold text-[#9A7C46]">{crewCount}</p>
+          </div>
+        )}
+        {departmentCount > 0 && (
+          <div className="flex items-center justify-between px-4 py-3">
+            <p className="text-[13px] text-[#171411]">Departments</p>
+            <p className="text-[13px] font-semibold text-[#9A7C46]">{departmentCount}</p>
+          </div>
+        )}
+        {calendarCount > 0 && (
+          <div className="flex items-center justify-between px-4 py-3">
+            <p className="text-[13px] text-[#171411]">Show dates</p>
+            <p className="text-[13px] font-semibold text-[#9A7C46]">{calendarCount}</p>
+          </div>
+        )}
+        <div className="flex items-center justify-between px-4 py-3">
+          <p className="text-[13px] text-[#171411]">Readiness</p>
+          <p className="text-[13px] font-semibold" style={{ color: readiness >= 70 ? '#4A7C59' : readiness >= 40 ? '#9A7C46' : '#C4521E' }}>
+            {readiness}%
+          </p>
+        </div>
+        {lastFeedItem && (
+          <div className="flex items-center justify-between px-4 py-3">
+            <p className="text-[13px] text-[#171411]">Last update</p>
+            <p className="text-[12px] text-[#A89880]">
+              {formatRelativeTime(lastFeedItem.timestamp)}{lastFeedItem.owner ? ` · ${lastFeedItem.owner}` : ''}
+            </p>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function HydrationSummaryBanner({ hydration, onDismiss }: { hydration: DocumentHydration; onDismiss: () => void }) {
+  const lines: string[] = []
+  if (hydration.personsActivated > 0) lines.push(`${hydration.personsActivated} crew activated`)
+  if (hydration.departmentsActivated > 0) lines.push(`${hydration.departmentsActivated} departments`)
+  if (hydration.showDatesImported > 0) lines.push(`${hydration.showDatesImported} shows imported`)
+  if (!lines.length) lines.push('Document ingested')
+
+  return (
+    <div
+      className="fixed bottom-28 left-0 right-0 z-[85] mx-auto max-w-[430px] px-5 md:max-w-[680px] xl:max-w-[760px]"
+    >
+      <button
+        onClick={onDismiss}
+        className="w-full rounded-[22px] px-5 py-4 text-left shadow-[0_12px_32px_rgba(17,17,17,0.2)]"
+        style={{ backgroundColor: '#1F1A12', border: '1px solid rgba(200,155,47,0.28)' }}
+      >
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: 'rgba(200,155,47,0.65)' }}>
+          Runtime Hydrated
+        </p>
+        <p className="mt-1 text-[15px] font-semibold text-[#F6EFDF]">{lines.join(' · ')}</p>
+        <p className="mt-1 text-[11px]" style={{ color: 'rgba(200,155,47,0.48)' }}>Tap to dismiss</p>
+      </button>
+    </div>
+  )
+}
+
 export function ShowTelaShell({ vm, user, briefing, focus, replay, projection }: {
   vm: ShowTelaViewModel
   user?: { name: string; email: string; image: string }
@@ -254,6 +359,7 @@ export function ShowTelaShell({ vm, user, briefing, focus, replay, projection }:
   const [taggedPerson, setTaggedPerson] = useState<string | undefined>(undefined)
   const [isRefreshing, startRefresh] = useTransition()
   const [sheet, setSheet] = useState<Sheet>(null)
+  const [hydrationSummary, setHydrationSummary] = useState<DocumentHydration | null>(null)
   const openVoice = (person?: string) => { setTaggedPerson(person); setShowVoice(true) }
   const openIngest = (mode?: ContinuityIngestionMode | null) => { setIngestMode(mode ?? null); setShowIngest(true) }
   const vmUnresolved = useMemo(() => vm.unresolved ?? [], [vm.unresolved])
@@ -345,16 +451,22 @@ export function ShowTelaShell({ vm, user, briefing, focus, replay, projection }:
 
   async function submitContinuity(input: ContinuityIngestionInput) {
     try {
-      const res = await fetch('/api/runtime/continuity/ingest', {
+      const isDocumentUpload = input.mode === 'upload-files' && (input.assetContents?.length ?? 0) > 0
+      const endpoint = isDocumentUpload
+        ? '/api/runtime/continuity/ingest-document'
+        : '/api/runtime/continuity/ingest'
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       })
-      const data = await res.json() as { error?: string }
+      const data = await res.json() as { error?: string; hydration?: DocumentHydration }
       if (!res.ok || data.error) throw new Error(data.error ?? `HTTP ${res.status}`)
-      startRefresh(() => {
-        router.refresh()
-      })
+
+      if (data.hydration) setHydrationSummary(data.hydration)
+
+      startRefresh(() => { router.refresh() })
       return true
     } catch (err) {
       console.error('[ShowTelaShell] continuity ingest failed:', err)
@@ -441,6 +553,14 @@ export function ShowTelaShell({ vm, user, briefing, focus, replay, projection }:
               <CalendarWeekRail events={calendarEvents} baseDate={calendarBaseDate} onOpenCalendar={() => setTab('calendar')} isEmpty={false} />
               <CrusadeOperationsRail items={operations} unresolvedItems={unresolvedItemsState} onOperationTap={(name) => setSheet({ type: 'operation', name })} />
               <UnresolvedPressureCard pressure={unresolvedPressure} onOpen={() => setSheet({ type: 'unresolved' })} />
+              <DepartmentsRail departments={vm.departments ?? []} />
+              <TELAwhyCard
+                crewCount={vm.activeOps.length}
+                departmentCount={vm.departments?.length ?? 0}
+                calendarCount={calendarEvents.length}
+                readiness={briefing.currentReadiness}
+                lastFeedItem={feed[0] ? { timestamp: feed[0].timestamp ?? '', owner: feed[0].owner?.name ?? '' } : undefined}
+              />
               <ReplayCard replay={replay} />
               <ContinuityFeed feed={feed} onFeedTap={(item) => setSheet({ type: 'feed', item })} />
             </>
@@ -547,6 +667,9 @@ export function ShowTelaShell({ vm, user, briefing, focus, replay, projection }:
         <div className="pointer-events-none fixed bottom-24 left-1/2 z-[80] -translate-x-1/2 rounded-full bg-[#17130F] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#F7E8C2]">
           Syncing runtime
         </div>
+      )}
+      {hydrationSummary && (
+        <HydrationSummaryBanner hydration={hydrationSummary} onDismiss={() => setHydrationSummary(null)} />
       )}
     </main>
   )
