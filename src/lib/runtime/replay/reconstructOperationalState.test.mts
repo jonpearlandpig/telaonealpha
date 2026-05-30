@@ -133,6 +133,7 @@ test('reconstructOperationalStateFromReplay preserves routing plans, legality ch
   assert.deepEqual(replayed.state.routingPlans[0]?.escalationPath, ['mose-router', 'flightpath-engine', 'garvis-enforcement'])
   assert.equal(replayed.state.governanceLegality[0]?.source, 'pen-and-sword')
   assert.equal(replayed.state.lineageGraph[0]?.parentLineageId, 'lineage-root')
-  assert.equal(replayed.state.operationalObjects.some((item) => item.objectType === 'routing-plan'), true)
-  assert.equal(replayed.state.operationalObjects.some((item) => item.objectType === 'authorship-guard'), true)
+  // Infrastructure events are excluded from operational objects — replay data lives in routingPlans/lineageGraph only
+  assert.equal(replayed.state.operationalObjects.some((item) => item.objectType === 'routing-plan'), false)
+  assert.equal(replayed.state.operationalObjects.some((item) => item.objectType === 'authorship-guard'), false)
 })

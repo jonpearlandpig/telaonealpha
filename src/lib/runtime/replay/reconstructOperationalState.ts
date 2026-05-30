@@ -4,8 +4,9 @@ import type { ReconstructedOperationalState, RuntimeEvent } from '../runtimeType
 import { decisionLabel, deriveOperationalObjects, projectRefs, stringList, stringRecord, stringValue } from './derivedArtifacts'
 
 function scoreForEvent(event: RuntimeEvent): number {
-  if (event.type === 'escalation.triggered' || event.type === 'operator.escalated') return 45
-  if (event.type === 'execution.denied' || event.type === 'governance.blocked' || event.type === 'operator.blocked') return 40
+  if (event.type === 'escalation.triggered' || event.type === 'operator.escalated' || event.type === 'governance.escalation.propagated') return 45
+  if (event.type === 'runtime.rollback.signaled') return 42
+  if (event.type === 'execution.denied' || event.type === 'governance.blocked' || event.type === 'operator.blocked' || event.type === 'governance.nil.blocked' || event.type === 'governance.two-key.blocked') return 40
   if (event.type === 'continuity.normalized') return 30
   if (event.type === 'continuity.ingested') return 24
   if (event.type.includes('unresolved')) return 35
@@ -14,7 +15,8 @@ function scoreForEvent(event: RuntimeEvent): number {
 }
 
 function priorityReason(event: RuntimeEvent): string {
-  if (event.type === 'escalation.triggered' || event.type === 'operator.escalated') return 'governance escalated'
+  if (event.type === 'escalation.triggered' || event.type === 'operator.escalated' || event.type === 'governance.escalation.propagated') return 'governance escalated'
+  if (event.type === 'runtime.rollback.signaled') return 'rollback signaled'
   if (event.type.includes('unresolved')) return 'unresolved continuity'
   if (event.type === 'governance.blocked' || event.type === 'operator.blocked') return 'governance blocked'
   if (event.type === 'execution.denied') return 'execution denied'
@@ -152,7 +154,7 @@ export function reconstructOperationalStateFromReplay(
       pendingCount += 1
     }
 
-    if (event.type === 'governance.blocked' || event.type === 'operator.blocked') {
+    if (event.type === 'governance.blocked' || event.type === 'operator.blocked' || event.type === 'governance.nil.blocked' || event.type === 'governance.two-key.blocked') {
       blockedCount += 1
     }
 
@@ -160,7 +162,7 @@ export function reconstructOperationalStateFromReplay(
       deniedCount += 1
     }
 
-    if (event.type === 'escalation.triggered' || event.type === 'operator.escalated') {
+    if (event.type === 'escalation.triggered' || event.type === 'operator.escalated' || event.type === 'governance.escalation.propagated') {
       escalatedCount += 1
       lastEscalationAt = event.createdAt
     }

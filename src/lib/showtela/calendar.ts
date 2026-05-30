@@ -254,6 +254,71 @@ function deriveDayContinuityState(events: OperationalCalendarEvent[]): Continuit
   return 'unknown'
 }
 
+// Calendar event type mapping for operational event kinds
+const KIND_TO_CALENDAR_TYPE: Record<string, OperationalCalendarEventType> = {
+  show_day: 'show',
+  travel_day: 'travel',
+  rehearsal: 'production',
+  production_day: 'production',
+  venue_advance: 'venue',
+  load_in: 'production',
+  load_out: 'production',
+  meeting: 'meeting',
+  deadline: 'deadline',
+}
+
+// Build calendar events exclusively from extracted operational events.
+// This is the clean path — no feed items, no thread timestamps, no infrastructure artifacts.
+export function buildCalendarFromOperationalEvents(
+  events: Array<{
+    id: string
+    kind: string
+    title: string
+    isoDate: string
+    venue?: string
+    city?: string
+    state?: string
+    sourceArtifactId: string
+  }>,
+  options?: { baseDate?: Date },
+): OperationalCalendarEvent[] {
+  const anchorDate = options?.baseDate ?? new Date()
+
+  return events
+    .filter(event => isValidDate(event.isoDate))
+    .map<OperationalCalendarEvent>(event => {
+      const type: OperationalCalendarEventType = (KIND_TO_CALENDAR_TYPE[event.kind] ?? 'note') as OperationalCalendarEventType
+      const location = [event.venue, event.city, event.state].filter(Boolean).join(', ') || undefined
+      const summary = event.venue
+        ? [event.venue, event.city].filter(Boolean).join(' — ')
+        : event.title
+
+      return {
+        id: event.id,
+        title: event.title,
+        type,
+        status: event.kind === 'show_day' ? 'active' : 'calm',
+        source: 'tela',
+        timestamp: event.isoDate,
+        startTime: event.isoDate,
+        people: [],
+        departments: event.venue ? [event.venue] : [],
+        location,
+        summary,
+        unresolvedCount: 0,
+        pressureState: event.kind === 'show_day' ? 'active' : 'calm',
+        continuityState: deriveContinuityState(event.isoDate, anchorDate),
+        density: 'light',
+        telaHint: event.kind === 'show_day'
+          ? 'Show date confirmed from tour calendar.'
+          : event.kind === 'rehearsal'
+          ? 'Rehearsal confirmed from calendar.'
+          : undefined,
+        sourceEntityId: event.sourceArtifactId,
+      }
+    })
+}
+
 export function buildOperationalCalendarEvents({
   feed,
   operations,

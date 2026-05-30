@@ -28,6 +28,7 @@ export type ContinuityIngestionInput = {
   linkUrl?: string
   assetNames?: string[]
   assetContents?: AssetContent[]
+  showTelaId?: string
 }
 
 export type NormalizeContinuityIngestionOptions = {

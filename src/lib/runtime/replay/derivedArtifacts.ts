@@ -31,7 +31,21 @@ export function decisionLabel(event: RuntimeEvent): string | undefined {
   return undefined
 }
 
+// Orchestration infrastructure event types that must not generate operational objects.
+// These are governance audit records — replay and lineage use them, but the projection layer
+// must not derive movement states, readiness deductions, or calendar entries from them.
+// operator.blocked and operator.escalated are intentionally absent — those are real governance signals.
+export const INFRASTRUCTURE_EVENT_TYPES = new Set([
+  'operator.invoked',
+  'operator.analysis.completed',
+  'operator.recommendation.generated',
+  'operator.execution.approved',
+  'operator.execution.completed',
+])
+
 export function deriveOperationalObjects(event: RuntimeEvent): OperationalObject[] {
+  if (INFRASTRUCTURE_EVENT_TYPES.has(event.type)) return []
+
   const payload = stringRecord(event.payload)
   const createdAt = event.createdAt
   const objects: OperationalObject[] = []
@@ -58,7 +72,11 @@ export function deriveOperationalObjects(event: RuntimeEvent): OperationalObject
     event.type === 'execution.denied' ||
     event.type === 'escalation.triggered' ||
     event.type === 'operator.blocked' ||
-    event.type === 'operator.escalated'
+    event.type === 'operator.escalated' ||
+    event.type === 'governance.escalation.propagated' ||
+    event.type === 'governance.nil.blocked' ||
+    event.type === 'governance.two-key.blocked' ||
+    event.type === 'runtime.rollback.signaled'
   ) {
     objects.push({
       id: `governance:${event.lineageId ?? event.id}`,

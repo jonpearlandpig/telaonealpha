@@ -1,9 +1,11 @@
 'use client'
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { createShowTelaId } from '@/lib/showtela/showTelaId'
 import { ContinuityIngest } from '@/components/runtime/continuity-ingest'
 import type { ContinuityIngestionInput, ContinuityIngestionMode } from '@/lib/continuity/normalize-ingestion'
-import { buildOperationalCalendarEvents } from '@/lib/showtela/calendar'
+import { buildOperationalCalendarEvents, buildCalendarFromOperationalEvents } from '@/lib/showtela/calendar'
+import { calculateOperationalReadiness } from '@/lib/runtime/operational/operationalExtraction'
 import { ActiveOpsRail } from './ActiveOpsRail'
 import { BottomDock } from './BottomDock'
 import { CalendarWeekRail } from './CalendarWeekRail'
@@ -342,13 +344,133 @@ function HydrationSummaryBanner({ hydration, onDismiss }: { hydration: DocumentH
   )
 }
 
-export function ShowTelaShell({ vm, user, briefing, focus, replay, projection }: {
+function NewShowTelaModal({ onClose }: { onClose: () => void }) {
+  const router = useRouter()
+  const [name, setName] = useState('')
+  const [creating, setCreating] = useState(false)
+
+  const handleCreate = () => {
+    const trimmed = name.trim()
+    const id = createShowTelaId(trimmed)
+    if (!id) return
+    setCreating(true)
+    router.push(`/showtela/${id}`)
+    onClose()
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-end justify-center"
+      style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-[430px] rounded-t-[28px] px-5 pb-10 pt-6 md:max-w-[680px] xl:max-w-[760px]"
+        style={{ backgroundColor: '#0D0E12', border: '1px solid rgba(200,155,47,0.18)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="mb-1 h-1 w-10 mx-auto rounded-full" style={{ backgroundColor: 'rgba(200,155,47,0.28)' }} />
+        <p
+          className="mt-5 text-[10px] font-semibold uppercase tracking-[0.26em]"
+          style={{ color: 'rgba(200,155,47,0.52)' }}
+        >
+          New ShowTELA
+        </p>
+        <p className="mt-2 text-[20px] font-semibold" style={{ color: '#F8F6F2' }}>
+          Name your ShowTELA
+        </p>
+        <p className="mt-1.5 text-[12px]" style={{ color: 'rgba(200,155,47,0.48)' }}>
+          e.g. Positive Rocks Spring 2027, Crusade, Brandon Lake Tour
+        </p>
+        <input
+          type="text"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleCreate() }}
+          placeholder="ShowTELA name"
+          autoFocus
+          className="mt-5 w-full rounded-[16px] px-4 py-3.5 text-[16px] font-medium outline-none"
+          style={{
+            backgroundColor: 'rgba(255,255,255,0.07)',
+            border: '1px solid rgba(200,155,47,0.22)',
+            color: '#F8F6F2',
+          }}
+        />
+        <button
+          onClick={handleCreate}
+          disabled={!name.trim() || creating}
+          className="mt-4 w-full rounded-[18px] py-4 text-[15px] font-semibold transition-opacity disabled:opacity-40"
+          style={{ backgroundColor: '#C89B2F', color: '#0D0E12' }}
+        >
+          {creating ? 'Creating…' : 'Create ShowTELA'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function NewShowTelaChoiceSheet({
+  onNewShowTela,
+  onAddContent,
+  onClose,
+}: {
+  onNewShowTela: () => void
+  onAddContent: () => void
+  onClose: () => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-end justify-center"
+      style={{ backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-[430px] rounded-t-[28px] px-5 pb-10 pt-6 md:max-w-[680px] xl:max-w-[760px]"
+        style={{ backgroundColor: '#0D0E12', border: '1px solid rgba(200,155,47,0.18)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="mb-1 h-1 w-10 mx-auto rounded-full" style={{ backgroundColor: 'rgba(200,155,47,0.28)' }} />
+        <div className="mt-5 flex flex-col gap-3">
+          <button
+            onClick={onNewShowTela}
+            className="flex items-center justify-between rounded-[18px] px-4 py-4 text-left transition-opacity hover:opacity-90 active:opacity-75"
+            style={{ backgroundColor: '#C89B2F' }}
+          >
+            <div>
+              <p className="text-[15px] font-semibold" style={{ color: '#0D0E12' }}>New ShowTELA</p>
+              <p className="mt-0.5 text-[12px]" style={{ color: 'rgba(0,0,0,0.55)' }}>Create a fresh operational runtime</p>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ opacity: 0.6 }}>
+              <path d="M7 1v12M1 7h12" stroke="#0D0E12" strokeWidth="1.7" strokeLinecap="round" />
+            </svg>
+          </button>
+          <button
+            onClick={onAddContent}
+            className="flex items-center justify-between rounded-[18px] px-4 py-4 text-left transition-opacity hover:opacity-90 active:opacity-75"
+            style={{ backgroundColor: 'rgba(255,255,255,0.07)', border: '1px solid rgba(200,155,47,0.18)' }}
+          >
+            <div>
+              <p className="text-[15px] font-semibold" style={{ color: '#F8F6F2' }}>Add Content</p>
+              <p className="mt-0.5 text-[12px]" style={{ color: 'rgba(200,155,47,0.48)' }}>Upload a document, voice note, or update</p>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ opacity: 0.4 }}>
+              <path d="M3 7h8M7 3l4 4-4 4" stroke="#C89B2F" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function ShowTelaShell({ vm, user, briefing, focus, replay, projection, showTelaId }: {
   vm: ShowTelaViewModel
   user?: { name: string; email: string; image: string }
   briefing: OperationalBrief
   focus: FocusEngineResult
   replay: ReplayOutput
   projection: OperationalProjection
+  showTelaId?: string
 }) {
   const router = useRouter()
   const initialSurface = getInitialSurfaceState()
@@ -360,8 +482,17 @@ export function ShowTelaShell({ vm, user, briefing, focus, replay, projection }:
   const [isRefreshing, startRefresh] = useTransition()
   const [sheet, setSheet] = useState<Sheet>(null)
   const [hydrationSummary, setHydrationSummary] = useState<DocumentHydration | null>(null)
+  const [showNewShowTelaChoice, setShowNewShowTelaChoice] = useState(false)
+  const [showCreateShowTela, setShowCreateShowTela] = useState(false)
   const openVoice = (person?: string) => { setTaggedPerson(person); setShowVoice(true) }
-  const openIngest = (mode?: ContinuityIngestionMode | null) => { setIngestMode(mode ?? null); setShowIngest(true) }
+  const openIngest = (mode?: ContinuityIngestionMode | null) => {
+    if ((mode === null || mode === undefined) && !showTelaId) {
+      setShowNewShowTelaChoice(true)
+    } else {
+      setIngestMode(mode ?? null)
+      setShowIngest(true)
+    }
+  }
   const vmUnresolved = useMemo(() => vm.unresolved ?? [], [vm.unresolved])
   const feed = vm.feed.map(mapVmFeedItem)
   const operations = vm.crusadeOperations
@@ -372,7 +503,10 @@ export function ShowTelaShell({ vm, user, briefing, focus, replay, projection }:
   const unresolvedPressure = derivePressure(unresolvedItemsState)
   const priorityOperation = operations[0]
   const recentFeedItem = feed[0]
-  const operationalCards = projectionCards(projection)
+  const operationalEvents = vm.operationalEvents ?? []
+  // Suppress infrastructure-derived projection cards when operational events exist.
+  // Movement comes from real show dates and rehearsals, not thread/governance heuristics.
+  const operationalCards = operationalEvents.length > 0 ? [] : projectionCards(projection)
   const activeOperators = useMemo(() => activeOpsData.map((item) => item.name), [activeOpsData])
   const userFirstName = user?.name?.split(' ')[0]?.toLowerCase()
   const visibleActiveOps = activeOpsData.filter((item) => {
@@ -431,22 +565,23 @@ export function ShowTelaShell({ vm, user, briefing, focus, replay, projection }:
     activeOperators: activeOperators.slice(0, 6),
   }
 
-  const calendarBaseDate = useMemo(() => {
-    const anchor = latestTimeline?.timestamp || recentFeedItem?.timestamp
-    return anchor ? new Date(anchor) : new Date()
-  }, [latestTimeline?.timestamp, recentFeedItem?.timestamp])
+  const calendarBaseDate = useMemo(() => new Date(), [])
 
   const calendarEvents = useMemo(
-    () => buildOperationalCalendarEvents({
-      feed,
-      operations,
-      unresolvedItems: unresolvedItemsState,
-      runtimeTimeline,
-      people: activeOperators,
-      source: vm.source,
+    () => operationalEvents.length > 0
+      ? buildCalendarFromOperationalEvents(operationalEvents, { baseDate: calendarBaseDate })
+      : [],
+    [operationalEvents, calendarBaseDate],
+  )
+
+  const operationalReadiness = useMemo(
+    () => calculateOperationalReadiness({
+      operationalEvents,
+      crewCount: vm.activeOps.length,
+      blockersCount: vm.unresolvedPressure.blockedCount,
       baseDate: calendarBaseDate,
     }),
-    [activeOperators, calendarBaseDate, feed, operations, runtimeTimeline, unresolvedItemsState, vm.source],
+    [operationalEvents, vm.activeOps.length, vm.unresolvedPressure.blockedCount, calendarBaseDate],
   )
 
   async function submitContinuity(input: ContinuityIngestionInput) {
@@ -459,7 +594,7 @@ export function ShowTelaShell({ vm, user, briefing, focus, replay, projection }:
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(input),
+        body: JSON.stringify(showTelaId ? { ...input, showTelaId } : input),
       })
       const data = await res.json() as { error?: string; hydration?: DocumentHydration }
       if (!res.ok || data.error) throw new Error(data.error ?? `HTTP ${res.status}`)
@@ -557,8 +692,8 @@ export function ShowTelaShell({ vm, user, briefing, focus, replay, projection }:
               <TELAwhyCard
                 crewCount={vm.activeOps.length}
                 departmentCount={vm.departments?.length ?? 0}
-                calendarCount={calendarEvents.length}
-                readiness={briefing.currentReadiness}
+                calendarCount={operationalEvents.filter(e => e.kind === 'show_day').length}
+                readiness={operationalReadiness.score}
                 lastFeedItem={feed[0] ? { timestamp: feed[0].timestamp ?? '', owner: feed[0].owner?.name ?? '' } : undefined}
               />
               <ReplayCard replay={replay} />
@@ -670,6 +805,16 @@ export function ShowTelaShell({ vm, user, briefing, focus, replay, projection }:
       )}
       {hydrationSummary && (
         <HydrationSummaryBanner hydration={hydrationSummary} onDismiss={() => setHydrationSummary(null)} />
+      )}
+      {showNewShowTelaChoice && (
+        <NewShowTelaChoiceSheet
+          onNewShowTela={() => { setShowNewShowTelaChoice(false); setShowCreateShowTela(true) }}
+          onAddContent={() => { setShowNewShowTelaChoice(false); setIngestMode(null); setShowIngest(true) }}
+          onClose={() => setShowNewShowTelaChoice(false)}
+        />
+      )}
+      {showCreateShowTela && (
+        <NewShowTelaModal onClose={() => setShowCreateShowTela(false)} />
       )}
     </main>
   )

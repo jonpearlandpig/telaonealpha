@@ -40,6 +40,8 @@ function toEntityRecord(row: DurableEntityRow): EntityRecord {
     relatedArtifacts: row.relatedArtifacts,
     relatedThreads: row.relatedThreads,
     temporalClusters: row.temporalClusters,
+    trustRank: row.provenance.truthRank,
+    authoritySource: row.provenance.authorityLevel as EntityRecord['authoritySource'],
   }
 }
 

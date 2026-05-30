@@ -8,6 +8,8 @@ import type {
   UnresolvedPressure,
 } from '@/components/showtela/types'
 import type { HydratedRuntimeState } from '@/lib/runtime/runtimeHydrationModel'
+import { PERSON_AUTHORITY_ALLOWED } from '@/lib/entities/entityEngine'
+import type { OperationalEvent } from '@/lib/runtime/operational/operationalExtraction'
 
 // Sovereign adapter — maps HydratedRuntimeState (event-derived runtime truth) to ShowTelaViewModel.
 // This is the target path after Phase B SSR inversion. operationalProjection is never
@@ -18,35 +20,13 @@ import type { HydratedRuntimeState } from '@/lib/runtime/runtimeHydrationModel'
 export function buildShowTelaVMFromHydratedState(
   state: HydratedRuntimeState,
 ): ShowTelaViewModel {
-  // Person entities from the durable store, filtered to those active in replay
-  const activeEntityIds = new Set(
-    state.operationalObjects
-      .filter(o => o.objectType === 'entity')
-      .map(o => (typeof o.payload.entityId === 'string' ? o.payload.entityId : null))
-      .filter((id): id is string => id !== null),
-  )
-
-  // TEMPORARY VISIBILITY FIX (Session 1C-B):
-  // Replay entity IDs from events may be raw name strings ("Juan Otero") rather than
-  // slugged durable IDs ("person:juan-otero"). Match by lowercased name from the
-  // continuity feed as a stopgap. Canonical repair: Anchor Directory → stable
-  // person:{slug} → replay entity IDs. That work belongs to Session 1D.
-  const activeEntityNamesFromFeed = new Set<string>()
-  for (const event of state.continuityFeed) {
-    if (event.owner?.name) activeEntityNamesFromFeed.add(event.owner.name.toLowerCase().trim())
-    for (const entity of event.linkedEntities ?? []) {
-      activeEntityNamesFromFeed.add(entity.toLowerCase().trim())
-    }
-  }
-
+  // Person entities — only those with verified authority may appear as operational anchors.
+  // Relay-derived names (linkedEntities, feed owner strings) are intentionally excluded
+  // to prevent venue names, department labels, and regex artifacts from entering ActiveOps.
   const personEntities = state.entities.filter(e => e.type === 'person')
 
   const activeOps: PersonItem[] = personEntities
-    .filter(e =>
-      activeEntityIds.has(e.id) ||
-      activeEntityNamesFromFeed.has(e.name.toLowerCase().trim()) ||
-      e.authoritySource === 'anchor-directory',
-    )
+    .filter(e => e.authoritySource != null && PERSON_AUTHORITY_ALLOWED.has(e.authoritySource))
     .slice(0, 8)
     .map(e => ({
       id: e.id,
@@ -193,6 +173,10 @@ export function buildShowTelaVMFromHydratedState(
       }
     : undefined
 
+  // Operational events — show dates, rehearsals, advances extracted from durable artifacts.
+  // These are the clean operational truth; infrastructure events are excluded upstream.
+  const operationalEvents: OperationalEvent[] = state.operationalEvents ?? []
+
   return {
     activeOps,
     fluencyPartners: [],  // no fluency partner classification in replay layer yet
@@ -201,6 +185,7 @@ export function buildShowTelaVMFromHydratedState(
     unresolvedPressure,
     unresolved,
     feed,
+    operationalEvents,
     continuityObjects: [],
     runtimeTimeline: [],
     source: 'supabase',

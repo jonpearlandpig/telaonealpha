@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import type { ContinuityIngestionInput } from '@/lib/continuity/normalize-ingestion'
 import type { OperationalCalendarEvent } from '@/lib/showtela/calendar'
+import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
 import type { ContinuityEvent } from '@/lib/showtela/types'
 import type { OperationalProjection } from '@/lib/runtime/state/model'
 import type { OperationEntity, UnresolvedItem } from './types'
@@ -74,6 +75,18 @@ export function TelaTalk({
     return normalized.endsWith('?') || promptOptions.some((prompt) => prompt.toLowerCase() === normalized)
   }
 
+  function isReplayQuery(value: string) {
+    const normalized = value.trim().toLowerCase()
+    return [
+      'what happened',
+      'replay',
+      'history',
+      'what changed',
+      'since yesterday',
+      'last week',
+    ].some((phrase) => normalized.includes(phrase))
+  }
+
   function createQuickUpdatePayload(value: string): ContinuityIngestionInput {
     const lines = value
       .split('\n')
@@ -93,6 +106,24 @@ export function TelaTalk({
   }
 
   const askTELA = useCallback(async (question: string): Promise<string> => {
+    if (isReplayQuery(question)) {
+      try {
+        const params = new URLSearchParams({
+          workspaceId: SHOWTELA_WORKSPACE_ID,
+          query: question,
+        })
+        const res = await fetch(`/api/runtime/continuity/replay?${params.toString()}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        })
+        if (!res.ok) return 'Runtime replay is not available right now.'
+        const payload = await res.json() as { answer?: string }
+        return payload.answer ?? 'Runtime replay returned no structural answer.'
+      } catch {
+        return 'Runtime replay is not available right now.'
+      }
+    }
+
     const operationalContext = [
       `Blockers: ${operationalProjection?.blockers.map((state) => state.stateLabel).join('; ') || 'none'}`,
       `Movement: ${operationalProjection?.movement.map((state) => state.stateLabel).join('; ') || 'none'}`,

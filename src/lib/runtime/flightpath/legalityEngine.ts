@@ -27,6 +27,14 @@ const LEGAL_MOVEMENTS: Partial<Record<RuntimeAction, RuntimeAction[]>> = {
   [ACTIONS.RESOLVE_UNRESOLVED]: [ACTIONS.GENERATE_REPORT, ACTIONS.ARCHIVE_CONTINUITY],
   [ACTIONS.EXECUTE_OPERATIONAL_ACTION]: [ACTIONS.GENERATE_REPORT, ACTIONS.ARCHIVE_CONTINUITY],
   [ACTIONS.GENERATE_REPORT]: [ACTIONS.ARCHIVE_CONTINUITY],
+  [ACTIONS.TRANSFER_NIL]: [],
+  [ACTIONS.ASSIGN_NIL]: [],
+  [ACTIONS.SUBLICENSE_NIL]: [],
+  [ACTIONS.DELEGATE_NIL_RIGHTS]: [],
+  [ACTIONS.FINANCIAL_COMMITMENT]: [ACTIONS.GENERATE_REPORT],
+  [ACTIONS.RIGHTS_ASSIGNMENT]: [ACTIONS.GENERATE_REPORT],
+  [ACTIONS.CONTRACT_EXECUTION]: [ACTIONS.GENERATE_REPORT],
+  [ACTIONS.DEAL_SIGNING]: [ACTIONS.GENERATE_REPORT],
 }
 
 const POLICIES: Record<RuntimeAction, ActionPolicy> = {
@@ -96,6 +104,46 @@ const POLICIES: Record<RuntimeAction, ActionPolicy> = {
     requiredAuthority: 'S1',
     allowedGovernanceStates: ['approved', 'escalated'],
     allowedNextActions: [],
+  },
+  [ACTIONS.TRANSFER_NIL]: {
+    requiredAuthority: 'S0',
+    allowedGovernanceStates: ['approved', 'escalated'],
+    allowedNextActions: [],
+  },
+  [ACTIONS.ASSIGN_NIL]: {
+    requiredAuthority: 'S0',
+    allowedGovernanceStates: ['approved', 'escalated'],
+    allowedNextActions: [],
+  },
+  [ACTIONS.SUBLICENSE_NIL]: {
+    requiredAuthority: 'S0',
+    allowedGovernanceStates: ['approved', 'escalated'],
+    allowedNextActions: [],
+  },
+  [ACTIONS.DELEGATE_NIL_RIGHTS]: {
+    requiredAuthority: 'S0',
+    allowedGovernanceStates: ['approved', 'escalated'],
+    allowedNextActions: [],
+  },
+  [ACTIONS.FINANCIAL_COMMITMENT]: {
+    requiredAuthority: 'S1',
+    allowedGovernanceStates: ['approved', 'escalated'],
+    allowedNextActions: [ACTIONS.GENERATE_REPORT],
+  },
+  [ACTIONS.RIGHTS_ASSIGNMENT]: {
+    requiredAuthority: 'S1',
+    allowedGovernanceStates: ['approved', 'escalated'],
+    allowedNextActions: [ACTIONS.GENERATE_REPORT],
+  },
+  [ACTIONS.CONTRACT_EXECUTION]: {
+    requiredAuthority: 'S1',
+    allowedGovernanceStates: ['approved', 'escalated'],
+    allowedNextActions: [ACTIONS.GENERATE_REPORT],
+  },
+  [ACTIONS.DEAL_SIGNING]: {
+    requiredAuthority: 'S2',
+    allowedGovernanceStates: ['approved', 'escalated'],
+    allowedNextActions: [ACTIONS.GENERATE_REPORT],
   },
 }
 

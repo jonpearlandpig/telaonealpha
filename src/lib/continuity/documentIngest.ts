@@ -209,7 +209,8 @@ export async function ingestDocumentContinuity(input: ContinuityIngestionInput):
   }
 
   if (extraArtifacts.length > 0 || extraEntities.length > 0) {
-    await persistDurableContinuity(SHOWTELA_WORKSPACE_ID, {
+    const workspaceId = input.showTelaId ?? SHOWTELA_WORKSPACE_ID
+    await persistDurableContinuity(workspaceId, {
       artifacts: extraArtifacts,
       entities: extraEntities,
       snapshots: [],

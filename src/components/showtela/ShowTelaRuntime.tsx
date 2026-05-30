@@ -65,7 +65,7 @@ function RuntimeDebugOverlay({ vm }: { vm: ShowTelaViewModel }) {
   )
 }
 
-export function ShowTelaRuntime({ vm: initialVm, user, briefing, focus, replay, projection }: { vm: ShowTelaViewModel; user?: User } & RuntimeEngines) {
+export function ShowTelaRuntime({ vm: initialVm, user, briefing, focus, replay, projection, showTelaId }: { vm: ShowTelaViewModel; user?: User; showTelaId?: string } & RuntimeEngines) {
   const [vm] = useState<ShowTelaViewModel>(initialVm)
   const [showDebug] = useState(() =>
     typeof window !== 'undefined' && (
@@ -87,7 +87,7 @@ export function ShowTelaRuntime({ vm: initialVm, user, briefing, focus, replay, 
   return (
     <>
       {showDebug && <RuntimeDebugOverlay vm={vm} />}
-      <ShowTelaShell vm={vm} user={user} briefing={briefing} focus={focus} replay={replay} projection={projection} />
+      <ShowTelaShell vm={vm} user={user} briefing={briefing} focus={focus} replay={replay} projection={projection} showTelaId={showTelaId} />
       {showDiagnostic && (
         <div className="pointer-events-none fixed bottom-28 left-0 right-0 z-40 mx-auto w-full max-w-[430px] px-5 md:max-w-[680px] xl:max-w-[760px]">
           <DiagnosticBar state={vm.diagnosticState!} />

@@ -12,6 +12,14 @@ export const ACTIONS = {
   EXECUTE_OPERATIONAL_ACTION: 'execute.operational-action',
   GENERATE_REPORT: 'generate.report',
   ARCHIVE_CONTINUITY: 'archive.continuity',
+  TRANSFER_NIL: 'transfer.nil',
+  ASSIGN_NIL: 'assign.nil',
+  SUBLICENSE_NIL: 'sublicense.nil',
+  DELEGATE_NIL_RIGHTS: 'delegate.nil-rights',
+  FINANCIAL_COMMITMENT: 'financial.commitment',
+  RIGHTS_ASSIGNMENT: 'rights.assignment',
+  CONTRACT_EXECUTION: 'contract.execution',
+  DEAL_SIGNING: 'deal.signing',
 } as const
 
 export const AUTHORITY_RANK = {
