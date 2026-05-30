@@ -22,6 +22,9 @@ import { TelaTalk } from './TelaTalk'
 import type { ShowTelaViewModel, UnresolvedItem, UnresolvedPressure } from './types'
 import type { ContinuityEvent } from '@/lib/showtela/types'
 import type { OperationalProjection, OperationalStateRecord } from '@/lib/runtime/state/model'
+import type { OperationalBrief } from '@/lib/briefing/types'
+import type { FocusEngineResult } from '@/lib/focus/types'
+import type { ReplayOutput, ReplayStepState } from '@/lib/replay/types'
 
 type Tab = 'home' | 'play' | 'messages' | 'calendar' | 'profile'
 type Sheet = { type: 'person'; name: string; role?: string } | { type: 'feed'; item: ContinuityEvent } | { type: 'operation'; name: string } | { type: 'unresolved' } | null
@@ -109,7 +112,139 @@ function projectionCards(projection?: OperationalProjection) {
   ]
 }
 
-export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { name: string; email: string; image: string } }) {
+const STATE_LABEL: Record<ReplayStepState, string> = {
+  BLOCKER_CREATED: 'Blocker',
+  BLOCKER_RESOLVED: 'Resolved',
+  PRESSURE_INCREASED: 'Pressure up',
+  PRESSURE_DECREASED: 'Pressure down',
+  DEPENDENCY_ADDED: 'Dependency',
+  DEPENDENCY_CLEARED: 'Cleared',
+  FOCUS_EVENT: 'Focus',
+  CONTINUITY_RECORDED: 'Recorded',
+}
+
+const STATE_COLOR: Record<ReplayStepState, string> = {
+  BLOCKER_CREATED: '#C4521E',
+  BLOCKER_RESOLVED: '#4A7C59',
+  PRESSURE_INCREASED: '#C4521E',
+  PRESSURE_DECREASED: '#4A7C59',
+  DEPENDENCY_ADDED: '#9A7C46',
+  DEPENDENCY_CLEARED: '#4A7C59',
+  FOCUS_EVENT: '#9A7C46',
+  CONTINUITY_RECORDED: '#A89880',
+}
+
+function formatRelativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  if (diff < 60_000) return 'just now'
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`
+  return `${Math.floor(diff / 86_400_000)}d ago`
+}
+
+function BriefingCard({ briefing }: { briefing: OperationalBrief }) {
+  const pct = briefing.currentReadiness
+  const readColor = pct >= 70 ? '#4A7C59' : pct >= 40 ? '#9A7C46' : '#C4521E'
+  return (
+    <section className="px-5 pb-4">
+      <div className="rounded-[22px] border border-[#E2D7C7] bg-white px-5 py-4 shadow-[0_8px_24px_rgba(17,17,17,0.05)]">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: '#9A7C46' }}>
+          Operational Brief
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-[#171411]">
+          <span><span className="font-semibold">{briefing.newEvents}</span> new</span>
+          {briefing.resolvedItems > 0 && (
+            <span><span className="font-semibold">{briefing.resolvedItems}</span> resolved</span>
+          )}
+          {briefing.newBlockers > 0 && (
+            <span style={{ color: '#C4521E' }}><span className="font-semibold">{briefing.newBlockers}</span> blockers</span>
+          )}
+        </div>
+        <div className="mt-3 flex items-center gap-3">
+          <div className="h-[5px] flex-1 overflow-hidden rounded-full bg-[#EDE8E0]">
+            <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: readColor }} />
+          </div>
+          <p className="shrink-0 text-[12px] font-semibold" style={{ color: readColor }}>
+            Readiness {pct}%
+          </p>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function FocusCard({ focus }: { focus: FocusEngineResult }) {
+  const top = focus.topFocus
+  if (!top) {
+    return (
+      <section className="px-5 pb-4">
+        <div className="rounded-[22px] border border-[#D7E3D1] bg-[#F2F7EF] px-5 py-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#4A7C59]">Field Status</p>
+          <p className="mt-2 text-[15px] font-semibold text-[#20311F]">Field is calm.</p>
+          <p className="mt-1 text-[12px] text-[#4A7C59]">No active blockers detected.</p>
+        </div>
+      </section>
+    )
+  }
+  return (
+    <section className="px-5 pb-4">
+      <div
+        className="rounded-[22px] px-5 py-4 shadow-[0_12px_24px_rgba(17,17,17,0.14)]"
+        style={{ backgroundColor: '#1F1A12', border: '1px solid rgba(200,155,47,0.22)' }}
+      >
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: 'rgba(200,155,47,0.65)' }}>
+          Top Focus
+        </p>
+        <p className="mt-2 text-[16px] font-semibold leading-snug text-[#F6EFDF]">{top.title}</p>
+        <p className="mt-1 text-[12px] text-[#DDD1BB]">{top.owner} · Priority {top.priorityScore}</p>
+        {top.recommendedAction && (
+          <p className="mt-3 text-[12px] leading-relaxed text-[#D7C9A8]">{top.recommendedAction}</p>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function ReplayCard({ replay }: { replay: ReplayOutput }) {
+  if (replay.timeline.length === 0) return null
+  const recent = [...replay.timeline].reverse().slice(0, 5)
+  return (
+    <section className="px-5 pb-5">
+      <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">
+        Recent Activity
+      </p>
+      <div className="divide-y divide-[#F0EAE0] overflow-hidden rounded-[22px] border border-[#E2D7C7] bg-white">
+        {recent.map((step) => (
+          <div key={step.id} className="flex items-start gap-3 px-4 py-3">
+            <p className="w-[52px] shrink-0 text-[11px] text-[#A89880]">
+              {formatRelativeTime(step.timestamp)}
+            </p>
+            <div className="min-w-0 flex-1">
+              <p className="line-clamp-1 text-[13px] font-medium leading-snug text-[#171411]">
+                {step.headline}
+              </p>
+              <p
+                className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.14em]"
+                style={{ color: STATE_COLOR[step.resultingState] }}
+              >
+                {STATE_LABEL[step.resultingState]}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+export function ShowTelaShell({ vm, user, briefing, focus, replay, projection }: {
+  vm: ShowTelaViewModel
+  user?: { name: string; email: string; image: string }
+  briefing: OperationalBrief
+  focus: FocusEngineResult
+  replay: ReplayOutput
+  projection: OperationalProjection
+}) {
   const router = useRouter()
   const initialSurface = getInitialSurfaceState()
   const [tab, setTab] = useState<Tab>(initialSurface.tab)
@@ -131,7 +266,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
   const unresolvedPressure = derivePressure(unresolvedItemsState)
   const priorityOperation = operations[0]
   const recentFeedItem = feed[0]
-  const operationalCards = projectionCards(undefined)
+  const operationalCards = projectionCards(projection)
   const activeOperators = useMemo(() => activeOpsData.map((item) => item.name), [activeOpsData])
   const userFirstName = user?.name?.split(' ')[0]?.toLowerCase()
   const visibleActiveOps = activeOpsData.filter((item) => {
@@ -139,7 +274,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
     return item.name.toLowerCase() !== userFirstName && !item.name.toLowerCase().includes(userFirstName)
   })
 
-  const isEmpty = vm.source === 'empty' && activeOpsData.length === 0 && operations.length === 0
+  const isEmpty = feed.length === 0 && activeOpsData.length === 0
   const runtimeLabel = priorityOperation?.label || priorityOperation?.name || feed[0]?.linkedEntities?.[0] || 'Operational Runtime'
     console.log('[TELA:TRACE] isEmpty eval', {
       vmSource: vm.source,
@@ -270,6 +405,8 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
                 runtimeLabel={runtimeLabel}
                 statusLabel={undefined}
               />
+              <BriefingCard briefing={briefing} />
+              <FocusCard focus={focus} />
               {operationalCards.length > 0 && (
                 <section className="px-5 pb-5">
                   <div className="grid gap-3">
@@ -304,6 +441,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
               <CalendarWeekRail events={calendarEvents} baseDate={calendarBaseDate} onOpenCalendar={() => setTab('calendar')} isEmpty={false} />
               <CrusadeOperationsRail items={operations} unresolvedItems={unresolvedItemsState} onOperationTap={(name) => setSheet({ type: 'operation', name })} />
               <UnresolvedPressureCard pressure={unresolvedPressure} onOpen={() => setSheet({ type: 'unresolved' })} />
+              <ReplayCard replay={replay} />
               <ContinuityFeed feed={feed} onFeedTap={(item) => setSheet({ type: 'feed', item })} />
             </>
           )}

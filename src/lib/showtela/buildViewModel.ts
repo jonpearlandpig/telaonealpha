@@ -131,8 +131,17 @@ export function buildShowTelaVMFromHydratedState(
   }
 
   // Feed from continuity artifacts (newest first — reverse-chronological dispatch order)
-  const feed: FeedItem[] = state.continuityFeed.slice(0, 12).map(event => ({
-    id: event.id,
+  // Deduplicate by ID before slicing — duplicate OCIDs cause React key collisions in the feed
+  const seenFeedIds = new Set<string>()
+  const feed: FeedItem[] = state.continuityFeed
+    .filter(event => {
+      if (seenFeedIds.has(event.id)) return false
+      seenFeedIds.add(event.id)
+      return true
+    })
+    .slice(0, 12)
+    .map(event => ({
+      id: event.id,
     timestamp: event.timestamp ?? state.diagnostics.hydratedAt,
     title: event.headline,
     summary: event.summary ?? '',
@@ -141,8 +150,8 @@ export function buildShowTelaVMFromHydratedState(
     avatar: '',
     unresolved: false,
     linkedEntities: event.linkedEntities ?? [],
-    pressure: event.pressure,
-  }))
+      pressure: event.pressure,
+    }))
 
   const hydration: ShowTelaHydrationSummary = {
     connectedToNotion: false,  // hydrateRuntime() does not call Notion
