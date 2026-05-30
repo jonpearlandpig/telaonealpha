@@ -3,8 +3,10 @@ import { SESSION_COOKIE_NAME } from './lib/auth-config'
 
 export function middleware(req: NextRequest) {
 
-  // LOCAL DEV BYPASS
-  if (process.env.NODE_ENV === 'development') {
+  if (
+    process.env.NODE_ENV === 'development' &&
+    process.env.DISABLE_AUTH === 'true'
+  ) {
     return NextResponse.next()
   }
 
