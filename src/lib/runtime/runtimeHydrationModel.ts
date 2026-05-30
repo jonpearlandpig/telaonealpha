@@ -2,6 +2,8 @@ import type { loadDurableContinuity } from './durableMemory'
 import type { reconstructOperationalStateFromReplay } from './replay/reconstructOperationalState'
 import type { OperationalProjection } from './state/model'
 import type { ContinuityEvent } from '@/lib/showtela/types'
+import { extractOperationalEvents } from './operational/operationalExtraction'
+import type { OperationalEvent } from './operational/operationalExtraction'
 
 type ArtifactStructureParsed = {
   continuityEvent?: ContinuityEvent
@@ -57,6 +59,9 @@ export function buildHydratedRuntimeState(input: {
     pendingLineageChains: input.replay.state.recentLineage,
   }
 
+  const continuityFeed = extractContinuityFeedFromArtifacts(input.durable.artifacts)
+  const operationalEvents: OperationalEvent[] = extractOperationalEvents(continuityFeed)
+
   return {
     activeProjects: input.replay.state.activeProjects,
     activeEntities: input.replay.state.activeEntities,
@@ -70,7 +75,8 @@ export function buildHydratedRuntimeState(input: {
     operationalProjection: input.operationalProjection,
     snapshots: input.durable.snapshots.filter((snapshot) => snapshot.snapshotKind === 'checkpoint'),
     entities: input.durable.entities,
-    continuityFeed: extractContinuityFeedFromArtifacts(input.durable.artifacts),
+    continuityFeed,
+    operationalEvents,
     unresolved,
     replay: input.replay,
     diagnostics: input.diagnostics,

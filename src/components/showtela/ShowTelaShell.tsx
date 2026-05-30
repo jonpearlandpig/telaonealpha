@@ -4,7 +4,8 @@ import { useRouter } from 'next/navigation'
 import { createShowTelaId } from '@/lib/showtela/showTelaId'
 import { ContinuityIngest } from '@/components/runtime/continuity-ingest'
 import type { ContinuityIngestionInput, ContinuityIngestionMode } from '@/lib/continuity/normalize-ingestion'
-import { buildOperationalCalendarEvents } from '@/lib/showtela/calendar'
+import { buildOperationalCalendarEvents, buildCalendarFromOperationalEvents } from '@/lib/showtela/calendar'
+import { calculateOperationalReadiness } from '@/lib/runtime/operational/operationalExtraction'
 import { ActiveOpsRail } from './ActiveOpsRail'
 import { BottomDock } from './BottomDock'
 import { CalendarWeekRail } from './CalendarWeekRail'
@@ -502,7 +503,10 @@ export function ShowTelaShell({ vm, user, briefing, focus, replay, projection, s
   const unresolvedPressure = derivePressure(unresolvedItemsState)
   const priorityOperation = operations[0]
   const recentFeedItem = feed[0]
-  const operationalCards = projectionCards(projection)
+  const operationalEvents = vm.operationalEvents ?? []
+  // Suppress infrastructure-derived projection cards when operational events exist.
+  // Movement comes from real show dates and rehearsals, not thread/governance heuristics.
+  const operationalCards = operationalEvents.length > 0 ? [] : projectionCards(projection)
   const activeOperators = useMemo(() => activeOpsData.map((item) => item.name), [activeOpsData])
   const userFirstName = user?.name?.split(' ')[0]?.toLowerCase()
   const visibleActiveOps = activeOpsData.filter((item) => {
@@ -561,22 +565,23 @@ export function ShowTelaShell({ vm, user, briefing, focus, replay, projection, s
     activeOperators: activeOperators.slice(0, 6),
   }
 
-  const calendarBaseDate = useMemo(() => {
-    const anchor = latestTimeline?.timestamp || recentFeedItem?.timestamp
-    return anchor ? new Date(anchor) : new Date()
-  }, [latestTimeline?.timestamp, recentFeedItem?.timestamp])
+  const calendarBaseDate = useMemo(() => new Date(), [])
 
   const calendarEvents = useMemo(
-    () => buildOperationalCalendarEvents({
-      feed,
-      operations,
-      unresolvedItems: unresolvedItemsState,
-      runtimeTimeline,
-      people: activeOperators,
-      source: vm.source,
+    () => operationalEvents.length > 0
+      ? buildCalendarFromOperationalEvents(operationalEvents, { baseDate: calendarBaseDate })
+      : [],
+    [operationalEvents, calendarBaseDate],
+  )
+
+  const operationalReadiness = useMemo(
+    () => calculateOperationalReadiness({
+      operationalEvents,
+      crewCount: vm.activeOps.length,
+      blockersCount: vm.unresolvedPressure.blockedCount,
       baseDate: calendarBaseDate,
     }),
-    [activeOperators, calendarBaseDate, feed, operations, runtimeTimeline, unresolvedItemsState, vm.source],
+    [operationalEvents, vm.activeOps.length, vm.unresolvedPressure.blockedCount, calendarBaseDate],
   )
 
   async function submitContinuity(input: ContinuityIngestionInput) {
@@ -687,8 +692,8 @@ export function ShowTelaShell({ vm, user, briefing, focus, replay, projection, s
               <TELAwhyCard
                 crewCount={vm.activeOps.length}
                 departmentCount={vm.departments?.length ?? 0}
-                calendarCount={calendarEvents.length}
-                readiness={briefing.currentReadiness}
+                calendarCount={operationalEvents.filter(e => e.kind === 'show_day').length}
+                readiness={operationalReadiness.score}
                 lastFeedItem={feed[0] ? { timestamp: feed[0].timestamp ?? '', owner: feed[0].owner?.name ?? '' } : undefined}
               />
               <ReplayCard replay={replay} />

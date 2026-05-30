@@ -1,4 +1,5 @@
 import type { ContinuityEvent, ShowTelaHydrationSummary, ShowTelaRuntimeSnapshotMeta } from '@/lib/showtela/types'
+import type { OperationalEvent } from '@/lib/runtime/operational/operationalExtraction'
 
 export interface PersonItem {
   id: string
@@ -56,6 +57,7 @@ export interface ShowTelaViewModel {
   unresolvedPressure: UnresolvedPressure
   unresolved: UnresolvedItem[]
   feed: FeedItem[]
+  operationalEvents?: OperationalEvent[]
   continuityObjects: ContinuityEvent[]
   runtimeTimeline: Array<{ id: string; timestamp: string; actor: string; summary: string; continuityObjectId: string; pressureDelta: number }>
   source?: 'supabase' | 'notion' | 'empty'

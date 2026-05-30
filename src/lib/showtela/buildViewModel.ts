@@ -9,6 +9,7 @@ import type {
 } from '@/components/showtela/types'
 import type { HydratedRuntimeState } from '@/lib/runtime/runtimeHydrationModel'
 import { PERSON_AUTHORITY_ALLOWED } from '@/lib/entities/entityEngine'
+import type { OperationalEvent } from '@/lib/runtime/operational/operationalExtraction'
 
 // Sovereign adapter — maps HydratedRuntimeState (event-derived runtime truth) to ShowTelaViewModel.
 // This is the target path after Phase B SSR inversion. operationalProjection is never
@@ -172,6 +173,10 @@ export function buildShowTelaVMFromHydratedState(
       }
     : undefined
 
+  // Operational events — show dates, rehearsals, advances extracted from durable artifacts.
+  // These are the clean operational truth; infrastructure events are excluded upstream.
+  const operationalEvents: OperationalEvent[] = state.operationalEvents ?? []
+
   return {
     activeOps,
     fluencyPartners: [],  // no fluency partner classification in replay layer yet
@@ -180,6 +185,7 @@ export function buildShowTelaVMFromHydratedState(
     unresolvedPressure,
     unresolved,
     feed,
+    operationalEvents,
     continuityObjects: [],
     runtimeTimeline: [],
     source: 'supabase',
