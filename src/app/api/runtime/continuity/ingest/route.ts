@@ -15,11 +15,9 @@ export async function POST(req: Request) {
     const result = await ingestCanonicalContinuity(input)
 
     return NextResponse.json({
-      success: true,
-      event: result.event,
-      insertedId: result.insertedId,
+      ok: result.ok,
+      eventId: result.eventId,
       lineageId: result.lineageId,
-      data: result.data,
     })
   } catch (err) {
     return NextResponse.json(

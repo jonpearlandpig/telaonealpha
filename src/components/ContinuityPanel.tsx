@@ -12,7 +12,6 @@ import { loadArtifacts, togglePinArtifact, type ArtifactRecord } from '@/lib/art
 import { loadEntities } from '@/lib/entities/entityStore'
 import type { EntityRecord } from '@/lib/entities/entityEngine'
 import { retrieveOperationalContinuity } from '@/lib/runtime/continuityRetrieval'
-import { applyContinuityLifecycle, createContinuitySnapshot, loadContinuitySnapshots, persistContinuitySnapshot, restoreContinuitySnapshot, type ContinuitySnapshot } from '@/lib/runtime/continuitySnapshots'
 import { hydrateClientFromDurable, type HydrateSource } from '@/lib/artifacts/hydrateClient'
 
 type PearlItem = {
@@ -143,7 +142,6 @@ export function ContinuityPanel({ data, pearlItems, onCapturePearl, onRefreshPea
   const [artifacts, setArtifacts] = useState<ArtifactRecord[]>(() => loadArtifacts())
   const [entities, setEntities] = useState<EntityRecord[]>(() => loadEntities())
   const [focusedEntityId, setFocusedEntityId] = useState<string | undefined>(undefined)
-  const [snapshots, setSnapshots] = useState<ContinuitySnapshot[]>(() => loadContinuitySnapshots())
   const [hydrateSource, setHydrateSource] = useState<HydrateSource | null>(null)
 
   // Mount hydration — Supabase → localStorage → empty state
@@ -192,27 +190,6 @@ export function ContinuityPanel({ data, pearlItems, onCapturePearl, onRefreshPea
     artifacts: seededArtifacts,
     entities,
   })
-
-  useEffect(() => {
-    const create = () => {
-      const continuity = retrieveOperationalContinuity({
-        prompt: 'continuity panel',
-        currentThreadId: 'chat-main',
-        artifacts: seededArtifacts,
-        entities,
-      })
-      const snapshot = createContinuitySnapshot({
-        threadId: 'chat-main',
-        artifacts,
-        entities,
-        continuity,
-      })
-      setSnapshots(persistContinuitySnapshot(snapshot))
-    }
-    create()
-    const timer = window.setInterval(create, 60000)
-    return () => window.clearInterval(timer)
-  }, [artifacts, entities, seededArtifacts])
 
   return (
     <div className="continuity-grid">
@@ -340,42 +317,10 @@ export function ContinuityPanel({ data, pearlItems, onCapturePearl, onRefreshPea
           ))}
         </div>
         <div style={{ marginTop: 24 }}>
-          <SectionLabel>Recent Snapshots</SectionLabel>
-          {snapshots.slice(0, 4).map((snapshot) => (
-            <div key={snapshot.id} className="tela-card" style={{ padding: '10px 12px', marginBottom: 8 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 12, color: '#EAE0D2' }}>{new Date(snapshot.createdAt).toLocaleString()}</span>
-                <button
-                  onClick={() => {
-                    const restored = restoreContinuitySnapshot(snapshot.id)
-                    if (!restored) return
-                    window.dispatchEvent(new CustomEvent('tela-continuity-restored', { detail: { snapshotId: restored.id } }))
-                  }}
-                  style={{ border: '1px solid rgba(196,151,58,0.4)', color: '#C4973A', background: 'transparent', borderRadius: 999, padding: '4px 10px', fontSize: 10 }}
-                >
-                  Restore Continuity
-                </button>
-              </div>
-              <div style={{ fontSize: 10, color: 'rgba(234,224,210,0.5)', marginTop: 4 }}>
-                Active {snapshot.activeArtifacts.length} · Entities {snapshot.relatedEntities.length} · Score {Math.round(applyContinuityLifecycle(snapshot))}
-              </div>
-            </div>
-          ))}
-        </div>
-        <div style={{ marginTop: 24 }}>
           <SectionLabel>Active Operational State</SectionLabel>
           <div style={{ fontSize: 12, color: 'rgba(234,224,210,0.82)', lineHeight: 1.6 }}>
             Threads: {continuityContext.activeThreads.length} · Unresolved: {continuityContext.unresolvedContinuity.length} · Entities: {continuityContext.relatedEntities.length}
           </div>
-        </div>
-        <div style={{ marginTop: 24 }}>
-          <SectionLabel>Continuity Timeline</SectionLabel>
-          {snapshots.slice(0, 5).map((snapshot) => (
-            <div key={`${snapshot.id}-timeline`} style={{ paddingBottom: 8, borderBottom: '1px solid rgba(234,224,210,0.06)', marginBottom: 8 }}>
-              <div style={{ fontSize: 11, color: '#C4973A' }}>{new Date(snapshot.createdAt).toLocaleTimeString()}</div>
-              <div style={{ fontSize: 12, color: '#EAE0D2' }}>{snapshot.threadRefs[0] || 'thread'}</div>
-            </div>
-          ))}
         </div>
 
         <SectionLabel>This Week</SectionLabel>

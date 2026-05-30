@@ -4,22 +4,25 @@ type AutoscanSignal = {
   currentTruth: string
   mattersNow: string
   nextMovement: string
+  blockersLabel?: string
+  movementLabel?: string
+  readinessLabel?: string
 }
 
 export function ShowTelaHeader({
   userName,
-  unresolvedCount,
   autoscan,
   onNextMovementTap,
   isEmpty,
   runtimeLabel,
+  statusLabel,
 }: {
   userName?: string
-  unresolvedCount: number
   autoscan: AutoscanSignal
   onNextMovementTap?: () => void
   isEmpty?: boolean
   runtimeLabel?: string
+  statusLabel?: string
 }) {
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
@@ -29,7 +32,9 @@ export function ShowTelaHeader({
     autoscan.currentTruth,
     autoscan.mattersNow,
     autoscan.nextMovement,
-    unresolvedCount > 0 ? `${unresolvedCount} unresolved movement${unresolvedCount === 1 ? '' : 's'} still open` : 'continuity field calm',
+    autoscan.blockersLabel,
+    autoscan.movementLabel,
+    autoscan.readinessLabel,
     'governance movement holding steady',
   ].filter(Boolean)
   const tickerText = tickerItems.join('  /  ')
@@ -68,7 +73,7 @@ export function ShowTelaHeader({
               <p className="text-[11px] font-medium tracking-[0.06em] text-[#8A7351]">TELAtop</p>
               <span className="telatop-pulse h-2 w-2 flex-shrink-0 rounded-full bg-[#D5C1A1]" />
             </div>
-            <p className="text-[11px] font-medium text-[#A89880]">{unresolvedCount} unresolved</p>
+            <p className="text-[11px] font-medium text-[#A89880]">{statusLabel ?? 'projection live'}</p>
           </div>
           <p className="mt-6 max-w-[34ch] text-[15px] font-semibold leading-[1.35] tracking-[-0.2px] text-[#171411]">{autoscan.currentTruth}</p>
           <p className="mt-4 max-w-[34ch] text-[12px] leading-[1.55] text-[#6E6A63]">{autoscan.mattersNow}</p>

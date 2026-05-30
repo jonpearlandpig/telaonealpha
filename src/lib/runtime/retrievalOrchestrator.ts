@@ -1,7 +1,6 @@
 import type { ArtifactRecord } from '@/lib/artifacts/artifactStore'
 import type { EntityRecord } from '@/lib/entities/entityEngine'
 import { retrieveOperationalContinuity } from './continuityRetrieval'
-import { loadContinuitySnapshots } from './continuitySnapshots'
 import { buildEntityGraph, expandEntityRelationships, getEntityContinuity } from './entityGraph'
 import { rankByProvenance } from './provenanceRanker'
 import { assembleOperationalContext, type AssembledOperationalContext } from './contextAssembler'
@@ -36,10 +35,9 @@ export function orchestrateRetrieval(params: {
     .slice(0, 12)
 
   const unresolved = continuity.unresolvedContinuity.slice(0, 8)
-  const snapshots = loadContinuitySnapshots().slice(0, 4)
   const entities = params.entities.filter((e) => expandedIds.includes(e.id) || continuity.relatedEntities.some((r) => r.id === e.id)).slice(0, 12)
 
-  const assembled = assembleOperationalContext({ artifacts, entities, snapshots, unresolved })
+  const assembled = assembleOperationalContext({ artifacts, entities, snapshots: [], unresolved })
   assembled.explanation.push(`Entity continuity unresolved=${continuityMeta.unresolvedCount} provenance=${continuityMeta.provenance.toFixed(2)}`)
   return assembled
 }

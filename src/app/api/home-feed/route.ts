@@ -1,19 +1,20 @@
 import { NextResponse } from 'next/server'
-import { getShowTelaHome } from '@/lib/showtela/hydration'
-import { buildShowTelaVM } from '@/lib/showtela/buildViewModel'
+import { hydrateRuntime } from '@/lib/runtime/runtimeHydration'
+import { buildShowTelaVMFromHydratedState } from '@/lib/showtela/buildViewModel'
+import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
 
 export const dynamic = 'force-dynamic'
 
-// Returns canonical Supabase snapshot only — never fetches Notion.
+// Returns sovereign runtime state — never fetches Notion.
 // Notion is ingested explicitly via /api/runtime/continuity/ingest.
 export async function GET() {
   try {
-    const data = await getShowTelaHome()
-    const vm = buildShowTelaVM(data)
+    const state = await hydrateRuntime(SHOWTELA_WORKSPACE_ID)
+    const vm = buildShowTelaVMFromHydratedState(state)
     console.log('[HOME_FEED_RESPONSE]', {
       source: vm.source,
       feedCount: vm.feed?.length,
-      operationsCount: data.operations?.length,
+      operationsCount: vm.crusadeOperations?.length,
     })
     return NextResponse.json(vm, { headers: { 'Cache-Control': 'no-store' } })
   } catch (err) {

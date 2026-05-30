@@ -54,10 +54,20 @@ export async function llmNormalize(
     owner?: string
     operation?: string
     linkedEntity?: string
-  }
+  },
+  fileContents?: string[],
 ): Promise<LLMNormalizationResult | null> {
   if (!process.env.ANTHROPIC_API_KEY) return null
-  if (!rawInput?.trim()) return null
+
+  const combinedParts: string[] = []
+  if (rawInput?.trim()) combinedParts.push(rawInput.trim())
+  for (const fc of fileContents ?? []) {
+    if (fc.trim()) combinedParts.push(fc.trim())
+  }
+  if (combinedParts.length === 0) return null
+
+  // Cap combined input at ~8000 chars to stay well within haiku token budget
+  const combined = combinedParts.join('\n\n---\n\n').slice(0, 8000)
 
   const contextBlock = context
     ? `\nContext: owner=${context.owner ?? 'unknown'}, operation=${context.operation ?? 'none'}, entity=${context.linkedEntity ?? 'none'}`
@@ -71,7 +81,7 @@ export async function llmNormalize(
       messages: [
         {
           role: 'user',
-          content: `Mode: ${mode}${contextBlock}\n\nRaw input:\n${rawInput.slice(0, 3000)}`,
+          content: `Mode: ${mode}${contextBlock}\n\nRaw input:\n${combined}`,
         },
       ],
     })

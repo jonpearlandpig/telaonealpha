@@ -52,6 +52,7 @@ export interface ShowTelaViewModel {
   activeOps: PersonItem[]
   fluencyPartners: PersonItem[]
   crusadeOperations: OperationEntity[]
+  departments?: OperationEntity[]
   unresolvedPressure: UnresolvedPressure
   unresolved: UnresolvedItem[]
   feed: FeedItem[]

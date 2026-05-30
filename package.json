@@ -7,14 +7,17 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "operator": "node --import tsx --env-file=.env.local operator/index.ts"
+    "operator": "node --import tsx --env-file=.env.local operator/index.ts",
+    "test": "node --import tsx --test src/**/*.test.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.2",
     "@notionhq/client": "^2.2.15",
     "@supabase/supabase-js": "^2.106.1",
     "ai": "^6.0.177",
+    "mammoth": "^1.12.0",
     "next": "^15.5.18",
+    "pdf-parse": "^2.4.5",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },

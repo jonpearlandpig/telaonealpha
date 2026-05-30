@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth'
 import { persistDurableContinuity } from '@/lib/runtime/durableMemory'
 import type { ArtifactRecord } from '@/lib/artifacts/artifactStore'
 import type { EntityRecord } from '@/lib/entities/entityEngine'
+import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
 
 export async function POST(req: NextRequest) {
   const session = await getSession()
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest) {
     if (artifacts.length === 0 && entities.length === 0) {
       return NextResponse.json({ ok: true, persisted: 0 })
     }
-    await persistDurableContinuity('default-workspace', { artifacts, entities, snapshots: [] })
+    await persistDurableContinuity(SHOWTELA_WORKSPACE_ID, { artifacts, entities, snapshots: [] })
     return NextResponse.json({ ok: true, persisted: artifacts.length })
   } catch (err) {
     // Non-fatal — client localStorage remains the fallback

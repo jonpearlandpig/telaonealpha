@@ -1,19 +1,9 @@
 import { parseMarkdownDirectory } from '@/lib/continuity/parseMarkdownDirectory'
 import { loadDurableContinuity } from '@/lib/runtime/durableMemory'
 import type { ArtifactRecord } from '@/lib/artifacts/artifactStore'
-import type { DurableArtifactRow } from '@/lib/supabase/schema'
 import { SHOWTELA_RUNTIME_ARTIFACT_GROUP_ID, SHOWTELA_WORKSPACE_ID } from './runtimeIds'
 import { createRuntimeSnapshotMeta } from './runtimeSnapshot'
 import type { ContinuityEvent, OperationEntity, PersonEntity, ShowTelaHomeData } from './types'
-
-function parseArtifactPayload(payload: string | undefined): ArtifactRecord | null {
-  if (!payload) return null
-  try {
-    return JSON.parse(payload) as ArtifactRecord
-  } catch {
-    return null
-  }
-}
 
 function recoverEventFromArtifact(artifact: ArtifactRecord): ContinuityEvent {
   const structure = artifact.structure
@@ -94,34 +84,14 @@ function inferArtifactOperationState(artifact: ArtifactRecord): { people: Person
   return null
 }
 
-function toTimestamp(value?: string | null) {
-  if (!value) return 0
-  const parsed = new Date(value).getTime()
-  return Number.isFinite(parsed) ? parsed : 0
-}
-
 export function recoverCanonicalShowTelaHomeFromArtifactRows(input: {
-  artifacts: DurableArtifactRow[]
+  artifacts: ArtifactRecord[]
   cached: ShowTelaHomeData | null
   cachedUpdatedAt?: string | null
 }): ShowTelaHomeData | null {
   const runtimeArtifacts = input.artifacts
-    .map((row) => parseArtifactPayload(row.payload))
-    .filter((artifact): artifact is ArtifactRecord => Boolean(artifact))
     .filter((artifact) => artifact.artifactGroupId === SHOWTELA_RUNTIME_ARTIFACT_GROUP_ID)
     .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
-
-  const latestArtifactTimestamp = toTimestamp(runtimeArtifacts[0]?.createdAt)
-  const cachedTimestamp = Math.max(
-    toTimestamp(input.cached?.runtimeSnapshotMeta?.updatedAt),
-    toTimestamp(input.cachedUpdatedAt),
-  )
-
-  // Cache is current — no newer artifacts exist. Return null so the caller uses
-  // the cache directly without triggering a repair write that refreshes updated_at.
-  if (input.cached && cachedTimestamp >= latestArtifactTimestamp) {
-    return null
-  }
 
   for (const artifact of runtimeArtifacts) {
     const rebuilt = reconstructDirectoryState(artifact) ?? inferArtifactOperationState(artifact)

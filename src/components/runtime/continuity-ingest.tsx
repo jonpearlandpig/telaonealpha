@@ -59,12 +59,30 @@ export function ContinuityIngest({
   const readFileContents = async (files: File[]) => {
     const results: Array<{ name: string; content: string; type: string }> = []
     for (const file of files) {
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
       const isText = file.type === 'text/plain' || file.type === 'text/markdown' ||
-        file.name.endsWith('.md') || file.name.endsWith('.txt') || file.name.endsWith('.markdown')
+        ext === 'md' || ext === 'txt' || ext === 'markdown'
+      const isExtractable = file.type === 'application/pdf' || ext === 'pdf' ||
+        file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || ext === 'docx'
+
       if (isText) {
         try {
           const content = await file.text()
           results.push({ name: file.name, content, type: file.type || 'text/plain' })
+        } catch {
+          results.push({ name: file.name, content: '', type: file.type })
+        }
+      } else if (isExtractable) {
+        try {
+          const fd = new FormData()
+          fd.append('file', file)
+          const res = await fetch('/api/parse-document', { method: 'POST', body: fd })
+          if (res.ok) {
+            const json = await res.json() as { text: string; mimeType: string }
+            results.push({ name: file.name, content: json.text, type: json.mimeType || file.type })
+          } else {
+            results.push({ name: file.name, content: '', type: file.type })
+          }
         } catch {
           results.push({ name: file.name, content: '', type: file.type })
         }

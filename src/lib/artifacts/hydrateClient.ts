@@ -10,39 +10,6 @@ export type HydrateResult = {
   entityCount: number
 }
 
-// Remote wins on ID conflict — Supabase is canonical.
-// Local-only records are retained (may be pending the async write).
-function mergeArtifacts(local: ArtifactRecord[], remote: ArtifactRecord[]): ArtifactRecord[] {
-  const merged = new Map<string, ArtifactRecord>()
-  for (const a of local) merged.set(a.id, a)
-  for (const a of remote) merged.set(a.id, a)   // remote overwrites local on conflict
-  return Array.from(merged.values()).sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  )
-}
-
-function mergeEntities(local: EntityRecord[], remote: EntityRecord[]): EntityRecord[] {
-  const merged = new Map<string, EntityRecord>()
-  for (const e of local) merged.set(e.id, e)
-  for (const e of remote) {
-    const existing = merged.get(e.id)
-    if (existing) {
-      // Preserve client-only fields that Supabase doesn't store
-      merged.set(e.id, {
-        ...e,
-        aliases: existing.aliases.length ? existing.aliases : e.aliases,
-        linkedArtifacts: existing.linkedArtifacts.length ? existing.linkedArtifacts : e.linkedArtifacts,
-        linkedThreads: existing.linkedThreads.length ? existing.linkedThreads : e.linkedThreads,
-        operationalContexts: existing.operationalContexts.length ? existing.operationalContexts : e.operationalContexts,
-        continuityCount: Math.max(existing.continuityCount, e.continuityCount),
-      })
-    } else {
-      merged.set(e.id, e)
-    }
-  }
-  return Array.from(merged.values()).sort((a, b) => b.continuityCount - a.continuityCount)
-}
-
 // Deterministic fallback order: Supabase → localStorage → empty state
 export async function hydrateClientFromDurable(): Promise<HydrateResult> {
   // Step 1: try Supabase
@@ -50,13 +17,9 @@ export async function hydrateClientFromDurable(): Promise<HydrateResult> {
     const res = await fetch('/api/load-artifacts', { cache: 'no-store' })
     if (res.ok) {
       const body = await res.json() as { artifacts: ArtifactRecord[]; entities: EntityRecord[]; source: string }
-      const local = loadArtifacts()
-      const localEntities = loadEntities()
-      const merged = mergeArtifacts(local, body.artifacts)
-      const mergedEntities = mergeEntities(localEntities, body.entities)
-      saveArtifacts(merged)
-      saveEntities(mergedEntities)
-      return { source: 'supabase', artifactCount: merged.length, entityCount: mergedEntities.length }
+      saveArtifacts(body.artifacts)
+      saveEntities(body.entities)
+      return { source: 'supabase', artifactCount: body.artifacts.length, entityCount: body.entities.length }
     }
   } catch { /* Supabase unavailable — fall through */ }
 

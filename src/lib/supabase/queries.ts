@@ -35,10 +35,16 @@ type EntityDbRow = {
 type SnapshotDbRow = {
   id: string
   workspace_id: string
+  snapshot_kind: DurableSnapshotRow['snapshotKind']
+  replay_source: DurableSnapshotRow['replaySource']
   thread_refs: string[]
   entity_refs: string[]
   lineage_refs: string[]
   unresolved_count: number
+  replayed_event_count: number
+  latest_replay_sequence?: number
+  latest_event_id?: string
+  latest_event_at?: string
   created_at: string
   updated_at: string
   provenance: DurableSnapshotRow['provenance']
@@ -81,10 +87,16 @@ function toSnapshotRow(db: SnapshotDbRow): DurableSnapshotRow {
   return {
     id: db.id,
     workspaceId: db.workspace_id,
+    snapshotKind: db.snapshot_kind,
+    replaySource: db.replay_source,
     threadRefs: db.thread_refs,
     entityRefs: db.entity_refs,
     lineageRefs: db.lineage_refs,
     unresolvedCount: db.unresolved_count,
+    replayedEventCount: db.replayed_event_count,
+    latestReplaySequence: db.latest_replay_sequence,
+    latestEventId: db.latest_event_id,
+    latestEventAt: db.latest_event_at,
     createdAt: db.created_at,
     updatedAt: db.updated_at,
     provenance: db.provenance,
@@ -147,16 +159,31 @@ export async function upsertEntityRow(row: DurableEntityRow): Promise<DurableEnt
   return row
 }
 
+export async function deleteEntityRow(id: string): Promise<void> {
+  const db = getSupabaseServerClient()
+  const { error } = await db.from('durable_entities').delete().eq('id', id)
+  if (error) {
+    console.error('[supabase:queries:deleteEntityRow] failed', { message: error.message, id })
+    throw new Error(`deleteEntityRow: ${error.message}`)
+  }
+}
+
 export async function upsertSnapshotRow(row: DurableSnapshotRow): Promise<DurableSnapshotRow> {
   console.log('[supabase:queries:upsertSnapshotRow] id:', row.id, 'workspace:', row.workspaceId)
   const db = getSupabaseServerClient()
   const { error } = await db.from('durable_snapshots').upsert([{
     id: row.id,
     workspace_id: row.workspaceId,
+    snapshot_kind: row.snapshotKind,
+    replay_source: row.replaySource,
     thread_refs: row.threadRefs,
     entity_refs: row.entityRefs,
     lineage_refs: row.lineageRefs,
     unresolved_count: row.unresolvedCount,
+    replayed_event_count: row.replayedEventCount,
+    latest_replay_sequence: row.latestReplaySequence,
+    latest_event_id: row.latestEventId,
+    latest_event_at: row.latestEventAt,
     created_at: row.createdAt,
     updated_at: row.updatedAt,
     provenance: row.provenance,

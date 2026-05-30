@@ -1,35 +1,99 @@
-import type { ContinuityEvent } from '@/lib/showtela/types'
-import { getShowTelaHome } from '@/lib/showtela/hydration'
-import { ingestShowTelaContinuity } from '@/lib/showtela/runtimeContinuity'
-import { writeShowTelaCache } from '@/lib/supabase/operationalCache'
-import type {
-  ContinuityIngestionInput,
-  NormalizeContinuityIngestionOptions,
+import { bootstrapRuntimeSpine } from '@/lib/runtime/bootstrap'
+import { emitRuntimeEvent } from '@/lib/runtime/eventBus'
+import { orchestrateRuntimeAction } from '@/lib/runtime/orchestration'
+import { ACTIONS } from '@/lib/runtime/actions'
+import { persistDurableContinuity } from '@/lib/runtime/durableMemory'
+import {
+  normalizeContinuityIngestionWithLLM,
+  type ContinuityIngestionInput,
+  type NormalizeContinuityIngestionOptions,
 } from './normalize-ingestion'
+import {
+  createContinuityOcid,
+  tryCreateContinuityEventRecord,
+  createRuntimeContinuityArtifact,
+  extractContinuityEntities,
+} from '@/lib/showtela/continuityRecord'
+import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
 
 export async function ingestCanonicalContinuity(
   input: ContinuityIngestionInput,
   options?: NormalizeContinuityIngestionOptions,
-): Promise<{
-  event: ContinuityEvent
-  insertedId?: string
-  lineageId: string
-  data: Awaited<ReturnType<typeof getShowTelaHome>>
-}> {
-  const baseData = await getShowTelaHome()
-  const result = await ingestShowTelaContinuity({
-    baseData,
-    payload: input,
-    submittedBy: options?.author ?? input.owner ?? 'Operations',
-  })
-  await writeShowTelaCache(result.data)
+): Promise<{ ok: true; eventId: string; lineageId: string }> {
+  const timestamp = new Date().toISOString()
+  const submittedBy = options?.author ?? input.owner ?? 'Operations'
 
-  return {
-    event: result.event,
-    insertedId: result.event.id,
-    lineageId: result.event.lineageRef?.lineageId ?? result.ocid,
-    data: result.data,
+  const fileContents = (input.assetContents ?? [])
+    .filter(f => f.content.trim().length > 0)
+    .map(f => f.content.trim())
+
+  const firstAssetName = input.assetContents?.[0]?.name ?? input.assetNames?.[0]
+  const headlineSeed = input.headline?.trim() || input.body?.trim() || firstAssetName || 'continuity'
+  const ocid = createContinuityOcid(headlineSeed, timestamp)
+
+  const event = await normalizeContinuityIngestionWithLLM(input, {
+    author: submittedBy,
+    continuityObjectId: ocid,
+    eventId: ocid,
+    existingLineageChain: options?.existingLineageChain,
+    lineageParentId: options?.lineageParentId,
+    timestamp,
+  })
+
+  const lineageId = event.lineageRef?.lineageId ?? ocid
+
+  // Persist durable artifact + entities — hydrateRuntime() reads these via loadDurableContinuity()
+  const constitutionalEvent = await tryCreateContinuityEventRecord({ event, ocid, submittedBy })
+  const artifact = createRuntimeContinuityArtifact({ constitutionalEvent, event, ocid, fileContents })
+  const entities = extractContinuityEntities(event, artifact)
+
+  try {
+    await persistDurableContinuity(SHOWTELA_WORKSPACE_ID, { artifacts: [artifact], entities, snapshots: [] })
+  } catch (err) {
+    console.error('[runtimeIngest] durable persistence non-fatal:', String(err))
   }
+
+  // Emit to runtime_events via bootstrap persistence handler
+  bootstrapRuntimeSpine()
+
+  await orchestrateRuntimeAction({
+    workspaceId: SHOWTELA_WORKSPACE_ID,
+    action: ACTIONS.INGEST_CONTINUITY,
+    authority: 'S2',
+    governanceState: 'approved',
+    executionState: 'completed',
+    source: 'operator',
+    threadId: event.threadId,
+    linkedEntities: event.linkedEntities ?? [],
+    authorship: {
+      author: submittedBy,
+      surface: 'ingest',
+      parentLineageId: options?.lineageParentId,
+      existingLineageChain: options?.existingLineageChain,
+    },
+    payload: { ocid, headline: event.headline, insertedId: artifact.id },
+  })
+
+  await emitRuntimeEvent({
+    workspaceId: SHOWTELA_WORKSPACE_ID,
+    type: 'continuity.ingested',
+    source: 'operator',
+    governanceState: 'approved',
+    executionState: 'completed',
+    lineageId,
+    payloadType: 'continuity.ingest',
+    payload: {
+      ocid,
+      headline: event.headline,
+      body: event.body,
+      insertedId: artifact.id,
+      threadId: event.threadId,
+      linkedEntities: event.linkedEntities ?? [],
+      sourceMode: event.sourceMode,
+    },
+  })
+
+  return { ok: true, eventId: event.id, lineageId }
 }
 
 export function extractInboxTitle(property: unknown) {

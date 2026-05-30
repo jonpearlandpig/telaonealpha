@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import crypto from 'crypto'
 import {
   extractInboxRichText,
   extractInboxSelect,
@@ -6,6 +7,8 @@ import {
   ingestCanonicalContinuity,
   resolveInboxDatabaseId,
 } from '@/lib/continuity/ingest-runtime'
+import { emitRuntimeEvent } from '@/lib/runtime/eventBus'
+import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
 
 export const dynamic = 'force-dynamic'
 
@@ -75,8 +78,13 @@ export async function POST() {
     )
   }
 
+  const traceId = crypto.randomUUID()
+  const correlationId = newest.id
+  const sourceMode = extractInboxSelect(properties['Source'])?.toLowerCase() === 'voice' ? 'voice-note' : 'quick-update'
+
+  // ingestCanonicalContinuity now emits continuity.ingested internally via bootstrapRuntimeSpine
   const ingested = await ingestCanonicalContinuity({
-    mode: extractInboxSelect(properties['Source'])?.toLowerCase() === 'voice' ? 'voice-note' : 'quick-update',
+    mode: sourceMode,
     headline: title,
     body,
     owner: extractInboxRichText(properties['Submitted By']) || 'Operations',
@@ -86,6 +94,26 @@ export async function POST() {
       extractInboxSelect(properties['Type']),
       extractInboxSelect(properties['Severity']),
     ].filter(Boolean),
+  })
+
+  await emitRuntimeEvent({
+    workspaceId: SHOWTELA_WORKSPACE_ID,
+    type: 'continuity.normalized',
+    source: 'automation',
+    governanceState: 'approved',
+    executionState: 'completed',
+    traceId,
+    correlationId,
+    lineageId: ingested.lineageId,
+    payloadType: 'continuity.normalized-event',
+    payload: {
+      notionPageId: newest.id,
+      insertedId: ingested.eventId,
+      normalizedHeadline: title,
+      schemaVersion: 'runtime.v1',
+      eventVersion: 1,
+      sourceMode,
+    },
   })
 
   try {
@@ -106,9 +134,7 @@ export async function POST() {
 
   return NextResponse.json({
     success: true,
-    insertedId: ingested.insertedId,
-    normalized: ingested.event,
+    insertedId: ingested.eventId,
     lineageId: ingested.lineageId,
-    data: ingested.data,
   })
 }

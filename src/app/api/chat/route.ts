@@ -2,14 +2,15 @@ import { getAnthropicClient, buildSystemPrompt, MODEL } from '@/lib/anthropic'
 
 function buildFallbackOperationalReply(question: string, operationalContext?: string) {
   const normalizedQuestion = question.trim().toLowerCase()
-  const unresolvedMatch = operationalContext?.match(/Unresolved items:\s*([^\n]+)/i)
+  const blockersMatch = operationalContext?.match(/Blockers:\s*([^\n]+)/i)
+  const movementMatch = operationalContext?.match(/Movement:\s*([^\n]+)/i)
+  const readinessMatch = operationalContext?.match(/Readiness:\s*([^\n]+)/i)
   const latestMatch = operationalContext?.match(/Latest continuity:\s*([^\n]+)/i)
-  const operationMatch = operationalContext?.match(/Priority operation:\s*([^\n]+)/i)
 
   if (normalizedQuestion.includes('blocking') || normalizedQuestion.includes('attention') || normalizedQuestion.includes('unresolved')) {
     return [
-      unresolvedMatch ? `${unresolvedMatch[0]}.` : 'No unresolved items are currently hydrated.',
-      operationMatch ? `${operationMatch[0]}.` : null,
+      blockersMatch ? `${blockersMatch[0]}.` : 'No blocker chain is currently hydrated.',
+      readinessMatch ? `${readinessMatch[0]}.` : null,
       latestMatch ? `Closest active signal is ${latestMatch[1]}.` : null,
     ].filter(Boolean).join(' ')
   }
@@ -21,7 +22,7 @@ function buildFallbackOperationalReply(question: string, operationalContext?: st
   }
 
   return latestMatch
-    ? `Operational context is limited right now. Start with ${latestMatch[1]}.`
+    ? `Operational context is limited right now. Start with ${latestMatch[1]}.${movementMatch ? ` ${movementMatch[0]}.` : ''}`
     : 'Operational context is limited right now.'
 }
 

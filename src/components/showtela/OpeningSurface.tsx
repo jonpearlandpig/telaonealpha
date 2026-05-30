@@ -93,6 +93,41 @@ export function OpeningSurface({
           operational origin node
         </p>
       </div>
+
+      {/* Upload suggestions */}
+      <div className="relative z-10 mt-10 w-full max-w-[340px] px-5">
+        <p
+          className="mb-4 text-center text-[11px] font-semibold uppercase tracking-[0.22em]"
+          style={{ color: 'rgba(200,155,47,0.52)' }}
+        >
+          Upload your first document
+        </p>
+        <div className="flex flex-col gap-2">
+          {[
+            { label: 'Anchor Directory', detail: 'People, roles, and contacts' },
+            { label: 'Tour Calendar', detail: 'Dates, venues, and schedule' },
+            { label: 'Production Rider', detail: 'Tech, hospitality, and logistics' },
+          ].map(({ label, detail }) => (
+            <button
+              key={label}
+              onClick={() => onOpenIngest('upload-files')}
+              className="flex items-center justify-between rounded-[18px] px-4 py-3.5 text-left transition-opacity hover:opacity-90 active:opacity-75"
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(200,155,47,0.14)',
+              }}
+            >
+              <div>
+                <p className="text-[14px] font-semibold" style={{ color: '#F8F6F2' }}>{label}</p>
+                <p className="mt-0.5 text-[11px]" style={{ color: 'rgba(200,155,47,0.48)' }}>{detail}</p>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ opacity: 0.4 }}>
+                <path d="M3 7h8M7 3l4 4-4 4" stroke="#C89B2F" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

@@ -7,7 +7,6 @@ import { extractEntities, type EntityRecord } from '@/lib/entities/entityEngine'
 import { loadEntities, upsertEntities } from '@/lib/entities/entityStore'
 import { ArtifactRenderer } from './artifacts/ArtifactRenderer'
 import { retrieveOperationalContinuity } from '@/lib/runtime/continuityRetrieval'
-import { restoreContinuitySnapshot } from '@/lib/runtime/continuitySnapshots'
 
 type Message = {
   role: 'user' | 'assistant'
@@ -153,8 +152,7 @@ export function ChatInterface({ wikiContext }: Props) {
       artifacts: loadArtifacts(),
       entities: loadEntities(),
     })
-    const restored = restoreContinuitySnapshot()
-    const contextLine = `Context: ${continuity.relatedEntities.slice(0, 3).map((e) => e.name).join(', ')} | unresolved ${continuity.unresolvedContinuity.length} | snapshot ${restored?.id ?? 'none'}`
+    const contextLine = `Context: ${continuity.relatedEntities.slice(0, 3).map((e) => e.name).join(', ')} | unresolved ${continuity.unresolvedContinuity.length}`
     continueFromRef.current = artifact.id
     setInput(`Continue from artifact: ${artifact.title}\n${contextLine}`)
     textareaRef.current?.focus()

@@ -3,9 +3,20 @@
 import { useEffect, useState } from 'react'
 import { ShowTelaShell } from './ShowTelaShell'
 import type { ShowTelaViewModel } from './types'
+import type { OperationalBrief } from '@/lib/briefing/types'
+import type { FocusEngineResult } from '@/lib/focus/types'
+import type { ReplayOutput } from '@/lib/replay/types'
+import type { OperationalProjection } from '@/lib/runtime/state/model'
 import { clearStaleRuntimeSnapshot } from '@/lib/showtela/runtimePersist'
 
 type User = { name: string; email: string; image: string }
+
+type RuntimeEngines = {
+  briefing: OperationalBrief
+  focus: FocusEngineResult
+  replay: ReplayOutput
+  projection: OperationalProjection
+}
 
 const DIAGNOSTIC_LABELS: Record<string, string> = {
   'notion-unavailable': 'Last known state',
@@ -54,7 +65,7 @@ function RuntimeDebugOverlay({ vm }: { vm: ShowTelaViewModel }) {
   )
 }
 
-export function ShowTelaRuntime({ vm: initialVm, user }: { vm: ShowTelaViewModel; user?: User }) {
+export function ShowTelaRuntime({ vm: initialVm, user, briefing, focus, replay, projection }: { vm: ShowTelaViewModel; user?: User } & RuntimeEngines) {
   const [vm] = useState<ShowTelaViewModel>(initialVm)
   const [showDebug] = useState(() =>
     typeof window !== 'undefined' && (
@@ -76,7 +87,7 @@ export function ShowTelaRuntime({ vm: initialVm, user }: { vm: ShowTelaViewModel
   return (
     <>
       {showDebug && <RuntimeDebugOverlay vm={vm} />}
-      <ShowTelaShell vm={vm} user={user} />
+      <ShowTelaShell vm={vm} user={user} briefing={briefing} focus={focus} replay={replay} projection={projection} />
       {showDiagnostic && (
         <div className="pointer-events-none fixed bottom-28 left-0 right-0 z-40 mx-auto w-full max-w-[430px] px-5 md:max-w-[680px] xl:max-w-[760px]">
           <DiagnosticBar state={vm.diagnosticState!} />
