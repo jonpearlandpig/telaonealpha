@@ -48,7 +48,8 @@ test('buildPersistenceMutationsForEvent persists canonical operator analysis for
 
   assert.equal(writes.enforcementActions.length, 1)
   assert.equal(writes.enforcementActions[0]?.decision, 'operator.analysis.completed')
-  assert.equal(writes.operationalObjects.some((item) => item.objectType === 'routing-plan'), true)
-  assert.equal(writes.operationalObjects.some((item) => item.objectType === 'authorship-guard'), true)
-  assert.equal(writes.operationalObjects.some((item) => item.objectType === 'legality-check'), true)
+  // Infrastructure events are excluded from operational objects — they must not create movement states
+  assert.equal(writes.operationalObjects.some((item) => item.objectType === 'routing-plan'), false)
+  assert.equal(writes.operationalObjects.some((item) => item.objectType === 'authorship-guard'), false)
+  assert.equal(writes.operationalObjects.some((item) => item.objectType === 'legality-check'), false)
 })
