@@ -2,6 +2,7 @@ import { classifyDocument } from './documentClassifier'
 import { extractPersonsFromAnchorDirectory } from './anchorDirectoryExtractor'
 import { extractShowDatesFromCalendar } from './calendarExtractor'
 import { extractDepartmentsFromRider } from './riderExtractor'
+import { extractVenueFromRider, buildVenueEntity, buildRiderArtifact } from '@/lib/entities/venueEntityFactory'
 import { ingestCanonicalContinuity } from './ingest-runtime'
 import { persistDurableContinuity } from '@/lib/runtime/durableMemory'
 import { deterministicArtifactId } from '@/lib/artifacts/artifactStore'
@@ -122,6 +123,8 @@ export type DocumentHydration = {
   personsActivated: number
   showDatesImported: number
   departmentsActivated: number
+  venueCreated: boolean
+  venueId?: string
 }
 
 export type DocumentIngestResult = {
@@ -142,6 +145,8 @@ export async function ingestDocumentContinuity(input: ContinuityIngestionInput):
   let personsActivated = 0
   let showDatesImported = 0
   let departmentsActivated = 0
+  let venueCreated = false
+  let venueId: string | undefined = undefined
   let summaryHeadline = ''
   let summaryBody = ''
 
@@ -187,17 +192,36 @@ export async function ingestDocumentContinuity(input: ContinuityIngestionInput):
     const departments = extractDepartmentsFromRider(content)
     departmentsActivated = departments.length
 
-    const placeholderId = deterministicArtifactId({
+    // Extract venue identity from rider content (deterministic, no LLM)
+    const venueExtraction = extractVenueFromRider(content, filename)
+
+    // Build rider artifact if venue was identified — links departments and venue entity
+    const riderArtifact = venueExtraction
+      ? buildRiderArtifact({ extraction: venueExtraction, departments, filename, content, timestamp })
+      : null
+
+    const placeholderId = riderArtifact?.id ?? deterministicArtifactId({
       title: `rider-${timestamp.slice(0, 10)}`,
       threadId: SHOWTELA_RUNTIME_THREAD_ID,
       sessionId: SESSION_ID,
       createdAt: timestamp,
     })
+
     for (const dept of departments) {
       extraEntities.push(departmentEntity(dept, placeholderId, timestamp))
     }
 
-    summaryHeadline = `Production Rider — ${departmentsActivated} department${departmentsActivated === 1 ? '' : 's'} activated`
+    if (venueExtraction) {
+      extraEntities.push(buildVenueEntity(venueExtraction, placeholderId, timestamp))
+      venueCreated = true
+      venueId = venueExtraction.venueId
+    }
+    if (riderArtifact) {
+      extraArtifacts.push(riderArtifact)
+    }
+
+    const venueSuffix = venueExtraction ? ` — ${venueExtraction.venueName}` : ''
+    summaryHeadline = `Production Rider${venueSuffix} — ${departmentsActivated} department${departmentsActivated === 1 ? '' : 's'} activated`
     summaryBody = departments.length
       ? `Departments: ${departments.join(', ')}`
       : 'Production rider ingested.'
@@ -232,6 +256,8 @@ export async function ingestDocumentContinuity(input: ContinuityIngestionInput):
       personsActivated,
       showDatesImported,
       departmentsActivated,
+      venueCreated,
+      venueId,
     },
   }
 }

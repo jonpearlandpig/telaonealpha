@@ -12,6 +12,8 @@ type ArtifactDbRow = {
   lineage_id?: string
   artifact_group_id?: string
   payload?: string
+  venue_id?: string
+  is_active_rider?: boolean
   created_at: string
   updated_at: string
   provenance: DurableArtifactRow['provenance']
@@ -60,6 +62,8 @@ function toArtifactRow(db: ArtifactDbRow): DurableArtifactRow {
     lineageId: db.lineage_id,
     artifactGroupId: db.artifact_group_id,
     payload: db.payload,
+    venueId: db.venue_id,
+    isActiveRider: db.is_active_rider,
     createdAt: db.created_at,
     updatedAt: db.updated_at,
     provenance: db.provenance,
@@ -226,4 +230,61 @@ export async function listWorkspaceSnapshots(workspaceId: string): Promise<Durab
     .order('created_at', { ascending: false })
   if (error) throw new Error(`listWorkspaceSnapshots: ${error.message}`)
   return (data as SnapshotDbRow[]).map(toSnapshotRow)
+}
+
+export async function listVenueArtifacts(workspaceId: string, venueId: string): Promise<DurableArtifactRow[]> {
+  const db = getSupabaseServerClient()
+  const { data, error } = await db
+    .from('durable_artifacts')
+    .select('*')
+    .eq('workspace_id', workspaceId)
+    .eq('venue_id', venueId)
+    .order('created_at', { ascending: false })
+  if (error) throw new Error(`listVenueArtifacts: ${error.message}`)
+  return (data as ArtifactDbRow[]).map(toArtifactRow)
+}
+
+export async function getVenueEntity(workspaceId: string, venueId: string): Promise<DurableEntityRow | null> {
+  const db = getSupabaseServerClient()
+  const { data, error } = await db
+    .from('durable_entities')
+    .select('*')
+    .eq('workspace_id', workspaceId)
+    .eq('id', venueId)
+    .single()
+  if (error) return null
+  return toEntityRow(data as EntityDbRow)
+}
+
+// Clears active rider on all artifacts for the venue, then sets the specified one active.
+// Caller is responsible for emitting RuntimeEvent after this succeeds.
+export async function setActiveRider(workspaceId: string, venueId: string, artifactId: string): Promise<void> {
+  const db = getSupabaseServerClient()
+
+  const { error: clearError } = await db
+    .from('durable_artifacts')
+    .update({ is_active_rider: false })
+    .eq('workspace_id', workspaceId)
+    .eq('venue_id', venueId)
+
+  if (clearError) throw new Error(`setActiveRider clear: ${clearError.message}`)
+
+  const { error: setError } = await db
+    .from('durable_artifacts')
+    .update({ is_active_rider: true })
+    .eq('workspace_id', workspaceId)
+    .eq('id', artifactId)
+
+  if (setError) throw new Error(`setActiveRider set: ${setError.message}`)
+}
+
+// Links an existing artifact to a venue by setting its venue_id column.
+// Used when venue is identified after initial ingestion.
+export async function linkArtifactToVenue(artifactId: string, venueId: string): Promise<void> {
+  const db = getSupabaseServerClient()
+  const { error } = await db
+    .from('durable_artifacts')
+    .update({ venue_id: venueId })
+    .eq('id', artifactId)
+  if (error) throw new Error(`linkArtifactToVenue: ${error.message}`)
 }

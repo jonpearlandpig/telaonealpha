@@ -6,6 +6,7 @@ import type {
   ShowTelaViewModel,
   UnresolvedItem,
   UnresolvedPressure,
+  VenueItem,
 } from '@/components/showtela/types'
 import type { HydratedRuntimeState } from '@/lib/runtime/runtimeHydrationModel'
 import { PERSON_AUTHORITY_ALLOWED } from '@/lib/entities/entityEngine'
@@ -109,6 +110,26 @@ export function buildShowTelaVMFromHydratedState(
       unresolvedCount: e.unresolvedLinks,
     }))
 
+  // Venue entities from rider ingestion — type === 'venue', id prefix venue:
+  const venues: VenueItem[] = state.entities
+    .filter(e => e.type === 'venue')
+    .map(e => {
+      const aliases = (e as unknown as { aliases?: string[] }).aliases ?? []
+      return {
+        id: e.id,
+        name: e.name,
+        city: aliases[0],
+        state: aliases[1],
+        departments: [],
+        riderCount: e.relatedArtifacts.length,
+        activeRiderId: undefined,
+        activeRiderDate: undefined,
+        loadIn: undefined,
+        loadOut: undefined,
+        contact: undefined,
+      }
+    })
+
   // Unresolved items from replay reconstruction
   const unresolved: UnresolvedItem[] = state.unresolved.incompleteArtifacts.map(id => ({
     id: `unresolved:${id}`,
@@ -181,6 +202,7 @@ export function buildShowTelaVMFromHydratedState(
     fluencyPartners: [],  // no fluency partner classification in replay layer yet
     crusadeOperations,
     departments,
+    venues,
     unresolvedPressure,
     unresolved,
     feed,

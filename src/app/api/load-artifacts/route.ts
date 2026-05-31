@@ -6,7 +6,7 @@ import type { ArtifactRecord } from '@/lib/artifacts/artifactStore'
 import type { EntityRecord, EntityType } from '@/lib/entities/entityEngine'
 import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
 
-const VALID_ENTITY_TYPES = new Set<EntityType>(['person', 'project', 'organization', 'system', 'location', 'ip', 'context'])
+const VALID_ENTITY_TYPES = new Set<EntityType>(['person', 'project', 'organization', 'system', 'location', 'ip', 'context', 'venue'])
 
 function toArtifactRecord(row: DurableArtifactRow): ArtifactRecord | null {
   // Primary path: payload stores full ArtifactRecord as JSON

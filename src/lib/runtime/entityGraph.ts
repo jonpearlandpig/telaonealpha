@@ -19,7 +19,7 @@ export function buildEntityGraph(entities: EntityRecord[], artifacts: ArtifactRe
   const now = Date.now()
 
   for (const entity of entities) {
-    const type: EntityNode['type'] = (entity.type === 'organization' || entity.type === 'context' || entity.type === 'operation') ? 'system' : (entity.type === 'location' || entity.type === 'ip') ? 'system' : entity.type
+    const type: EntityNode['type'] = (entity.type === 'organization' || entity.type === 'context' || entity.type === 'operation') ? 'system' : (entity.type === 'location' || entity.type === 'ip' || entity.type === 'venue') ? 'system' : entity.type
     const ageHours = Math.max(1, (now - new Date(entity.lastSeen).getTime()) / 3600000)
     graph.set(entity.id, {
       id: entity.id,

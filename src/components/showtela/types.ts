@@ -49,11 +49,26 @@ export interface FeedItem {
   pressure?: string
 }
 
+export interface VenueItem {
+  id: string
+  name: string
+  city?: string
+  state?: string
+  departments: string[]
+  activeRiderId?: string
+  activeRiderDate?: string
+  riderCount: number
+  loadIn?: string
+  loadOut?: string
+  contact?: string
+}
+
 export interface ShowTelaViewModel {
   activeOps: PersonItem[]
   fluencyPartners: PersonItem[]
   crusadeOperations: OperationEntity[]
   departments?: OperationEntity[]
+  venues?: VenueItem[]
   unresolvedPressure: UnresolvedPressure
   unresolved: UnresolvedItem[]
   feed: FeedItem[]

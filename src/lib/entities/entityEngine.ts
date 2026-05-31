@@ -1,6 +1,6 @@
 import type { ArtifactRecord } from '@/lib/artifacts/artifactStore'
 
-export type EntityType = 'person' | 'project' | 'organization' | 'system' | 'location' | 'ip' | 'context' | 'operation'
+export type EntityType = 'person' | 'project' | 'organization' | 'system' | 'location' | 'ip' | 'context' | 'operation' | 'venue'
 export type AuthoritySource = 'anchor-directory' | 'owner' | 'manual' | 'verified' | 'document' | 'llm' | 'regex' | 'tentative'
 
 // Person entities are sovereign data. Only explicitly authorized sources may create them.

@@ -20,6 +20,8 @@ export type DurableArtifactRow = {
   lineageId?: string
   artifactGroupId?: string
   payload?: string
+  venueId?: string
+  isActiveRider?: boolean
   createdAt: string
   updatedAt: string
   provenance: ProvenanceMetadata

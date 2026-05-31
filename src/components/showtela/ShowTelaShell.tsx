@@ -19,9 +19,11 @@ import { PersonSheet } from './sheets/PersonSheet'
 import { FeedSheet } from './sheets/FeedSheet'
 import { OperationSheet } from './sheets/OperationSheet'
 import { UnresolvedSheet } from './sheets/UnresolvedSheet'
+import { VenueSheet } from './sheets/VenueSheet'
+import { VenueCard } from './VenueCard'
 import { PearlDropVoice } from './PearlDropVoice'
 import { TelaTalk } from './TelaTalk'
-import type { ShowTelaViewModel, OperationEntity, UnresolvedItem, UnresolvedPressure } from './types'
+import type { ShowTelaViewModel, OperationEntity, UnresolvedItem, UnresolvedPressure, VenueItem } from './types'
 import type { DocumentHydration } from '@/lib/continuity/documentIngest'
 import type { ContinuityEvent } from '@/lib/showtela/types'
 import type { OperationalProjection, OperationalStateRecord } from '@/lib/runtime/state/model'
@@ -30,7 +32,7 @@ import type { FocusEngineResult } from '@/lib/focus/types'
 import type { ReplayOutput, ReplayStepState } from '@/lib/replay/types'
 
 type Tab = 'home' | 'play' | 'messages' | 'calendar' | 'profile'
-type Sheet = { type: 'person'; name: string; role?: string } | { type: 'feed'; item: ContinuityEvent } | { type: 'operation'; name: string } | { type: 'unresolved' } | null
+type Sheet = { type: 'person'; name: string; role?: string } | { type: 'feed'; item: ContinuityEvent } | { type: 'operation'; name: string } | { type: 'unresolved' } | { type: 'venue'; venueId: string; venueName: string } | null
 
 function getInitialSurfaceState(): {
   tab: Tab
@@ -261,6 +263,28 @@ function DepartmentsRail({ departments }: { departments: OperationEntity[] }) {
   )
 }
 
+function VenueIntelligenceRail({
+  venues,
+  onTapVenue,
+}: {
+  venues: VenueItem[]
+  onTapVenue: (venueId: string) => void
+}) {
+  if (!venues.length) return null
+  return (
+    <section className="px-5 pb-5">
+      <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">
+        Venue Intelligence
+      </p>
+      <div className="flex flex-col gap-3">
+        {venues.map((venue) => (
+          <VenueCard key={venue.id} venue={venue} onTap={onTapVenue} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
 function TELAwhyCard({
   crewCount,
   departmentCount,
@@ -323,6 +347,7 @@ function HydrationSummaryBanner({ hydration, onDismiss }: { hydration: DocumentH
   if (hydration.personsActivated > 0) lines.push(`${hydration.personsActivated} crew activated`)
   if (hydration.departmentsActivated > 0) lines.push(`${hydration.departmentsActivated} departments`)
   if (hydration.showDatesImported > 0) lines.push(`${hydration.showDatesImported} shows imported`)
+  if (hydration.venueCreated) lines.push('venue added')
   if (!lines.length) lines.push('Document ingested')
 
   return (
@@ -691,6 +716,13 @@ export function ShowTelaShell({ vm, user, briefing, focus, replay, projection, s
               <CrusadeOperationsRail items={operations} unresolvedItems={unresolvedItemsState} onOperationTap={(name) => setSheet({ type: 'operation', name })} />
               <UnresolvedPressureCard pressure={unresolvedPressure} onOpen={() => setSheet({ type: 'unresolved' })} />
               <DepartmentsRail departments={vm.departments ?? []} />
+              <VenueIntelligenceRail
+                venues={vm.venues ?? []}
+                onTapVenue={(venueId) => {
+                  const venue = vm.venues?.find(v => v.id === venueId)
+                  if (venue) setSheet({ type: 'venue', venueId, venueName: venue.name })
+                }}
+              />
               <TELAwhyCard
                 crewCount={vm.activeOps.length}
                 departmentCount={vm.departments?.length ?? 0}
@@ -783,6 +815,7 @@ export function ShowTelaShell({ vm, user, briefing, focus, replay, projection, s
           <FeedSheet open={sheet?.type === 'feed'} item={sheet?.type === 'feed' ? sheet.item : null} onClose={() => setSheet(null)} />
           <OperationSheet open={sheet?.type === 'operation'} name={sheet?.type === 'operation' ? sheet.name : ''} onClose={() => setSheet(null)} onResolve={handleResolveOperation} />
           <UnresolvedSheet open={sheet?.type === 'unresolved'} items={unresolvedItemsState} onClose={() => setSheet(null)} />
+          <VenueSheet open={sheet?.type === 'venue'} venueId={sheet?.type === 'venue' ? sheet.venueId : ''} venueName={sheet?.type === 'venue' ? sheet.venueName : ''} onClose={() => setSheet(null)} />
         </>
       )}
 
