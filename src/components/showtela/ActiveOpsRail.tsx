@@ -49,6 +49,7 @@ export function ActiveOpsRail({
   onPersonTap,
   onAddContinuity,
   isEmpty,
+  proofMode,
 }: {
   userName?: string
   userImage?: string
@@ -58,6 +59,7 @@ export function ActiveOpsRail({
   onPersonTap?: (name: string, role?: string) => void
   onAddContinuity?: () => void
   isEmpty?: boolean
+  proofMode?: boolean
 }) {
   const firstName = userName?.split(' ')[0] ?? 'You'
 
@@ -67,7 +69,7 @@ export function ActiveOpsRail({
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5E5348]">Anchors</h2>
         {!isEmpty && <button className="text-[11px] font-semibold text-[#C89B2F]">View all</button>}
       </div>
-      <div className="flex gap-6 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className={proofMode ? 'grid grid-cols-4 gap-4 pb-1' : 'flex gap-6 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'}>
         <div
           role="button"
           tabIndex={0}
@@ -125,6 +127,7 @@ export function ActiveOpsRail({
           return (
             <button
               key={p.id}
+              data-testid="anchor-person"
               className="flex w-[92px] flex-shrink-0 flex-col items-center gap-4 p-0"
               onClick={() => onPersonTap?.(p.name, role)}
             >

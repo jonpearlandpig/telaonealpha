@@ -1,6 +1,5 @@
 'use client'
 import { useMemo, useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { ContinuityIngest } from '@/components/runtime/continuity-ingest'
 import type { ContinuityIngestionInput, ContinuityIngestionMode } from '@/lib/continuity/normalize-ingestion'
 import { buildOperationalCalendarEvents } from '@/lib/showtela/calendar'
@@ -30,9 +29,11 @@ function getInitialSurfaceState(): {
   tab: Tab
   showIngest: boolean
   ingestMode: ContinuityIngestionMode | null
+  workspaceId: string | null
+  proofMode: boolean
 } {
   if (typeof window === 'undefined') {
-    return { tab: 'home', showIngest: false, ingestMode: null }
+    return { tab: 'home', showIngest: false, ingestMode: null, workspaceId: null, proofMode: false }
   }
 
   const params = new URLSearchParams(window.location.search)
@@ -54,6 +55,8 @@ function getInitialSurfaceState(): {
     tab: surface && tabMap[surface] ? tabMap[surface] : 'home',
     showIngest: Boolean(ingestMode),
     ingestMode,
+    workspaceId: params.get('workspace'),
+    proofMode: params.get('showtela_proof') === '1',
   }
 }
 
@@ -109,13 +112,22 @@ function projectionCards(projection?: OperationalProjection) {
   ]
 }
 
-export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { name: string; email: string; image: string } }) {
-  const router = useRouter()
+export function ShowTelaShell({
+  vm,
+  user,
+  onHydrate,
+}: {
+  vm: ShowTelaViewModel
+  user?: { name: string; email: string; image: string }
+  onHydrate?: () => Promise<boolean>
+}) {
   const initialSurface = getInitialSurfaceState()
   const [tab, setTab] = useState<Tab>(initialSurface.tab)
   const [showVoice, setShowVoice] = useState(false)
   const [showIngest, setShowIngest] = useState(initialSurface.showIngest)
   const [ingestMode, setIngestMode] = useState<ContinuityIngestionMode | null>(initialSurface.ingestMode)
+  const workspaceId = initialSurface.workspaceId
+  const proofMode = initialSurface.proofMode
   const [taggedPerson, setTaggedPerson] = useState<string | undefined>(undefined)
   const [isRefreshing, startRefresh] = useTransition()
   const [sheet, setSheet] = useState<Sheet>(null)
@@ -196,7 +208,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
   }, [latestTimeline?.timestamp, recentFeedItem?.timestamp])
 
   const calendarEvents = useMemo(
-    () => buildOperationalCalendarEvents({
+    () => vm.calendarEvents ?? buildOperationalCalendarEvents({
       feed,
       operations,
       unresolvedItems: unresolvedItemsState,
@@ -205,7 +217,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
       source: vm.source,
       baseDate: calendarBaseDate,
     }),
-    [activeOperators, calendarBaseDate, feed, operations, runtimeTimeline, unresolvedItemsState, vm.source],
+    [activeOperators, calendarBaseDate, feed, operations, runtimeTimeline, unresolvedItemsState, vm.calendarEvents, vm.source],
   )
 
   async function submitContinuity(input: ContinuityIngestionInput) {
@@ -213,13 +225,17 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
       const res = await fetch('/api/runtime/continuity/ingest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(input),
+        body: JSON.stringify({ ...input, workspaceId }),
       })
       const data = await res.json() as { error?: string }
       if (!res.ok || data.error) throw new Error(data.error ?? `HTTP ${res.status}`)
-      startRefresh(() => {
-        router.refresh()
-      })
+      if (onHydrate) {
+        startRefresh(() => {
+          void onHydrate().catch((err) => {
+            console.error('[ShowTelaShell] post-ingest hydration failed:', err)
+          })
+        })
+      }
       return true
     } catch (err) {
       console.error('[ShowTelaShell] continuity ingest failed:', err)
@@ -300,6 +316,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
                 onPersonTap={(name, role) => setSheet({ type: 'person', name, role })}
                 onAddContinuity={() => openIngest(null)}
                 isEmpty={false}
+                proofMode={proofMode}
               />
               <CalendarWeekRail events={calendarEvents} baseDate={calendarBaseDate} onOpenCalendar={() => setTab('calendar')} isEmpty={false} />
               <CrusadeOperationsRail items={operations} unresolvedItems={unresolvedItemsState} onOperationTap={(name) => setSheet({ type: 'operation', name })} />
@@ -337,7 +354,7 @@ export function ShowTelaShell({ vm, user }: { vm: ShowTelaViewModel; user?: { na
           )}
 
           {tab === 'calendar' && (
-            <OperationalCalendar events={calendarEvents} baseDate={calendarBaseDate} onOpenVoice={() => openVoice(user?.name)} />
+            <OperationalCalendar events={calendarEvents} baseDate={calendarBaseDate} onOpenVoice={() => openVoice(user?.name)} proofMode={proofMode} />
           )}
 
           {tab === 'profile' && (

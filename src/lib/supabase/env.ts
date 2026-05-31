@@ -4,6 +4,13 @@ const SUPABASE_URL_KEYS = [
   'SUPABASE_PROJECT_URL',
 ] as const
 
+const SUPABASE_ANON_KEYS = [
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'SUPABASE_ANON_KEY',
+  'SUPABASE_PUBLISHABLE_KEY',
+  'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+] as const
+
 const SUPABASE_SERVICE_ROLE_KEYS = [
   'SUPABASE_SERVICE_ROLE_KEY',
   'SUPABASE_SERVICE_KEY',
@@ -37,6 +44,10 @@ export function resolveSupabaseServiceRoleKey() {
   return resolveFirst(SUPABASE_SERVICE_ROLE_KEYS)
 }
 
+export function resolveSupabaseAnonKey() {
+  return resolveFirst(SUPABASE_ANON_KEYS)
+}
+
 export function resolveSupabaseConfig(): { url: string; serviceRoleKey: string } {
   const url = resolveSupabaseUrl().value
   const serviceRoleKey = resolveSupabaseServiceRoleKey().value
@@ -44,4 +55,13 @@ export function resolveSupabaseConfig(): { url: string; serviceRoleKey: string }
     throw new Error('Missing Supabase configuration: expected SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY-compatible key')
   }
   return { url, serviceRoleKey }
+}
+
+export function resolveSupabaseBrowserConfig(): { url: string; anonKey: string } {
+  const url = resolveSupabaseUrl().value
+  const anonKey = resolveSupabaseAnonKey().value
+  if (!url || !anonKey) {
+    throw new Error('Missing Supabase browser configuration: expected SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY-compatible key')
+  }
+  return { url, anonKey }
 }

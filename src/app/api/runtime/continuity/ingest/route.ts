@@ -7,9 +7,15 @@ export const dynamic = 'force-dynamic'
 export async function POST(req: Request) {
   try {
     const input = (await req.json()) as ContinuityIngestionInput
+    const hasBody = Boolean(input?.body?.trim())
+    const hasFileContent = Boolean(input?.assetContents?.some((asset) => asset.content.trim().length > 0))
+    const hasAssetName = Boolean(input?.assetNames?.some((name) => name.trim().length > 0))
 
-    if (!input?.body?.trim()) {
-      return NextResponse.json({ error: 'Continuity body is required' }, { status: 422 })
+    if (!hasBody && !hasFileContent && !hasAssetName) {
+      return NextResponse.json(
+        { error: 'Continuity body or uploaded file is required' },
+        { status: 422 },
+      )
     }
 
     const result = await ingestCanonicalContinuity(input)

@@ -21,7 +21,7 @@ export function CalendarEventCard({ event }: { event: OperationalCalendarEvent }
   const departments = metaLine(event.departments)
 
   return (
-    <article className="rounded-[22px] border border-[#E8DDCC] bg-[#FFFDF8] px-4 py-4 shadow-[0_10px_28px_rgba(27,22,16,0.06)]">
+    <article data-testid="calendar-event-card" className="rounded-[22px] border border-[#E8DDCC] bg-[#FFFDF8] px-4 py-4 shadow-[0_10px_28px_rgba(27,22,16,0.06)]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">

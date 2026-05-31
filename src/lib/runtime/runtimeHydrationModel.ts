@@ -47,6 +47,7 @@ export function buildHydratedRuntimeState(input: {
     lineageGraph: input.replay.state.lineageGraph,
     governanceLegality: input.replay.state.governanceLegality,
     operationalProjection: input.operationalProjection,
+    artifacts: input.durable.artifacts,
     snapshots: input.durable.snapshots.filter((snapshot) => snapshot.snapshotKind === 'checkpoint'),
     entities: input.durable.entities,
     unresolved,

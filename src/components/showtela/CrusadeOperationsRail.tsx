@@ -51,6 +51,7 @@ function OperationCard({ item, matchedItems, onTap }: {
 
   return (
     <button
+      data-testid="operation-card"
       onClick={onTap}
       className="relative w-full overflow-hidden rounded-[22px] text-left"
       style={{ height: '274px', boxShadow: unresolved > 0 ? '0 14px 56px rgba(0,0,0,0.24)' : '0 12px 44px rgba(17,17,17,0.14)' }}

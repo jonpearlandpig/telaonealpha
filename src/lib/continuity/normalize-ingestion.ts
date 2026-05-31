@@ -18,6 +18,7 @@ export type AssetContent = {
 }
 
 export type ContinuityIngestionInput = {
+  workspaceId?: string
   mode: ContinuityIngestionMode
   headline?: string
   body?: string

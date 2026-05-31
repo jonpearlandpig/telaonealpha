@@ -1,8 +1,11 @@
-import { getSupabaseClient } from './client'
+import 'server-only'
+
+import { createClient } from '@supabase/supabase-js'
 import { resolveSupabaseConfig } from './env'
 
 export function getSupabaseServerClient() {
-  return getSupabaseClient()
+  const { url, serviceRoleKey } = resolveSupabaseConfig()
+  return createClient(url, serviceRoleKey, { auth: { persistSession: false } })
 }
 
 export function getSupabaseConfig(): { url: string; serviceRoleKey: string } {

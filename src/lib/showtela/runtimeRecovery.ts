@@ -1,5 +1,4 @@
 import { parseMarkdownDirectory } from '@/lib/continuity/parseMarkdownDirectory'
-import { loadDurableContinuity } from '@/lib/runtime/durableMemory'
 import type { ArtifactRecord } from '@/lib/artifacts/artifactStore'
 import { SHOWTELA_RUNTIME_ARTIFACT_GROUP_ID, SHOWTELA_WORKSPACE_ID } from './runtimeIds'
 import { createRuntimeSnapshotMeta } from './runtimeSnapshot'
@@ -132,6 +131,7 @@ export async function recoverCanonicalShowTelaHomeFromDurable(input: {
   cached: ShowTelaHomeData | null
   cachedUpdatedAt?: string | null
 }): Promise<ShowTelaHomeData | null> {
+  const { loadDurableContinuity } = await import('@/lib/runtime/durableMemory')
   const durable = await loadDurableContinuity(SHOWTELA_WORKSPACE_ID)
   return recoverCanonicalShowTelaHomeFromArtifactRows({
     artifacts: durable.artifacts,

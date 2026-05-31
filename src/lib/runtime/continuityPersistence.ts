@@ -21,7 +21,37 @@ export function persistArtifact(workspaceId: string, artifact: ArtifactRecord, p
 function toArtifactRecord(row: DurableArtifactRow): ArtifactRecord {
   if (row.payload) {
     try {
-      return JSON.parse(row.payload) as ArtifactRecord
+      const parsed = JSON.parse(row.payload) as Partial<ArtifactRecord>
+      if (!parsed.createdAt) {
+        console.warn('[continuityPersistence] artifact payload missing createdAt; falling back to durable row', {
+          id: row.id,
+          title: parsed.title ?? row.fileName ?? row.id,
+          rowCreatedAt: row.createdAt,
+        })
+      }
+
+      return {
+        id: parsed.id ?? row.id,
+        title: parsed.title ?? row.fileName ?? row.id,
+        threadId: parsed.threadId ?? row.threadId,
+        sessionId: parsed.sessionId ?? row.artifactGroupId ?? 'durable-runtime',
+        prompt: parsed.prompt,
+        html: parsed.html,
+        markdown: parsed.markdown,
+        text: parsed.text ?? row.payload,
+        fileName: parsed.fileName ?? row.fileName,
+        mimeType: parsed.mimeType ?? row.mimeType,
+        previewUrl: parsed.previewUrl,
+        code: parsed.code,
+        structure: parsed.structure,
+        entities: parsed.entities,
+        projects: parsed.projects,
+        lineageId: parsed.lineageId ?? row.lineageId,
+        artifactGroupId: parsed.artifactGroupId ?? row.artifactGroupId,
+        createdAt: parsed.createdAt ?? row.createdAt,
+        pinned: parsed.pinned,
+        classification: parsed.classification,
+      }
     } catch {
       // Fall through to minimal reconstruction.
     }

@@ -5,10 +5,13 @@ import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
-  const state = await hydrateRuntime(SHOWTELA_WORKSPACE_ID)
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url)
+  const workspaceId = searchParams.get('workspaceId')?.trim() || searchParams.get('workspace')?.trim() || SHOWTELA_WORKSPACE_ID
+  const state = await hydrateRuntime(workspaceId)
   const vm = buildShowTelaVMFromHydratedState(state)
   return NextResponse.json({
+    workspaceId,
     hasLiveData: Boolean(
       vm.activeOps.length ||
       vm.fluencyPartners.length ||
@@ -23,5 +26,6 @@ export async function GET() {
     operations: vm.crusadeOperations.map(o => ({ name: o.name, status: o.label })),
     unresolved: vm.unresolved.map(u => ({ title: u.title, severity: u.severity })),
     feed: vm.feed.slice(0, 5).map(e => ({ headline: e.title, owner: e.owner })),
+    vm,
   }, { headers: { 'Cache-Control': 'no-store' } })
 }

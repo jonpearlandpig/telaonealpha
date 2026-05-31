@@ -1,11 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { startTransition, useEffect, useState } from 'react'
 import { ShowTelaShell } from './ShowTelaShell'
 import type { ShowTelaViewModel } from './types'
 import { clearStaleRuntimeSnapshot } from '@/lib/showtela/runtimePersist'
+import { subscribeToContinuity } from '@/lib/supabase/realtime'
 
 type User = { name: string; email: string; image: string }
+type ShowTelaDataResponse = {
+  vm: ShowTelaViewModel
+}
 
 const DIAGNOSTIC_LABELS: Record<string, string> = {
   'notion-unavailable': 'Last known state',
@@ -54,14 +58,59 @@ function RuntimeDebugOverlay({ vm }: { vm: ShowTelaViewModel }) {
   )
 }
 
-export function ShowTelaRuntime({ vm: initialVm, user }: { vm: ShowTelaViewModel; user?: User }) {
-  const [vm] = useState<ShowTelaViewModel>(initialVm)
+function vmSignature(vm: ShowTelaViewModel) {
+  return JSON.stringify({
+    snapshotId: vm.runtimeSnapshotMeta?.snapshotId ?? null,
+    updatedAt: vm.runtimeSnapshotMeta?.updatedAt ?? null,
+    people: vm.activeOps.length,
+    operations: vm.crusadeOperations.length,
+    calendar: vm.calendarEvents?.length ?? 0,
+    feed: vm.feed.length,
+  })
+}
+
+export function ShowTelaRuntime({
+  vm: initialVm,
+  user,
+  workspaceId,
+}: {
+  vm: ShowTelaViewModel
+  user?: User
+  workspaceId: string
+}) {
+  const [vm, setVm] = useState<ShowTelaViewModel>(initialVm)
   const [showDebug] = useState(() =>
     typeof window !== 'undefined' && (
       process.env.NEXT_PUBLIC_SHOWTELA_DEBUG_UI === 'true' ||
       new URLSearchParams(window.location.search).get('showtela_debug') === '1'
     )
   )
+
+  async function hydrateFromServer(previousSignature?: string) {
+    const maxAttempts = previousSignature ? 24 : 1
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const res = await fetch(`/api/showtela-data?workspaceId=${encodeURIComponent(workspaceId)}`, {
+        cache: 'no-store',
+      })
+      if (!res.ok) throw new Error(`Hydration fetch failed with HTTP ${res.status}`)
+
+      const data = await res.json() as ShowTelaDataResponse
+      const nextVm = data.vm
+      const nextSignature = vmSignature(nextVm)
+
+      if (!previousSignature || nextSignature !== previousSignature) {
+        startTransition(() => {
+          setVm(nextVm)
+        })
+        return true
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 250))
+    }
+
+    return false
+  }
 
   // Clear any stale localStorage state left from pre-canonical-snapshot sessions — run once on mount
   useEffect(() => {
@@ -71,12 +120,25 @@ export function ShowTelaRuntime({ vm: initialVm, user }: { vm: ShowTelaViewModel
     console.log('[SHOWTELA] mount — source:', initialVm.source, 'snap:', snap, 'feed:', initialVm.feed?.length ?? 0, 'ops:', initialVm.crusadeOperations?.length ?? 0)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    const unsubscribe = subscribeToContinuity(() => {
+      void hydrateFromServer().catch((err) => {
+        console.error('[SHOWTELA] continuity subscription hydrate failed:', err)
+      })
+    })
+    return unsubscribe
+  }, [workspaceId])
+
   const showDiagnostic = vm.diagnosticState && vm.diagnosticState !== 'persistence-connected'
 
   return (
     <>
       {showDebug && <RuntimeDebugOverlay vm={vm} />}
-      <ShowTelaShell vm={vm} user={user} />
+      <ShowTelaShell
+        vm={vm}
+        user={user}
+        onHydrate={async () => hydrateFromServer(vmSignature(vm))}
+      />
       {showDiagnostic && (
         <div className="pointer-events-none fixed bottom-28 left-0 right-0 z-40 mx-auto w-full max-w-[430px] px-5 md:max-w-[680px] xl:max-w-[760px]">
           <DiagnosticBar state={vm.diagnosticState!} />

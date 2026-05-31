@@ -20,6 +20,7 @@ export async function ingestCanonicalContinuity(
   input: ContinuityIngestionInput,
   options?: NormalizeContinuityIngestionOptions,
 ): Promise<{ ok: true; eventId: string; lineageId: string }> {
+  const workspaceId = input.workspaceId?.trim() || SHOWTELA_WORKSPACE_ID
   const timestamp = new Date().toISOString()
   const submittedBy = options?.author ?? input.owner ?? 'Operations'
 
@@ -47,7 +48,7 @@ export async function ingestCanonicalContinuity(
   const entities = extractContinuityEntities(event, artifact)
 
   try {
-    await persistDurableContinuity(SHOWTELA_WORKSPACE_ID, { artifacts: [artifact], entities, snapshots: [] })
+    await persistDurableContinuity(workspaceId, { artifacts: [artifact], entities, snapshots: [] })
   } catch (err) {
     console.error('[runtimeIngest] durable persistence non-fatal:', String(err))
   }
@@ -56,7 +57,7 @@ export async function ingestCanonicalContinuity(
   bootstrapRuntimeSpine()
 
   await orchestrateRuntimeAction({
-    workspaceId: SHOWTELA_WORKSPACE_ID,
+    workspaceId,
     action: ACTIONS.INGEST_CONTINUITY,
     authority: 'S2',
     governanceState: 'approved',
@@ -74,7 +75,7 @@ export async function ingestCanonicalContinuity(
   })
 
   await emitRuntimeEvent({
-    workspaceId: SHOWTELA_WORKSPACE_ID,
+    workspaceId,
     type: 'continuity.ingested',
     source: 'operator',
     governanceState: 'approved',

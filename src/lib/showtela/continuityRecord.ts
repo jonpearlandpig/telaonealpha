@@ -1,5 +1,7 @@
 import { deterministicArtifactId, type ArtifactRecord } from '@/lib/artifacts/artifactStore'
 import { createConstitutionalEvent } from '@/lib/constitutional/create-event'
+import { parseMarkdownCalendar } from '@/lib/continuity/parseMarkdownCalendar'
+import { parseMarkdownDirectory } from '@/lib/continuity/parseMarkdownDirectory'
 import type { ConstitutionalEvent } from '@/lib/constitutional/types'
 import { extractEntities, type EntityRecord, type EntityType } from '@/lib/entities/entityEngine'
 import {
@@ -10,12 +12,37 @@ import type { ContinuityEvent } from './types'
 
 const SHOWTELA_RUNTIME_SESSION_ID = 'showtela-runtime-ingest'
 const ENTITY_STOPLIST = new Set(['linked entities', 'owner', 'ocid'])
+const ROLE_STOPWORDS = new Set([
+  'director',
+  'manager',
+  'engineer',
+  'coordinator',
+  'lead',
+  'programmer',
+  'captain',
+  'chief',
+  'medic',
+  'counsel',
+  'oversight',
+  'architect',
+  'runtime',
+  'security',
+  'producer',
+])
 
 function slugify(value: string) {
   return value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
+}
+
+function detectArtifactKind(text: string) {
+  if (/production rider/i.test(text)) return 'rider' as const
+  const calendar = parseMarkdownCalendar(text)
+  if (calendar.events.length > 0) return 'calendar' as const
+  if (/\|\s*role\s*\|\s*name\s*\|/i.test(text) || /\|\s*name\s*\|/i.test(text)) return 'directory' as const
+  return 'generic' as const
 }
 
 function dedupeEntities(entities: EntityRecord[]) {
@@ -63,6 +90,12 @@ function namedEntity(name: string, type: EntityType, artifact: ArtifactRecord, t
   }
 }
 
+function looksLikeRoleTitle(name: string) {
+  return name
+    .split(/\s+/)
+    .some((part) => ROLE_STOPWORDS.has(part.toLowerCase()))
+}
+
 function manualEntities(event: ContinuityEvent, artifact: ArtifactRecord): EntityRecord[] {
   const timestamp = event.timestamp ?? artifact.createdAt
   const refs = [
@@ -77,6 +110,42 @@ function manualEntities(event: ContinuityEvent, artifact: ArtifactRecord): Entit
     .map((item) => ({ ...item, name: item.name.trim() }))
     .filter((item) => item.name.length > 0)
     .map((item) => namedEntity(item.name, item.type, artifact, timestamp))
+}
+
+function parsedArtifactEntities(event: ContinuityEvent, artifact: ArtifactRecord): EntityRecord[] {
+  const text = artifact.text ?? `${event.headline}\n${event.body ?? ''}`
+  const kind = detectArtifactKind(text)
+  const timestamp = event.timestamp ?? artifact.createdAt
+
+  if (kind === 'directory') {
+    return parseMarkdownDirectory(text).people.map((person) => namedEntity(person.name, 'person', artifact, timestamp))
+  }
+
+  if (kind === 'calendar') {
+    const calendar = parseMarkdownCalendar(text)
+    const entities: EntityRecord[] = []
+    const seenPeople = new Set<string>()
+    const seenLocations = new Set<string>()
+
+    for (const calendarEvent of calendar.events) {
+      if (calendarEvent.owner && !seenPeople.has(calendarEvent.owner.toLowerCase())) {
+        seenPeople.add(calendarEvent.owner.toLowerCase())
+        entities.push(namedEntity(calendarEvent.owner, 'person', artifact, timestamp))
+      }
+      if (calendarEvent.location && !seenLocations.has(calendarEvent.location.toLowerCase())) {
+        seenLocations.add(calendarEvent.location.toLowerCase())
+        entities.push(namedEntity(calendarEvent.location, 'location', artifact, timestamp))
+      }
+    }
+
+    return entities
+  }
+
+  if (kind === 'rider') return []
+
+  return extractEntities(text, artifact).filter((entity) => (
+    entity.type !== 'person' || !looksLikeRoleTitle(entity.name)
+  ))
 }
 
 function serializeRuntimeMetadata(input: {
@@ -183,6 +252,6 @@ export function createRuntimeContinuityArtifact(input: {
 }
 
 export function extractContinuityEntities(event: ContinuityEvent, artifact: ArtifactRecord) {
-  const extracted = extractEntities(artifact.text ?? `${event.headline}\n${event.body ?? ''}`, artifact)
+  const extracted = parsedArtifactEntities(event, artifact)
   return dedupeEntities([...extracted, ...manualEntities(event, artifact)])
 }

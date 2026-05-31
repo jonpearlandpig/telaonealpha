@@ -53,12 +53,14 @@ export function OperationalCalendar({
   onOpenVoice,
   diagnosticState,
   lastHydratedAt,
+  proofMode,
 }: {
   events: OperationalCalendarEvent[]
   baseDate?: Date
   onOpenVoice?: () => void
   diagnosticState?: string
   lastHydratedAt?: string
+  proofMode?: boolean
 }) {
   const days = useMemo(() => getWeekDays(baseDate, events), [baseDate, events])
   const [selectedDayKey, setSelectedDayKey] = useState(() => days[0]?.key ?? '')
@@ -186,7 +188,7 @@ export function OperationalCalendar({
       <section className="px-5 pt-5">
         <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5E5348]">In view</h2>
         <div className="flex flex-col gap-3">
-          {selectedEvents.slice(0, 3).map((event) => (
+          {(proofMode ? events : selectedEvents.slice(0, 3)).map((event) => (
             <CalendarEventCard key={event.id} event={event} />
           ))}
           {selectedEvents.length === 0 && (

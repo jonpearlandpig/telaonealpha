@@ -94,8 +94,19 @@ export function parseMarkdownDirectory(text: string): ParsedDirectory {
       continue
     }
 
-    if (trimmed.startsWith('# ') && !title) {
-      title = trimmed.slice(2).trim()
+    if (trimmed.startsWith('# ')) {
+      const heading = trimmed.slice(2).trim()
+      if (!title) {
+        title = heading
+        continue
+      }
+
+      currentDept = heading
+      addDept(heading)
+      inTable = false
+      nameCol = -1
+      roleCol = -1
+      deptCol = -1
       continue
     }
 

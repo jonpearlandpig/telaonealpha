@@ -6,14 +6,24 @@ import { getSession } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
+function firstQueryValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value
+}
+
 function upgradeGooglePhoto(url: string): string {
   if (!url) return url
   return url.replace(/=s\d+-c/, '=s400-c').replace(/s96-c/, 's400-c')
 }
 
-export default async function ShowTelaHome() {
+export default async function ShowTelaHome({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const params = searchParams ? await searchParams : {}
+  const workspaceId = firstQueryValue(params.workspace)?.trim() || SHOWTELA_WORKSPACE_ID
   const [state, session] = await Promise.all([
-    hydrateRuntime(SHOWTELA_WORKSPACE_ID),
+    hydrateRuntime(workspaceId),
     getSession(),
   ])
 
@@ -46,5 +56,5 @@ export default async function ShowTelaHome() {
       })
   }
 
-  return <ShowTelaRuntime vm={vm} user={user} />
+  return <ShowTelaRuntime vm={vm} user={user} workspaceId={workspaceId} />
 }
