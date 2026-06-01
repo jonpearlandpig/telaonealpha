@@ -10,6 +10,14 @@ This is the known-good release baseline after build recovery. Future ShowTELA wo
 
 The repository now builds from the current release baseline branch. ShowTELA has a real persisted runtime backed by Supabase data. The founder-facing runtime can show continuity, people, operations, calendar-derived state, messages/TELA, and play/feed surfaces.
 
+Production baseline deployment:
+
+- Alias: `https://telaonealpha.vercel.app`
+- Deployment URL: `https://telaonealpha-7me6i4nqs-jonathan-3979s-projects.vercel.app`
+- Deployment id: `dpl_H7RhNoVgwWnaBjeFDHGBXT4R7s5K`
+- Release branch: `showtela-release-baseline-june1`
+- Release commit: `10e90cc`
+
 This baseline is not a claim that every intended founder journey is complete.
 
 ## Verified Commands
@@ -89,4 +97,3 @@ This baseline protects:
 - Deployment confidence.
 - Runtime continuity visibility.
 - Truthful distinction between working, partial, and broken features.
-
