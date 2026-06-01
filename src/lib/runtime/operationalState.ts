@@ -1,7 +1,7 @@
 export type OperationalPriority = { id: string; reason: string; score: number }
 export type OperationalObject = {
   id: string
-  objectType: 'continuity-thread' | 'decision' | 'governance' | 'entity' | 'routing-plan' | 'legality-check' | 'execution' | 'authorship-guard'
+  objectType: 'continuity-thread' | 'decision' | 'governance' | 'entity' | 'routing-plan' | 'legality-check' | 'execution' | 'authorship-guard' | 'readiness-review'
   lineageId?: string
   status: string
   createdAt: string
@@ -63,4 +63,3 @@ export type OperationalState = {
     lastEscalationAt?: string
   }
 }
-

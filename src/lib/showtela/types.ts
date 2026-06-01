@@ -1,4 +1,5 @@
 import type { OperationalProjection } from '@/lib/runtime/state/model'
+import type { ReadinessReview, ReadinessSectionSet, ReadinessStatus, ReadinessEvidenceLink, ReadinessHistoryEntry } from './readiness'
 
 export type PressureLevel = 'low' | 'medium' | 'high' | 'critical'
 
@@ -143,11 +144,20 @@ export type ShowTelaHomeData = {
     medium: number
   }
   runtimeTimeline: RuntimeTimelineItem[]
+  readinessReviews?: ReadinessReview[]
   source?: DataSource
   diagnosticState?: DiagnosticState
   hydration?: ShowTelaHydrationSummary
   runtimeSnapshotMeta?: ShowTelaRuntimeSnapshotMeta
   operationalProjection?: OperationalProjection
+}
+
+export type {
+  ReadinessReview,
+  ReadinessSectionSet,
+  ReadinessStatus,
+  ReadinessEvidenceLink,
+  ReadinessHistoryEntry,
 }
 
 export type ShowTelaHydrationSummary = {

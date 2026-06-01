@@ -131,6 +131,38 @@ export function deriveOperationalObjects(event: RuntimeEvent): OperationalObject
     })
   }
 
+  if (
+    event.type === 'showtela.readiness.review.created' ||
+    event.type === 'showtela.readiness.review.updated'
+  ) {
+    const reviewId = stringValue(payload.reviewId)
+    if (reviewId) {
+      const evidenceLinks = Array.isArray(payload.evidenceLinks) ? payload.evidenceLinks : []
+      const sections = stringRecord(payload.sections)
+      const blockingItems = stringList(sections.blockingItems)
+
+      objects.push({
+        id: `readiness-review:${reviewId}`,
+        objectType: 'readiness-review',
+        lineageId: event.lineageId,
+        status: stringValue(payload.status) || 'UNKNOWN',
+        createdAt,
+        updatedAt: createdAt,
+        payload: {
+          reviewId,
+          showTelaId: stringValue(payload.showTelaId),
+          title: stringValue(payload.title),
+          owner: stringValue(payload.owner),
+          scope: stringValue(payload.scope),
+          reviewDate: stringValue(payload.reviewDate),
+          evidenceCount: evidenceLinks.length,
+          blockingItems,
+          threadId,
+        },
+      })
+    }
+  }
+
   for (const entityId of [stringValue(payload.entityId), ...stringList(payload.linkedEntities)].filter(Boolean) as string[]) {
     objects.push({
       id: `entity:${entityId}`,

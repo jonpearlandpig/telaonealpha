@@ -126,6 +126,7 @@ export async function hydrateRuntime(workspaceId: string) {
   return buildHydratedRuntimeState({
     durable,
     replay,
+    events,
     operationalProjection,
     diagnostics,
   })

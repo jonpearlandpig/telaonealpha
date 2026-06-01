@@ -1,4 +1,6 @@
 'use client'
+import Link from 'next/link'
+import Image from 'next/image'
 import { useMemo, useState, useTransition } from 'react'
 import { ContinuityIngest } from '@/components/runtime/continuity-ingest'
 import type { ContinuityIngestionInput, ContinuityIngestionMode } from '@/lib/continuity/normalize-ingestion'
@@ -29,11 +31,15 @@ function getInitialSurfaceState(): {
   tab: Tab
   showIngest: boolean
   ingestMode: ContinuityIngestionMode | null
-  workspaceId: string | null
   proofMode: boolean
 } {
   if (typeof window === 'undefined') {
-    return { tab: 'home', showIngest: false, ingestMode: null, workspaceId: null, proofMode: false }
+    return {
+      tab: 'home',
+      showIngest: false,
+      ingestMode: null,
+      proofMode: false,
+    }
   }
 
   const params = new URLSearchParams(window.location.search)
@@ -55,7 +61,6 @@ function getInitialSurfaceState(): {
     tab: surface && tabMap[surface] ? tabMap[surface] : 'home',
     showIngest: Boolean(ingestMode),
     ingestMode,
-    workspaceId: params.get('workspace'),
     proofMode: params.get('showtela_proof') === '1',
   }
 }
@@ -64,6 +69,15 @@ function formatTimelineTime(iso?: string) {
   if (!iso) return ''
   try {
     return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).replace(' AM', 'A').replace(' PM', 'P')
+  } catch {
+    return ''
+  }
+}
+
+function formatTimelineDay(iso?: string) {
+  if (!iso) return ''
+  try {
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   } catch {
     return ''
   }
@@ -115,10 +129,18 @@ function projectionCards(projection?: OperationalProjection) {
 export function ShowTelaShell({
   vm,
   user,
+  workspaceId,
+  showTelaId,
+  showTelaName,
+  showTelaCreated,
   onHydrate,
 }: {
   vm: ShowTelaViewModel
   user?: { name: string; email: string; image: string }
+  workspaceId: string
+  showTelaId?: string
+  showTelaName?: string
+  showTelaCreated?: boolean
   onHydrate?: () => Promise<boolean>
 }) {
   const initialSurface = getInitialSurfaceState()
@@ -126,7 +148,6 @@ export function ShowTelaShell({
   const [showVoice, setShowVoice] = useState(false)
   const [showIngest, setShowIngest] = useState(initialSurface.showIngest)
   const [ingestMode, setIngestMode] = useState<ContinuityIngestionMode | null>(initialSurface.ingestMode)
-  const workspaceId = initialSurface.workspaceId
   const proofMode = initialSurface.proofMode
   const [taggedPerson, setTaggedPerson] = useState<string | undefined>(undefined)
   const [isRefreshing, startRefresh] = useTransition()
@@ -138,6 +159,9 @@ export function ShowTelaShell({
   const operations = vm.crusadeOperations
   const activeOpsData = vm.activeOps
   const runtimeTimeline = vm.runtimeTimeline
+  const continuityTimeline = vm.continuityTimeline
+  const showTelaHealth = vm.showTelaHealth
+  const showTelaStatus = vm.showTelaStatus
   const unresolvedItemsState = vmUnresolved
   const latestTimeline = runtimeTimeline?.[0]
   const unresolvedPressure = derivePressure(unresolvedItemsState)
@@ -151,25 +175,24 @@ export function ShowTelaShell({
     return item.name.toLowerCase() !== userFirstName && !item.name.toLowerCase().includes(userFirstName)
   })
 
-  const isEmpty = vm.source === 'empty' && activeOpsData.length === 0 && operations.length === 0
   const runtimeLabel = priorityOperation?.label || priorityOperation?.name || feed[0]?.linkedEntities?.[0] || 'Operational Runtime'
-    console.log('[TELA:TRACE] isEmpty eval', {
-      vmSource: vm.source,
-      activeOpsLength: activeOpsData.length,
-      operationsLength: operations.length,
-      isEmpty,
-    })
 
   const autoscan = {
-    currentTruth: priorityOperation
-        ? (priorityOperation.unresolvedCount ?? 0) > 0
-          ? `${priorityOperation.label} currently carries the highest unresolved operational pressure.`
-          : `${priorityOperation.label} is operational. Field is clear.`
-        : 'Operational pressure is evenly distributed across the field.',
+    currentTruth: showTelaStatus === 'archived'
+      ? 'This ShowTELA is archived. Replay remains available.'
+      : priorityOperation
+          ? (priorityOperation.unresolvedCount ?? 0) > 0
+            ? `${priorityOperation.label} currently carries the highest unresolved operational pressure.`
+            : `${priorityOperation.label} is operational. Field is clear.`
+          : 'Operational pressure is evenly distributed across the field.',
     mattersNow: latestTimeline
       ? `${latestTimeline.summary} stabilized most recently${latestTimeline.timestamp ? ` at ${formatTimelineTime(latestTimeline.timestamp)}` : ''}${latestTimeline.actor ? ` through ${latestTimeline.actor}` : ''}.`
-      : 'No new continuity drift surfaced in the latest autoscan.',
-    nextMovement: priorityOperation?.latest
+      : continuityTimeline[0]
+        ? `${continuityTimeline[0].title}${continuityTimeline[0].timestamp ? ` at ${formatTimelineTime(continuityTimeline[0].timestamp)}` : ''}.`
+        : 'No new continuity drift surfaced in the latest autoscan.',
+    nextMovement: showTelaStatus === 'archived'
+      ? 'Replay historical continuity below.'
+      : priorityOperation?.latest
         ? `Next meaningful movement is ${priorityOperation.latest.toLowerCase()}.`
         : 'Next meaningful movement is confirming the highest-pressure thread.',
     blockersLabel: undefined,
@@ -207,6 +230,7 @@ export function ShowTelaShell({
     return anchor ? new Date(anchor) : new Date()
   }, [latestTimeline?.timestamp, recentFeedItem?.timestamp])
 
+  const hydratedCalendarEvents = vm.calendarEvents ?? []
   const calendarEvents = useMemo(
     () => vm.calendarEvents ?? buildOperationalCalendarEvents({
       feed,
@@ -219,6 +243,29 @@ export function ShowTelaShell({
     }),
     [activeOperators, calendarBaseDate, feed, operations, runtimeTimeline, unresolvedItemsState, vm.calendarEvents, vm.source],
   )
+  const isEmpty = (
+    activeOpsData.length === 0 &&
+    operations.length === 0 &&
+    unresolvedItemsState.length === 0 &&
+    feed.length === 0 &&
+    hydratedCalendarEvents.length === 0
+  )
+  const creationSummary = showTelaCreated
+    ? {
+        people: activeOpsData.length,
+        operations: operations.length,
+        calendar: hydratedCalendarEvents.length,
+        artifacts: vm.hydration?.counts.artifacts ?? 0,
+        events: vm.feed.length,
+      }
+    : null
+
+  console.log('[TELA:TRACE] isEmpty eval', {
+    vmSource: vm.source,
+    activeOpsLength: activeOpsData.length,
+    operationsLength: operations.length,
+    isEmpty,
+  })
 
   async function submitContinuity(input: ContinuityIngestionInput) {
     try {
@@ -270,7 +317,12 @@ export function ShowTelaShell({
     >
       {/* Opening surface — renders full-screen when no continuity exists yet */}
       {isEmpty && (
-        <OpeningSurface user={user} onOpenIngest={openIngest} />
+        <OpeningSurface
+          user={user}
+          onOpenIngest={openIngest}
+          showTelaName={showTelaName ?? undefined}
+          creationSummary={creationSummary}
+        />
       )}
 
       {/* Operational runtime — only rendered when continuity exists */}
@@ -284,8 +336,85 @@ export function ShowTelaShell({
                 onNextMovementTap={priorityOperation ? () => setSheet({ type: 'operation', name: priorityOperation.label }) : undefined}
                 isEmpty={false}
                 runtimeLabel={runtimeLabel}
-                statusLabel={undefined}
+                statusLabel={showTelaStatus === 'archived' ? 'archived replay' : 'evidence live'}
               />
+              <section className="px-5 pb-5">
+                <div className="rounded-[24px] border border-[#E2D7C7] bg-white px-5 py-5 shadow-[0_12px_24px_rgba(17,17,17,0.04)]">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8E7551]">ShowTELA Health</p>
+                      <p className="mt-2 text-[18px] font-semibold text-[#171411]">
+                        {showTelaStatus === 'archived' ? 'Archived replay intact' : 'Continuity replay active'}
+                      </p>
+                    </div>
+                    <div className="rounded-full border border-[#E7DCCB] bg-[#FBF7F0] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7A6240]">
+                      {showTelaHealth.lastActivityAt ? `Last ${formatTimelineTime(showTelaHealth.lastActivityAt)}` : 'No activity'}
+                    </div>
+                  </div>
+
+                  <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
+                    {[
+                      ['People', showTelaHealth.people],
+                      ['Operations', showTelaHealth.operations],
+                      ['Calendar Events', showTelaHealth.calendarEvents],
+                      ['Artifacts', showTelaHealth.artifacts],
+                      ['Events', showTelaHealth.events],
+                    ].map(([label, value]) => (
+                      <div key={String(label)} className="rounded-[18px] border border-[#EFE7DB] bg-[#FCFAF6] px-3 py-3">
+                        <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#8C7B65]">{label}</p>
+                        <p className="mt-2 text-[22px] font-semibold tracking-[-0.03em] text-[#171411]">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+              <section className="px-5 pb-5">
+                <div className="rounded-[24px] border border-[#E2D7C7] bg-white px-5 py-5 shadow-[0_12px_24px_rgba(17,17,17,0.04)]">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8E7551]">Continuity Timeline</p>
+                      <p className="mt-2 text-[18px] font-semibold text-[#171411]">Replay operational history from stored evidence.</p>
+                    </div>
+                  </div>
+                  <div className="mt-5 space-y-4">
+                    {continuityTimeline.slice(0, 10).map((item) => (
+                      <article key={item.id} className="flex gap-4 border-t border-[#F0E8DD] pt-4 first:border-t-0 first:pt-0">
+                        <div className="w-[56px] flex-shrink-0 text-right">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9A7C46]">{formatTimelineDay(item.timestamp)}</p>
+                          <p className="mt-1 text-[12px] text-[#7C7267]">{formatTimelineTime(item.timestamp)}</p>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[15px] font-semibold text-[#171411]">{item.title}</p>
+                          <p className="mt-1 text-[12px] font-medium uppercase tracking-[0.12em] text-[#9B8C77]">{item.eventType.replaceAll('_', ' ')}</p>
+                          <p className="mt-2 text-[13px] leading-[1.6] text-[#62584D]">{item.description}</p>
+                        </div>
+                      </article>
+                    ))}
+                    {continuityTimeline.length === 0 && (
+                      <div className="rounded-[18px] border border-dashed border-[#D4C9B4] px-4 py-8 text-center">
+                        <p className="text-[13px] font-medium text-[#8B847B]">No stored continuity events exist yet.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+              <section className="px-5 pb-5">
+                <Link
+                  href={showTelaId
+                    ? `/showtela/venues?showtela=${encodeURIComponent(showTelaId)}`
+                    : `/showtela/venues${workspaceId ? `?workspace=${encodeURIComponent(workspaceId)}` : ''}`}
+                  className="block rounded-[24px] border border-[#E1D6C7] bg-[linear-gradient(135deg,#FFF9EF_0%,#F0E4CF_100%)] px-5 py-5 shadow-[0_12px_24px_rgba(17,17,17,0.05)]"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9A7C46]">Venue Dashboard</p>
+                      <p className="mt-2 text-[17px] font-semibold leading-snug text-[#171411]">Upload technical packets and score venue readiness.</p>
+                      <p className="mt-2 text-[12px] leading-[1.6] text-[#6E6A63]">Extract. Normalize. Compare against the active rider. Save the report into Supabase.</p>
+                    </div>
+                    <span className="rounded-full bg-white px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6F541A]">Open</span>
+                  </div>
+                </Link>
+              </section>
               {operationalCards.length > 0 && (
                 <section className="px-5 pb-5">
                   <div className="grid gap-3">
@@ -362,7 +491,11 @@ export function ShowTelaShell({
               <div className="rounded-[28px] border border-[#E2D7C7] bg-[linear-gradient(180deg,#FFFFFF_0%,#F3EDE3_100%)] px-5 py-6 shadow-[0_12px_30px_rgba(17,17,17,0.06)]">
                 <div className="flex flex-col items-center">
                   <div className="relative h-20 w-20 overflow-hidden rounded-full border-2 border-[#CFB889] bg-stone-800">
-                    {user?.image ? <img src={user.image} alt={user.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-yellow-200">{user?.name?.slice(0, 1) ?? 'S'}</div>}
+                    {user?.image ? (
+                      <Image src={user.image} alt={user.name} fill sizes="80px" className="object-cover" unoptimized />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-yellow-200">{user?.name?.slice(0, 1) ?? 'S'}</div>
+                    )}
                     <button onClick={() => openVoice(user?.name)} className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-stone-900">
                       <span className="text-base font-bold text-white">+</span>
                     </button>

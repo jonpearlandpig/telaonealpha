@@ -1,6 +1,6 @@
 import type { ArtifactRecord } from '@/lib/artifacts/artifactStore'
 
-export type EntityType = 'person' | 'project' | 'organization' | 'system' | 'location' | 'ip' | 'context'
+export type EntityType = 'person' | 'project' | 'organization' | 'system' | 'location' | 'venue' | 'ip' | 'context'
 export type EntityRecord = {
   id: string
   name: string

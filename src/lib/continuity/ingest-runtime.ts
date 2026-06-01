@@ -14,6 +14,10 @@ import {
   createRuntimeContinuityArtifact,
   extractContinuityEntities,
 } from '@/lib/showtela/continuityRecord'
+import { parseMarkdownCalendar } from '@/lib/continuity/parseMarkdownCalendar'
+import { parseMarkdownDirectory } from '@/lib/continuity/parseMarkdownDirectory'
+import { parseMarkdownRider } from '@/lib/venue-intelligence/rider'
+import { SHOWTELA_RUNTIME_EVENT_TYPES } from '@/lib/showtela/continuityEvents'
 import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
 
 export async function ingestCanonicalContinuity(
@@ -92,6 +96,96 @@ export async function ingestCanonicalContinuity(
       sourceMode: event.sourceMode,
     },
   })
+
+  const directory = parseMarkdownDirectory(artifact.text ?? '')
+  const calendar = parseMarkdownCalendar(artifact.text ?? '')
+  const rider = parseMarkdownRider(artifact.text ?? '')
+  const operationCount = new Set([
+    ...directory.departments,
+    ...calendar.departments,
+    ...rider.departments,
+  ]).size
+
+  await emitRuntimeEvent({
+    workspaceId,
+    type: SHOWTELA_RUNTIME_EVENT_TYPES.artifactUploaded,
+    source: 'operator',
+    governanceState: 'approved',
+    executionState: 'completed',
+    lineageId,
+    payloadType: 'showtela.continuity-event',
+    payload: {
+      artifactId: artifact.id,
+      insertedId: artifact.id,
+      threadId: event.threadId,
+      linkedEntities: event.linkedEntities ?? [],
+      submittedBy,
+      sourceMode: event.sourceMode,
+      peopleCount: directory.people.length,
+      operationsCount: operationCount,
+      calendarCount: calendar.events.length,
+    },
+  })
+
+  if (directory.people.length > 0) {
+    await emitRuntimeEvent({
+      workspaceId,
+      type: SHOWTELA_RUNTIME_EVENT_TYPES.peopleHydrated,
+      source: 'operator',
+      governanceState: 'approved',
+      executionState: 'completed',
+      lineageId,
+      payloadType: 'showtela.continuity-event',
+      payload: {
+        artifactId: artifact.id,
+        insertedId: artifact.id,
+        threadId: event.threadId,
+        linkedEntities: event.linkedEntities ?? [],
+        submittedBy,
+        peopleCount: directory.people.length,
+      },
+    })
+  }
+
+  if (operationCount > 0) {
+    await emitRuntimeEvent({
+      workspaceId,
+      type: SHOWTELA_RUNTIME_EVENT_TYPES.operationsHydrated,
+      source: 'operator',
+      governanceState: 'approved',
+      executionState: 'completed',
+      lineageId,
+      payloadType: 'showtela.continuity-event',
+      payload: {
+        artifactId: artifact.id,
+        insertedId: artifact.id,
+        threadId: event.threadId,
+        linkedEntities: event.linkedEntities ?? [],
+        submittedBy,
+        operationsCount: operationCount,
+      },
+    })
+  }
+
+  if (calendar.events.length > 0) {
+    await emitRuntimeEvent({
+      workspaceId,
+      type: SHOWTELA_RUNTIME_EVENT_TYPES.calendarHydrated,
+      source: 'operator',
+      governanceState: 'approved',
+      executionState: 'completed',
+      lineageId,
+      payloadType: 'showtela.continuity-event',
+      payload: {
+        artifactId: artifact.id,
+        insertedId: artifact.id,
+        threadId: event.threadId,
+        linkedEntities: event.linkedEntities ?? [],
+        submittedBy,
+        calendarCount: calendar.events.length,
+      },
+    })
+  }
 
   return { ok: true, eventId: event.id, lineageId }
 }

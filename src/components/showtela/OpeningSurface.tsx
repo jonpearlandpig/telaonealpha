@@ -6,9 +6,19 @@ import type { ContinuityIngestionMode } from '@/lib/continuity/normalize-ingesti
 export function OpeningSurface({
   user,
   onOpenIngest,
+  showTelaName,
+  creationSummary,
 }: {
   user?: { name: string; email: string; image: string }
   onOpenIngest: (mode?: ContinuityIngestionMode | null) => void
+  showTelaName?: string
+  creationSummary?: {
+    people: number
+    operations: number
+    calendar: number
+    artifacts: number
+    events: number
+  } | null
 }) {
   const initial = user?.name?.slice(0, 1) ?? 'S'
   const displayName = user?.name?.split(' ')[0] ?? 'Operator'
@@ -40,6 +50,55 @@ export function OpeningSurface({
 
       {/* Profile + */}
       <div className="relative z-10 mt-16 flex flex-col items-center">
+        {creationSummary ? (
+          <div
+            className="mb-8 w-[min(92vw,420px)] rounded-[28px] border px-5 py-5 text-left shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
+            style={{
+              borderColor: 'rgba(200,155,47,0.24)',
+              background: 'linear-gradient(180deg, rgba(28,31,37,0.98) 0%, rgba(17,18,23,0.98) 100%)',
+            }}
+          >
+            <p
+              className="text-[11px] font-semibold uppercase tracking-[0.18em]"
+              style={{ color: 'rgba(200,155,47,0.74)' }}
+            >
+              ShowTELA Created
+            </p>
+            <p className="mt-2 text-[22px] font-semibold tracking-[-0.03em]" style={{ color: '#F8F6F2' }}>
+              {showTelaName ?? 'New ShowTELA'}
+            </p>
+            <p className="mt-2 text-[12px] leading-[1.6]" style={{ color: 'rgba(248,246,242,0.72)' }}>
+              Clean operational state verified. Open and ready for continuity.
+            </p>
+            <div className="mt-4 grid grid-cols-3 gap-2 text-[11px]">
+              <div className="rounded-[16px] px-3 py-3" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                <p style={{ color: 'rgba(200,155,47,0.74)' }}>People</p>
+                <p className="mt-1 font-semibold" style={{ color: '#F8F6F2' }}>{creationSummary.people}</p>
+              </div>
+              <div className="rounded-[16px] px-3 py-3" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                <p style={{ color: 'rgba(200,155,47,0.74)' }}>Operations</p>
+                <p className="mt-1 font-semibold" style={{ color: '#F8F6F2' }}>{creationSummary.operations}</p>
+              </div>
+              <div className="rounded-[16px] px-3 py-3" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                <p style={{ color: 'rgba(200,155,47,0.74)' }}>Calendar</p>
+                <p className="mt-1 font-semibold" style={{ color: '#F8F6F2' }}>{creationSummary.calendar}</p>
+              </div>
+              <div className="rounded-[16px] px-3 py-3" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                <p style={{ color: 'rgba(200,155,47,0.74)' }}>Artifacts</p>
+                <p className="mt-1 font-semibold" style={{ color: '#F8F6F2' }}>{creationSummary.artifacts}</p>
+              </div>
+              <div className="rounded-[16px] px-3 py-3" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                <p style={{ color: 'rgba(200,155,47,0.74)' }}>Events</p>
+                <p className="mt-1 font-semibold" style={{ color: '#F8F6F2' }}>{creationSummary.events}</p>
+              </div>
+              <div className="rounded-[16px] px-3 py-3" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                <p style={{ color: 'rgba(200,155,47,0.74)' }}>Status</p>
+                <p className="mt-1 font-semibold" style={{ color: '#F8F6F2' }}>Clean</p>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         <div className="relative">
           <div
             className="h-[76px] w-[76px] overflow-hidden rounded-full"
@@ -90,8 +149,16 @@ export function OpeningSurface({
           className="mt-1.5 text-[10px] font-medium uppercase tracking-[0.18em]"
           style={{ color: 'rgba(200,155,47,0.36)' }}
         >
-          operational origin node
+          {creationSummary ? 'ready for continuity' : 'operational origin node'}
         </p>
+        {showTelaName ? (
+          <p
+            className="mt-3 text-[16px] font-semibold tracking-[-0.03em]"
+            style={{ color: '#F8F6F2' }}
+          >
+            {showTelaName}
+          </p>
+        ) : null}
       </div>
     </div>
   )

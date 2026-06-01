@@ -86,3 +86,51 @@ test('buildCanonicalObjectsFromReplay preserves identity and confirms once repla
   assert.deepEqual(routingPlan.provenance.confirmedBy, ['evt-approved'])
   assert.equal(routingPlan.payload.governanceState, 'approved')
 })
+
+test('buildCanonicalObjectsFromReplay promotes readiness reviews as canonical objects', () => {
+  const objects = buildCanonicalObjectsFromReplay('tela-showtela', [
+    makeEvent({
+      id: 'evt-readiness',
+      replaySequence: 11,
+      type: 'showtela.readiness.review.created',
+      governanceState: 'approved',
+      executionState: 'completed',
+      createdAt: '2026-05-31T12:00:00.000Z',
+      lineageId: 'review-lineage-1',
+      payload: {
+        reviewId: 'review-1',
+        showTelaId: 'show-1',
+        title: 'Launch Readiness',
+        owner: 'Jon Hartman',
+        status: 'YELLOW',
+        reviewDate: '2026-05-31',
+        scope: 'June 8 show',
+        sections: {
+          greenItems: [],
+          yellowItems: ['Crew staffing unresolved'],
+          redItems: [],
+          blockingItems: ['Crew staffing unresolved'],
+          recommendedActions: ['Lock local crew'],
+          notes: '',
+        },
+        evidenceLinks: [
+          { id: 'entity-1', kind: 'entity', refId: 'crew-chief', label: 'Crew Chief' },
+        ],
+        historyEntry: {
+          id: 'hist-1',
+          status: 'YELLOW',
+          summary: 'Crew staffing unresolved.',
+          blockingItems: ['Crew staffing unresolved'],
+          recordedAt: '2026-05-31T12:00:00.000Z',
+        },
+      },
+    }),
+  ])
+
+  const review = objects.find((object) => object.id === 'readiness-review:review-1')
+  assert.ok(review)
+  assert.equal(review.objectType, 'readiness-review')
+  assert.equal(review.status, 'YELLOW')
+  assert.equal(review.payload.title, 'Launch Readiness')
+  assert.equal(review.replayConfirmed, true)
+})

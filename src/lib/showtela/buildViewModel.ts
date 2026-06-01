@@ -1,7 +1,9 @@
 import type { ArtifactRecord } from '@/lib/artifacts/artifactStore'
 import { parseMarkdownCalendar } from '@/lib/continuity/parseMarkdownCalendar'
 import { parseMarkdownDirectory } from '@/lib/continuity/parseMarkdownDirectory'
+import { parseMarkdownRider } from '@/lib/venue-intelligence/rider'
 import type { ShowTelaHydrationSummary, ShowTelaRuntimeSnapshotMeta } from './types'
+import { buildReadinessReviewsFromEvents } from './readiness'
 import type { OperationalCalendarEvent } from './calendar'
 import type {
   FeedItem,
@@ -12,20 +14,14 @@ import type {
   UnresolvedPressure,
 } from '@/components/showtela/types'
 import type { HydratedRuntimeState } from '@/lib/runtime/runtimeHydrationModel'
+import { SHOWTELA_CREATED_EVENT_TYPE } from './lifecycleRegistry'
+import { buildShowTelaContinuityEvents } from './continuityEvents'
 
 function slugify(value: string) {
   return value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
-}
-
-type ArtifactKind = 'directory' | 'calendar' | 'rider' | 'generic'
-type RiderRequirement = {
-  id: string
-  title: string
-  detail: string
-  department: string
 }
 
 function detectArtifactKind(input: {
@@ -45,69 +41,6 @@ function detectArtifactKind(input: {
   if (input.directoryPeopleCount > 0) return 'directory' as const
   if (input.calendarEventCount > 0) return 'calendar' as const
   return 'generic' as const
-}
-
-function parseMarkdownRider(text: string): {
-  title: string
-  departments: string[]
-  requirements: RiderRequirement[]
-} {
-  const lines = text.split('\n')
-  const departments: string[] = []
-  const requirements: RiderRequirement[] = []
-  let title = ''
-  let currentDepartment = ''
-
-  for (const line of lines) {
-    const trimmed = line.trim()
-    if (!trimmed) continue
-
-    if (trimmed.startsWith('# ')) {
-      if (!title) {
-        title = trimmed.slice(2).trim()
-        if (title && !departments.includes(title)) departments.push(title)
-      }
-      continue
-    }
-
-    if (/^#{2,3}\s/.test(trimmed)) {
-      currentDepartment = trimmed
-        .replace(/^#+\s+/, '')
-        .replace(/\s+DEPARTMENT$/i, '')
-        .trim()
-      if (currentDepartment && !departments.includes(currentDepartment)) departments.push(currentDepartment)
-      continue
-    }
-
-    if (!currentDepartment || (!trimmed.startsWith('- ') && !trimmed.startsWith('* '))) continue
-
-    const content = trimmed.slice(2).trim()
-    const separators = [' — ', ' – ', ' - ', ': ']
-    let requirementTitle = content
-    let requirementDetail = ''
-
-    for (const separator of separators) {
-      const index = content.indexOf(separator)
-      if (index > 0) {
-        requirementTitle = content.slice(0, index).trim()
-        requirementDetail = content.slice(index + separator.length).trim()
-        break
-      }
-    }
-
-    requirements.push({
-      id: `rider:${slugify(`${currentDepartment}-${requirementTitle}`)}`,
-      title: requirementTitle,
-      detail: requirementDetail,
-      department: currentDepartment,
-    })
-  }
-
-  return {
-    title: title || 'Production Rider',
-    departments,
-    requirements,
-  }
 }
 
 function collectArtifactViewData(artifacts: ArtifactRecord[]) {
@@ -288,6 +221,19 @@ export function buildShowTelaVMFromHydratedState(
   state: HydratedRuntimeState,
 ): ShowTelaViewModel {
   const artifactView = collectArtifactViewData(state.artifacts)
+  const replayEvents = state.events ?? []
+  const createdEvent = replayEvents.find((event) => event.type === SHOWTELA_CREATED_EVENT_TYPE)
+  const showTelaName = typeof createdEvent?.payload?.showTelaName === 'string' ? createdEvent.payload.showTelaName : undefined
+  const showTelaId = createdEvent?.id ?? state.replay.state.activeProjects[0] ?? 'showtela'
+  const continuityRecords = buildShowTelaContinuityEvents({
+    showTelaId,
+    showTelaName,
+    runtimeEvents: replayEvents,
+    artifacts: state.artifacts,
+  })
+  const readinessReviews = buildReadinessReviewsFromEvents(replayEvents, { showTelaId })
+  const latestContinuity = continuityRecords[0]
+  const showTelaStatus = continuityRecords.some((event) => event.event_type === 'SHOWTELA_ARCHIVED') ? 'archived' as const : 'active' as const
   // Person entities from the durable store, filtered to those active in replay
   const activeEntityIds = new Set(
     state.operationalObjects
@@ -346,18 +292,23 @@ export function buildShowTelaVMFromHydratedState(
   }
 
   // Feed from recent replay decisions
-  const replayFeed: FeedItem[] = state.recentDecisions.slice(-12).map((decision, i) => ({
-    id: `decision:${i}`,
-    timestamp: state.diagnostics.hydratedAt,
-    title: decision,
-    summary: '',
-    owner: '',
-    image: '',
-    avatar: '',
-    unresolved: false,
-    linkedEntities: [],
-  }))
-  const feed = artifactView.feed.length > 0 ? artifactView.feed : replayFeed
+  const replayFeed: FeedItem[] = continuityRecords
+    .slice(0, 24)
+    .map((record) => ({
+      id: record.event_id,
+      timestamp: record.created_at,
+      title: record.title,
+      summary: record.description,
+      owner: record.created_by,
+      image: '',
+      avatar: '',
+      unresolved: false,
+      linkedEntities: Array.isArray(record.metadata.linked_entities)
+        ? record.metadata.linked_entities.filter((item): item is string => typeof item === 'string')
+        : [],
+      pressure: record.event_type.includes('ARCHIVED') ? 'low' : undefined,
+    }))
+  const feed = replayFeed.length > 0 ? replayFeed : artifactView.feed
 
   const hydration: ShowTelaHydrationSummary = {
     connectedToNotion: false,  // hydrateRuntime() does not call Notion
@@ -392,8 +343,43 @@ export function buildShowTelaVMFromHydratedState(
     unresolvedPressure,
     unresolved,
     feed,
-    continuityObjects: [],
-    runtimeTimeline: [],
+    continuityObjects: continuityRecords.map((record) => ({
+      id: record.event_id,
+      headline: record.title,
+      body: record.description,
+      timestamp: record.created_at,
+      tags: [record.event_type],
+      owner: { id: record.created_by, name: record.created_by },
+      linkedEntities: Array.isArray(record.metadata.linked_entities)
+        ? record.metadata.linked_entities.filter((item): item is string => typeof item === 'string')
+        : [],
+      sourceMode: record.source,
+    })),
+    readinessReviews,
+    runtimeTimeline: continuityRecords.slice(0, 24).map((record) => ({
+      id: record.event_id,
+      timestamp: record.created_at,
+      actor: record.created_by,
+      summary: record.title,
+      continuityObjectId: record.event_id,
+      pressureDelta: 0,
+    })),
+    continuityTimeline: continuityRecords.slice(0, 24).map((record) => ({
+      id: record.event_id,
+      timestamp: record.created_at,
+      eventType: record.event_type,
+      title: record.title,
+      description: record.description,
+    })),
+    showTelaHealth: {
+      people: activeOps.length,
+      operations: crusadeOperations.length,
+      calendarEvents: artifactView.calendarEvents.length,
+      artifacts: state.artifacts.length,
+      events: continuityRecords.length,
+      lastActivityAt: latestContinuity?.created_at ?? state.replay.lastEventAt,
+    },
+    showTelaStatus,
     source: 'supabase',
     diagnosticState: 'persistence-connected',
     hydration,

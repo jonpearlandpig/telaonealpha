@@ -1,6 +1,7 @@
 import type { loadDurableContinuity } from './durableMemory'
 import type { reconstructOperationalStateFromReplay } from './replay/reconstructOperationalState'
 import type { OperationalProjection } from './state/model'
+import type { RuntimeEvent } from './runtimeTypes'
 
 // Diagnostics-only record produced by hydrateRuntime().
 // Never exposed to the UI — consumed only by observability/logging paths.
@@ -25,6 +26,7 @@ export type RuntimeDiagnostics = {
 export function buildHydratedRuntimeState(input: {
   durable: Awaited<ReturnType<typeof loadDurableContinuity>>
   replay: ReturnType<typeof reconstructOperationalStateFromReplay>
+  events: RuntimeEvent[]
   operationalProjection: OperationalProjection
   diagnostics: RuntimeDiagnostics
 }) {
@@ -50,6 +52,7 @@ export function buildHydratedRuntimeState(input: {
     artifacts: input.durable.artifacts,
     snapshots: input.durable.snapshots.filter((snapshot) => snapshot.snapshotKind === 'checkpoint'),
     entities: input.durable.entities,
+    events: input.events,
     unresolved,
     replay: input.replay,
     diagnostics: input.diagnostics,

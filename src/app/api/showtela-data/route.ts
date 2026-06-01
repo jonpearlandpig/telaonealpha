@@ -10,6 +10,7 @@ export async function GET(req: Request) {
   const workspaceId = searchParams.get('workspaceId')?.trim() || searchParams.get('workspace')?.trim() || SHOWTELA_WORKSPACE_ID
   const state = await hydrateRuntime(workspaceId)
   const vm = buildShowTelaVMFromHydratedState(state)
+  const readinessReviews = vm.readinessReviews ?? []
   return NextResponse.json({
     workspaceId,
     hasLiveData: Boolean(
@@ -17,7 +18,8 @@ export async function GET(req: Request) {
       vm.fluencyPartners.length ||
       vm.crusadeOperations.length ||
       vm.unresolved.length ||
-      vm.feed.length
+      vm.feed.length ||
+      readinessReviews.length
     ),
     source: vm.source,
     diagnosticState: vm.diagnosticState,
@@ -25,6 +27,12 @@ export async function GET(req: Request) {
     fluencyPartners: vm.fluencyPartners.map(p => ({ name: p.name, role: p.latest })),
     operations: vm.crusadeOperations.map(o => ({ name: o.name, status: o.label })),
     unresolved: vm.unresolved.map(u => ({ title: u.title, severity: u.severity })),
+    readinessReviews: readinessReviews.map((review) => ({
+      reviewId: review.reviewId,
+      title: review.title,
+      status: review.status,
+      reviewDate: review.reviewDate,
+    })),
     feed: vm.feed.slice(0, 5).map(e => ({ headline: e.title, owner: e.owner })),
     vm,
   }, { headers: { 'Cache-Control': 'no-store' } })

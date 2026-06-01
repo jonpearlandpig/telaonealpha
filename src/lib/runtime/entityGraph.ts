@@ -4,7 +4,7 @@ import type { EntityRecord } from '@/lib/entities/entityEngine'
 export type EntityNode = {
   id: string
   name: string
-  type: 'person' | 'project' | 'system' | 'artifact' | 'thread'
+  type: 'person' | 'project' | 'venue' | 'system' | 'artifact' | 'thread'
   relatedEntities: string[]
   relatedArtifacts: string[]
   activeThreads: string[]

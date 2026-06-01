@@ -134,6 +134,13 @@ function determineOntologyIdentity(
     }
   }
 
+  if (object.objectType === 'readiness-review') {
+    return {
+      ontologyType: 'operational-task',
+      identitySource: 'object-id',
+    }
+  }
+
   if (object.objectType === 'entity') {
     return {
       ontologyType: ontologyTypeForEntityId(object, event),

@@ -1,6 +1,8 @@
 import { ShowTelaRuntime } from '@/components/showtela/ShowTelaRuntime'
+import { notFound } from 'next/navigation'
 import { hydrateRuntime } from '@/lib/runtime/runtimeHydration'
 import { buildShowTelaVMFromHydratedState } from '@/lib/showtela/buildViewModel'
+import { resolveShowTela } from '@/lib/showtela/lifecycle'
 import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
 import { getSession } from '@/lib/auth'
 
@@ -21,7 +23,15 @@ export default async function ShowTelaHome({
   searchParams?: Promise<Record<string, string | string[] | undefined>>
 }) {
   const params = searchParams ? await searchParams : {}
-  const workspaceId = firstQueryValue(params.workspace)?.trim() || SHOWTELA_WORKSPACE_ID
+  const workspaceParam = firstQueryValue(params.workspace)?.trim()
+  const showTelaId = firstQueryValue(params.showtela)?.trim()
+  const showTela = showTelaId ? await resolveShowTela(showTelaId) : null
+
+  if (showTelaId && !showTela) {
+    notFound()
+  }
+
+  const workspaceId = workspaceParam || showTela?.workspaceId || SHOWTELA_WORKSPACE_ID
   const [state, session] = await Promise.all([
     hydrateRuntime(workspaceId),
     getSession(),
@@ -56,5 +66,14 @@ export default async function ShowTelaHome({
       })
   }
 
-  return <ShowTelaRuntime vm={vm} user={user} workspaceId={workspaceId} />
+  return (
+    <ShowTelaRuntime
+      vm={vm}
+      user={user}
+      workspaceId={workspaceId}
+      showTelaId={showTela?.showTelaId}
+      showTelaName={showTela?.showTelaName}
+      showTelaCreated={firstQueryValue(params.showtela_created) === '1'}
+    />
+  )
 }

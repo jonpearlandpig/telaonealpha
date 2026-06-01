@@ -73,10 +73,16 @@ export function ShowTelaRuntime({
   vm: initialVm,
   user,
   workspaceId,
+  showTelaId,
+  showTelaName,
+  showTelaCreated,
 }: {
   vm: ShowTelaViewModel
   user?: User
   workspaceId: string
+  showTelaId?: string
+  showTelaName?: string
+  showTelaCreated?: boolean
 }) {
   const [vm, setVm] = useState<ShowTelaViewModel>(initialVm)
   const [showDebug] = useState(() =>
@@ -137,6 +143,10 @@ export function ShowTelaRuntime({
       <ShowTelaShell
         vm={vm}
         user={user}
+        workspaceId={workspaceId}
+        showTelaId={showTelaId}
+        showTelaName={showTelaName}
+        showTelaCreated={showTelaCreated}
         onHydrate={async () => hydrateFromServer(vmSignature(vm))}
       />
       {showDiagnostic && (
