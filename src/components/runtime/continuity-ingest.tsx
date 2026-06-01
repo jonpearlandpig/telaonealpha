@@ -55,15 +55,18 @@ export function ContinuityIngest({
   const [linkUrl, setLinkUrl] = useState('')
   const [assetNames, setAssetNames] = useState<string[]>([])
   const [assetContents, setAssetContents] = useState<Array<{ name: string; content: string; type: string }>>([])
+  const [extracting, setExtracting] = useState(false)
+  const [extractError, setExtractError] = useState<string | null>(null)
 
   const readFileContents = async (files: File[]) => {
+    setExtracting(true)
+    setExtractError(null)
     const results: Array<{ name: string; content: string; type: string }> = []
     for (const file of files) {
       const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
       const isText = file.type === 'text/plain' || file.type === 'text/markdown' ||
         ext === 'md' || ext === 'txt' || ext === 'markdown'
-      const isExtractable = file.type === 'application/pdf' || ext === 'pdf' ||
-        file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || ext === 'docx'
+      const isPdf = file.type === 'application/pdf' || ext === 'pdf'
 
       if (isText) {
         try {
@@ -72,18 +75,21 @@ export function ContinuityIngest({
         } catch {
           results.push({ name: file.name, content: '', type: file.type })
         }
-      } else if (isExtractable) {
+      } else if (isPdf) {
         try {
-          const fd = new FormData()
-          fd.append('file', file)
-          const res = await fetch('/api/parse-document', { method: 'POST', body: fd })
+          const formData = new FormData()
+          formData.append('file', file)
+          const res = await fetch('/api/runtime/continuity/extract-pdf', { method: 'POST', body: formData })
           if (res.ok) {
-            const json = await res.json() as { text: string; mimeType: string }
-            results.push({ name: file.name, content: json.text, type: json.mimeType || file.type })
+            const data = await res.json() as { text?: string }
+            results.push({ name: file.name, content: data.text ?? '', type: 'text/plain' })
           } else {
+            const err = await res.json().catch(() => ({ error: 'Extraction failed' })) as { error?: string }
+            setExtractError(err.error ?? 'PDF extraction failed')
             results.push({ name: file.name, content: '', type: file.type })
           }
-        } catch {
+        } catch (err) {
+          setExtractError(`PDF extraction error: ${String(err)}`)
           results.push({ name: file.name, content: '', type: file.type })
         }
       } else {
@@ -91,6 +97,7 @@ export function ContinuityIngest({
       }
     }
     setAssetContents(results)
+    setExtracting(false)
   }
 
   const toggleTag = (tag: string) => {
@@ -111,7 +118,7 @@ export function ContinuityIngest({
         ? 'Add the reason this link matters, what changed, or what needs movement.'
         : 'Add the operational thread, blocker, or handoff detail.'
 
-  const canSubmit = Boolean(mode && (headline.trim() || body.trim() || linkUrl.trim() || assetNames.length))
+  const canSubmit = Boolean(mode && !extracting && (headline.trim() || body.trim() || linkUrl.trim() || assetNames.length))
 
   const submit = () => {
     if (!mode) return
@@ -231,7 +238,9 @@ export function ContinuityIngest({
                   }}
                   className="w-full rounded-[18px] border border-[#DED4C4] bg-white px-4 py-3 text-[13px] text-[#171411] file:mr-3 file:rounded-full file:border-0 file:bg-[#171411] file:px-3 file:py-2 file:text-[12px] file:font-semibold file:text-[#F6EFDF]"
                 />
-                {assetNames.length > 0 && <p className="mt-2 text-[12px] text-[#6B5D4B]">{assetNames.length} item{assetNames.length === 1 ? '' : 's'} staged into continuity.</p>}
+                {extracting && <p className="mt-2 text-[12px] text-[#9A7C46]">Extracting PDF content…</p>}
+                {!extracting && extractError && <p className="mt-2 text-[12px] text-[#B84040]">{extractError}</p>}
+                {!extracting && !extractError && assetNames.length > 0 && <p className="mt-2 text-[12px] text-[#6B5D4B]">{assetNames.length} item{assetNames.length === 1 ? '' : 's'} staged into continuity.</p>}
               </label>
             )}
 
