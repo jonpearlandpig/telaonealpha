@@ -7,6 +7,7 @@ import { clearStaleRuntimeSnapshot } from '@/lib/showtela/runtimePersist'
 import { subscribeToContinuity } from '@/lib/supabase/realtime'
 
 type User = { name: string; email: string; image: string }
+type ShowTelaEntry = { showTelaId: string; showTelaName: string }
 type ShowTelaDataResponse = {
   vm: ShowTelaViewModel
 }
@@ -76,6 +77,7 @@ export function ShowTelaRuntime({
   showTelaId,
   showTelaName,
   showTelaCreated,
+  activeShowTelas = [],
 }: {
   vm: ShowTelaViewModel
   user?: User
@@ -83,6 +85,7 @@ export function ShowTelaRuntime({
   showTelaId?: string
   showTelaName?: string
   showTelaCreated?: boolean
+  activeShowTelas?: ShowTelaEntry[]
 }) {
   const [vm, setVm] = useState<ShowTelaViewModel>(initialVm)
   const [showDebug] = useState(() =>
@@ -147,6 +150,7 @@ export function ShowTelaRuntime({
         showTelaId={showTelaId}
         showTelaName={showTelaName}
         showTelaCreated={showTelaCreated}
+        activeShowTelas={activeShowTelas}
         onHydrate={async () => hydrateFromServer(vmSignature(vm))}
       />
       {showDiagnostic && (
