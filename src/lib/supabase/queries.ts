@@ -159,6 +159,15 @@ export async function upsertEntityRow(row: DurableEntityRow): Promise<DurableEnt
   return row
 }
 
+export async function deleteEntityRow(id: string): Promise<void> {
+  const db = getSupabaseServerClient()
+  const { error } = await db.from('durable_entities').delete().eq('id', id)
+  if (error) {
+    console.error('[supabase:queries:deleteEntityRow] failed', { message: error.message, id })
+    throw new Error(`deleteEntityRow: ${error.message}`)
+  }
+}
+
 export async function upsertSnapshotRow(row: DurableSnapshotRow): Promise<DurableSnapshotRow> {
   console.log('[supabase:queries:upsertSnapshotRow] id:', row.id, 'workspace:', row.workspaceId)
   const db = getSupabaseServerClient()

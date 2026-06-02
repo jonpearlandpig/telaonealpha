@@ -3,6 +3,11 @@ import { upsertEntityRow, listWorkspaceEntities } from '@/lib/supabase/queries'
 import type { DurableEntityRow, ProvenanceMetadata } from '@/lib/supabase/schema'
 
 export function persistEntity(workspaceId: string, entity: EntityRecord, provenance: ProvenanceMetadata) {
+  const resolvedProvenance: ProvenanceMetadata = {
+    ...provenance,
+    truthRank: entity.trustRank ?? provenance.truthRank,
+    authorityLevel: entity.authoritySource ?? provenance.authorityLevel,
+  }
   return upsertEntityRow({
     id: entity.id,
     workspaceId,
@@ -15,7 +20,7 @@ export function persistEntity(workspaceId: string, entity: EntityRecord, provena
     temporalClusters: entity.temporalClusters,
     createdAt: entity.firstSeen,
     updatedAt: entity.lastSeen,
-    provenance,
+    provenance: resolvedProvenance,
   })
 }
 
@@ -35,6 +40,8 @@ function toEntityRecord(row: DurableEntityRow): EntityRecord {
     relatedArtifacts: row.relatedArtifacts,
     relatedThreads: row.relatedThreads,
     temporalClusters: row.temporalClusters,
+    trustRank: row.provenance.truthRank,
+    authoritySource: row.provenance.authorityLevel as EntityRecord['authoritySource'],
   }
 }
 
