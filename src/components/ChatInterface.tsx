@@ -1,29 +1,36 @@
 'use client'
 
-import { useState, useRef, useEffect, KeyboardEvent, type MutableRefObject, type RefObject } from 'react'
+import { useState, useRef, useEffect, KeyboardEvent } from 'react'
 import { extractArtifactsFromAssistant } from '@/lib/artifacts/runtime'
 import { findArtifactById, loadArtifacts, upsertArtifact, type ArtifactRecord } from '@/lib/artifacts/artifactStore'
 import { extractEntities, type EntityRecord } from '@/lib/entities/entityEngine'
 import { loadEntities, upsertEntities } from '@/lib/entities/entityStore'
 import { ArtifactRenderer } from './artifacts/ArtifactRenderer'
 import { retrieveOperationalContinuity } from '@/lib/runtime/continuityRetrieval'
+import { parseTelaActions, useTelaActions, type TelaAction } from '@/lib/tela/useTelaActions'
+import { useTelaThreads, useTelaMessages } from '@/lib/tela/useTelaThreads'
+import { TELAActionButton } from './tela/TELAActionButton'
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type Message = {
   role: 'user' | 'assistant'
   content: string
   artifactIds?: string[]
+  actions?: TelaAction[]
+  dbId?: string
 }
 
 type Props = {
   wikiContext: string
+  workspaceId?: string
+  userId?: string
 }
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
+type SaveResult = { destination: string; provenanceId: string }
 
-type SaveResult = {
-  destination: string
-  provenanceId: string
-}
+// ─── SaveToNotion ─────────────────────────────────────────────────────────────
 
 function SaveToNotion({ content }: { content: string }) {
   const [state, setState] = useState<SaveState>('idle')
@@ -79,17 +86,15 @@ function SaveToNotion({ content }: { content: string }) {
         display: 'block',
         transition: 'color 0.15s',
       }}
-      onMouseEnter={(e) => {
-        if (state === 'idle') (e.currentTarget as HTMLButtonElement).style.color = 'rgba(196,151,58,0.8)'
-      }}
-      onMouseLeave={(e) => {
-        if (state === 'idle') (e.currentTarget as HTMLButtonElement).style.color = 'rgba(196,151,58,0.35)'
-      }}
+      onMouseEnter={e => { if (state === 'idle') e.currentTarget.style.color = 'rgba(196,151,58,0.8)' }}
+      onMouseLeave={e => { if (state === 'idle') e.currentTarget.style.color = 'rgba(196,151,58,0.35)' }}
     >
       {state === 'saving' ? 'Saving…' : state === 'error' ? 'Save failed — retry' : 'Save →'}
     </button>
   )
 }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const AKB_WRITE_PATTERN = /^(update pearl box|update akb|akb:|create |draft |write |explore |edit |summarize )/i
 
@@ -125,21 +130,30 @@ function conversationalPreview(text: string): string {
 function buildArtifactFirstMessage(raw: string, fileNames: string[]): string {
   const cleaned = stripFencedBlocks(raw)
   const header = `Generated ${fileNames.length} runtime artifact${fileNames.length > 1 ? 's' : ''}: ${fileNames.join(', ')}`
-  const summary = cleaned.split(/\n+/).map((line) => line.trim()).filter(Boolean).slice(0, 2).join(' ')
+  const summary = cleaned.split(/\n+/).map(l => l.trim()).filter(Boolean).slice(0, 2).join(' ')
   return summary
     ? `${header}\n\n${summary}`
     : `${header}\n\nPreview, open, download, continue, or view source from the artifact cards.`
 }
 
-export function ChatInterface({ wikiContext }: Props) {
+// ─── ChatInterface ────────────────────────────────────────────────────────────
+
+export function ChatInterface({ wikiContext, workspaceId = 'default', userId = 'jon' }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [messageArtifacts, setMessageArtifacts] = useState<Record<number, ArtifactRecord[]>>({})
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
+
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const abortRef = useRef<AbortController | null>(null)
   const continueFromRef = useRef<string | undefined>(undefined)
+
+  // Trust layer hooks
+  const { createThread, touchThread } = useTelaThreads(workspaceId, userId)
+  const { saveMessage } = useTelaMessages(activeThreadId)
+  const { executeAction } = useTelaActions(workspaceId, userId, activeThreadId)
 
   const onContinueFromArtifact = (artifactId: string) => {
     const artifact = findArtifactById(artifactId)
@@ -152,7 +166,7 @@ export function ChatInterface({ wikiContext }: Props) {
       artifacts: loadArtifacts(),
       entities: loadEntities(),
     })
-    const contextLine = `Context: ${continuity.relatedEntities.slice(0, 3).map((e) => e.name).join(', ')} | unresolved ${continuity.unresolvedContinuity.length}`
+    const contextLine = `Context: ${continuity.relatedEntities.slice(0, 3).map(e => e.name).join(', ')} | unresolved ${continuity.unresolvedContinuity.length}`
     continueFromRef.current = artifact.id
     setInput(`Continue from artifact: ${artifact.title}\n${contextLine}`)
     textareaRef.current?.focus()
@@ -161,7 +175,6 @@ export function ChatInterface({ wikiContext }: Props) {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
-
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -172,8 +185,7 @@ export function ChatInterface({ wikiContext }: Props) {
     }
     window.addEventListener('tela-artifact-continue', handler as EventListener)
     return () => window.removeEventListener('tela-artifact-continue', handler as EventListener)
-  }, [onContinueFromArtifact])
-
+  }, [])
 
   async function sendMessage() {
     if (!input.trim() || streaming) return
@@ -184,15 +196,32 @@ export function ChatInterface({ wikiContext }: Props) {
     setInput('')
     setStreaming(true)
 
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
-    }
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
 
     const trimmed = input.trim()
     const isPearlBox = trimmed.toLowerCase().startsWith('pearl box:')
     const isAKBWrite = AKB_WRITE_PATTERN.test(trimmed)
 
-    // Legacy Pearl Box quick capture
+    // ── Thread management ──────────────────────────────────────────────────
+    let threadId = activeThreadId
+    if (!threadId) {
+      const title = trimmed.slice(0, 60)
+      threadId = await createThread(title)
+      if (threadId) setActiveThreadId(threadId)
+    }
+
+    // Save user message to DB
+    if (threadId) {
+      const dbId = await saveMessage('user', trimmed)
+      if (dbId) {
+        setMessages(prev => prev.map((m, i) =>
+          i === prev.length - 1 ? { ...m, dbId } : m
+        ))
+      }
+      touchThread(threadId)
+    }
+
+    // ── Pearl Box / AKB write ──────────────────────────────────────────────
     if (isPearlBox) {
       const content = trimmed.slice('pearl box:'.length).trim()
       try {
@@ -201,12 +230,9 @@ export function ChatInterface({ wikiContext }: Props) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ content, source: 'Chat' }),
         })
-      } catch {
-        // Silent — TELA will confirm
-      }
+      } catch { /* Silent */ }
     }
 
-    // Governed AKB write — await before sending to chat so TELA knows the result
     let akbNote = ''
     if (isAKBWrite && !isPearlBox) {
       akbNote = await tryAKBWrite(trimmed)
@@ -217,7 +243,6 @@ export function ChatInterface({ wikiContext }: Props) {
 
     abortRef.current = new AbortController()
 
-    // Augment wiki context with AKB write result so TELA can acknowledge accurately
     const augmentedContext = akbNote
       ? `${wikiContext}\n\n${akbNote}`
       : wikiContext
@@ -260,10 +285,15 @@ export function ChatInterface({ wikiContext }: Props) {
             if (parsed.error) throw new Error(parsed.error)
             if (parsed.text) {
               accumulated += parsed.text
-              const streamingPreview = conversationalPreview(accumulated)
-              setMessages((prev) => {
+              // Strip action tags from streaming preview
+              const { cleanText } = parseTelaActions(accumulated)
+              const preview = conversationalPreview(cleanText)
+              setMessages(prev => {
                 const updated = [...prev]
-                updated[updated.length - 1] = { role: 'assistant', content: streamingPreview || 'Generating artifact…' }
+                updated[updated.length - 1] = {
+                  role: 'assistant',
+                  content: preview || 'Generating…',
+                }
                 return updated
               })
             }
@@ -273,47 +303,69 @@ export function ChatInterface({ wikiContext }: Props) {
         }
       }
 
+      // ── Final processing ───────────────────────────────────────────────
       if (accumulated.trim()) {
+        // Parse actions from full response
+        const { cleanText, actions } = parseTelaActions(accumulated)
+
+        // Artifact extraction
         const artifacts = extractArtifactsFromAssistant({
-          threadId: 'chat-main',
+          threadId: threadId || 'chat-main',
           sourcePrompt: trimmed,
           assistantText: accumulated,
           parentArtifactId: continueFromRef.current,
         })
+
+        let finalContent: string
         if (artifacts.length === 0) {
-          setMessages((prev) => {
-            const updated = [...prev]
-            updated[updated.length - 1] = { role: 'assistant', content: conversationalPreview(accumulated) || accumulated.trim() }
-            return updated
-          })
-          return
+          finalContent = conversationalPreview(cleanText) || cleanText.trim()
+        } else {
+          const allEntities: EntityRecord[] = []
+          for (const artifact of artifacts) {
+            upsertArtifact(artifact)
+            const entities = extractEntities(accumulated, artifact)
+            upsertEntities(entities)
+            allEntities.push(...entities)
+          }
+          fetch('/api/persist-artifact', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ artifacts, entities: allEntities }),
+          }).catch(() => {})
+          continueFromRef.current = artifacts[artifacts.length - 1]?.id
+          finalContent = buildArtifactFirstMessage(
+            accumulated,
+            artifacts.map(a => a.fileName || a.id)
+          )
+          window.dispatchEvent(new Event('tela-artifacts-updated'))
         }
-        const allEntities: EntityRecord[] = []
-        for (const artifact of artifacts) {
-          upsertArtifact(artifact)              // localStorage — immediate client cache
-          const entities = extractEntities(accumulated, artifact)
-          upsertEntities(entities)              // localStorage — immediate client cache
-          allEntities.push(...entities)
-        }
-        // Durable write — non-blocking from UX; localStorage is the fallback if this fails
-        fetch('/api/persist-artifact', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ artifacts, entities: allEntities }),
-        }).catch(() => { /* localStorage fallback remains intact */ })
-        continueFromRef.current = artifacts[artifacts.length - 1]?.id
-        const artifactMessage = buildArtifactFirstMessage(accumulated, artifacts.map((artifact) => artifact.fileName || artifact.id))
-        setMessages((prev) => {
+
+        // Update message with clean text + parsed actions
+        setMessages(prev => {
           const updated = [...prev]
-          updated[updated.length - 1] = { role: 'assistant', content: artifactMessage }
+          updated[updated.length - 1] = {
+            role: 'assistant',
+            content: finalContent,
+            actions: actions.length > 0 ? actions : undefined,
+          }
           return updated
         })
-        window.dispatchEvent(new Event('tela-artifacts-updated'))
+
+        // Save completed assistant response to DB (clean text, no action tags)
+        if (threadId) {
+          const dbId = await saveMessage('assistant', finalContent)
+          if (dbId) {
+            setMessages(prev => prev.map((m, i) =>
+              i === prev.length - 1 ? { ...m, dbId } : m
+            ))
+          }
+          touchThread(threadId)
+        }
       }
     } catch (err: unknown) {
       if ((err as Error).name !== 'AbortError') {
         const msg = (err as Error).message || 'Unknown error'
-        setMessages((prev) => {
+        setMessages(prev => {
           const updated = [...prev]
           updated[updated.length - 1] = { role: 'assistant', content: `[Error: ${msg}]` }
           return updated
@@ -331,11 +383,29 @@ export function ChatInterface({ wikiContext }: Props) {
     }
   }
 
+  // ─── Render ──────────────────────────────────────────────────────────────
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 56px - 44px)', background: '#0D1B2A' }}>
+
+      {/* Thread indicator */}
+      {activeThreadId && (
+        <div style={{
+          padding: '6px 24px',
+          fontFamily: "'DM Mono', monospace",
+          fontSize: 10,
+          color: 'rgba(196,151,58,0.4)',
+          letterSpacing: '0.08em',
+          borderBottom: '1px solid rgba(234,224,210,0.04)',
+        }}>
+          THREAD {activeThreadId.slice(0, 8)}…
+        </div>
+      )}
+
       {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '32px 0' }}>
         <div style={{ maxWidth: 720, margin: '0 auto', padding: '0 24px' }}>
+
           {messages.length === 0 && (
             <div style={{ textAlign: 'center', paddingTop: '15vh' }}>
               <p style={{
@@ -378,11 +448,7 @@ export function ChatInterface({ wikiContext }: Props) {
                   {msg.content}
                 </div>
               ) : (
-                <div style={{
-                  maxWidth: '85%',
-                  borderLeft: '2px solid #C4973A',
-                  paddingLeft: 16,
-                }}>
+                <div style={{ maxWidth: '85%', borderLeft: '2px solid #C4973A', paddingLeft: 16 }}>
                   <p style={{
                     fontSize: 14,
                     color: msg.artifactIds?.length ? 'rgba(234,224,210,0.82)' : '#EAE0D2',
@@ -404,20 +470,60 @@ export function ChatInterface({ wikiContext }: Props) {
                       }} />
                     )}
                   </p>
-                  {/* Save to Notion — only on completed messages */}
+
+                  {/* ── TELA Action Buttons ─────────────────────────── */}
+                  {msg.actions && msg.actions.length > 0 && (
+                    <div style={{ marginTop: 4 }}>
+                      {msg.actions.map((action, ai) => (
+                        <TELAActionButton
+                          key={ai}
+                          action={action}
+                          onExecute={executeAction}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Save to Notion */}
                   {!(streaming && i === messages.length - 1) && msg.content && (
                     <SaveToNotion content={msg.content} />
                   )}
+
+                  {/* Artifacts */}
                   {msg.artifactIds && msg.artifactIds.length > 0 && (
                     <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      {(messageArtifacts[i] || []).map((artifact) => (
-                        <div key={artifact.id} style={{ border: '1px solid rgba(196,151,58,0.35)', borderRadius: 14, padding: 12, background: 'rgba(8,19,33,0.9)' }}>
+                      {(messageArtifacts[i] || []).map(artifact => (
+                        <div
+                          key={artifact.id}
+                          style={{
+                            border: '1px solid rgba(196,151,58,0.35)',
+                            borderRadius: 14,
+                            padding: 12,
+                            background: 'rgba(8,19,33,0.9)',
+                          }}
+                        >
                           <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 8 }}>{artifact.fileName}</div>
                           <ArtifactRenderer artifact={artifact} mode={artifact.mimeType === 'text/html' ? 'open' : 'preview'} />
                           <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                            <button onClick={() => onContinueFromArtifact(artifact.id)} style={{ border: '1px solid rgba(196,151,58,0.4)', background: 'rgba(196,151,58,0.1)', color: '#EAE0D2', borderRadius: 999, padding: '8px 12px' }}>Continue</button>
-                            <a href={URL.createObjectURL(new Blob([artifact.html ?? artifact.markdown ?? artifact.code ?? artifact.text ?? ''], { type: artifact.mimeType || 'text/plain' }))} download={artifact.fileName || `${artifact.id}.txt`} style={{ border: '1px solid rgba(234,224,210,0.24)', color: '#EAE0D2', borderRadius: 999, padding: '8px 12px', textDecoration: 'none' }}>Download</a>
-                            <button onClick={() => window.dispatchEvent(new CustomEvent('tela-artifact-continue', { detail: { artifactId: artifact.id } }))} style={{ border: '1px solid rgba(234,224,210,0.24)', background: 'transparent', color: '#EAE0D2', borderRadius: 999, padding: '8px 12px' }}>Open</button>
+                            <button
+                              onClick={() => onContinueFromArtifact(artifact.id)}
+                              style={{ border: '1px solid rgba(196,151,58,0.4)', background: 'rgba(196,151,58,0.1)', color: '#EAE0D2', borderRadius: 999, padding: '8px 12px' }}
+                            >
+                              Continue
+                            </button>
+                            <a
+                              href={URL.createObjectURL(new Blob([artifact.html ?? artifact.markdown ?? artifact.code ?? artifact.text ?? ''], { type: artifact.mimeType || 'text/plain' }))}
+                              download={artifact.fileName || `${artifact.id}.txt`}
+                              style={{ border: '1px solid rgba(234,224,210,0.24)', color: '#EAE0D2', borderRadius: 999, padding: '8px 12px', textDecoration: 'none' }}
+                            >
+                              Download
+                            </a>
+                            <button
+                              onClick={() => window.dispatchEvent(new CustomEvent('tela-artifact-continue', { detail: { artifactId: artifact.id } }))}
+                              style={{ border: '1px solid rgba(234,224,210,0.24)', background: 'transparent', color: '#EAE0D2', borderRadius: 999, padding: '8px 12px' }}
+                            >
+                              Open
+                            </button>
                             <details>
                               <summary style={{ cursor: 'pointer', color: '#C4973A' }}>View Source</summary>
                               <ArtifactRenderer artifact={artifact} mode='source' />
@@ -437,25 +543,23 @@ export function ChatInterface({ wikiContext }: Props) {
       </div>
 
       {/* Input */}
-      <div style={{
-        borderTop: '1px solid rgba(234,224,210,0.08)',
-        padding: '16px 24px',
-      }}>
+      <div style={{ borderTop: '1px solid rgba(234,224,210,0.08)', padding: '16px 24px' }}>
         <div style={{ maxWidth: 720, margin: '0 auto', display: 'flex', gap: 12, alignItems: 'flex-end' }}>
-          <div style={{
-            flex: 1,
-            border: '1px solid rgba(234,224,210,0.12)',
-            background: 'rgba(255,255,255,0.02)',
-            padding: '10px 14px',
-            transition: 'border-color 0.2s',
-          }}
-            onFocusCapture={(e) => (e.currentTarget.style.borderColor = 'rgba(196,151,58,0.4)')}
-            onBlurCapture={(e) => (e.currentTarget.style.borderColor = 'rgba(234,224,210,0.12)')}
+          <div
+            style={{
+              flex: 1,
+              border: '1px solid rgba(234,224,210,0.12)',
+              background: 'rgba(255,255,255,0.02)',
+              padding: '10px 14px',
+              transition: 'border-color 0.2s',
+            }}
+            onFocusCapture={e => (e.currentTarget.style.borderColor = 'rgba(196,151,58,0.4)')}
+            onBlurCapture={e => (e.currentTarget.style.borderColor = 'rgba(234,224,210,0.12)')}
           >
             <textarea
               ref={textareaRef}
               value={input}
-              onChange={(e) => {
+              onChange={e => {
                 setInput(e.target.value)
                 e.target.style.height = 'auto'
                 e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px'
