@@ -1,31 +1,11 @@
-/**
- * POST /api/seed-anchor-directory
- *
- * One-shot ingestion route for crew anchor directory documents.
- * Parses the markdown table rows as individual evidence chunks,
- * persists each as a durable artifact in the showtela workspace,
- * so answerRoleFromEvidenceChunks can find exact role→name mappings.
- *
- * Usage: POST with { content: "<markdown string>", sourceFile: "<title>" }
- * Or call with no body to seed the canonical Positive Rocks directory.
- */
-
 import { NextResponse } from 'next/server'
-import { requireApiSession } from '@/lib/api-auth'
-import {
-  createEvidenceChunksFromText,
-  evidenceChunkToArtifact,
-} from '@/lib/showtela/evidenceAuthority'
+import { createEvidenceChunksFromText, evidenceChunkToArtifact } from '@/lib/showtela/evidenceAuthority'
 import { persistDurableContinuity } from '@/lib/runtime/durableMemory'
 import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
 
-// The canonical directory — embedded so it can be seeded without an upload
-const CANONICAL_DIRECTORY = `# THE POSITIVE ROCKS
-# SPRING 2027 ARENA TOUR
-# TOUR TEAM CREW ANCHOR DIRECTORY
+export const dynamic = 'force-dynamic'
 
-# EXECUTIVE & TOUR LEADERSHIP
-
+const DIRECTORY = `# EXECUTIVE & TOUR LEADERSHIP
 | Role | Name | Email | Mobile | Notes |
 |---|---|---|---|---|
 | Executive Producer | Jon Hartman | jonhartman@pigpenpositiverocks.com | (615) 555-0101 | Final creative + operational authority |
@@ -38,7 +18,6 @@ const CANONICAL_DIRECTORY = `# THE POSITIVE ROCKS
 | Risk Oversight | Levi Foster | levifoster@pigpenpositiverocks.com | (615) 555-0108 | Risk analysis |
 
 # CREATIVE DIRECTION
-
 | Role | Name | Email | Mobile | Notes |
 |---|---|---|---|---|
 | Creative Director | Naomi Top | naomitop@pigpenpositiverocks.com | (615) 555-0201 | Narrative + visuals |
@@ -49,7 +28,6 @@ const CANONICAL_DIRECTORY = `# THE POSITIVE ROCKS
 | Concept Artist | Ellie Summers | elliesummers@pigpenpositiverocks.com | (615) 555-0206 | Visual iteration |
 
 # MUSIC & PERFORMANCE
-
 | Role | Name | Email | Mobile | Notes |
 |---|---|---|---|---|
 | Music Director | Turner Smith | turnersmith@pigpenpositiverocks.com | (615) 555-0301 | Musical identity |
@@ -60,7 +38,6 @@ const CANONICAL_DIRECTORY = `# THE POSITIVE ROCKS
 | Drum Tech | Cruz Hartman | cruzhartman@pigpenpositiverocks.com | (615) 555-0306 | Drum systems |
 
 # STAGE MANAGEMENT
-
 | Role | Name | Email | Mobile | Notes |
 |---|---|---|---|---|
 | Stage Manager | Sam Rivers | samrivers@pigpenpositiverocks.com | (615) 555-0401 | Deck execution |
@@ -70,7 +47,6 @@ const CANONICAL_DIRECTORY = `# THE POSITIVE ROCKS
 | Stage PA | Eli Stone | elistone@pigpenpositiverocks.com | (615) 555-0405 | Quick-turn support |
 
 # AUDIO DEPARTMENT
-
 | Role | Name | Email | Mobile | Notes |
 |---|---|---|---|---|
 | FOH Engineer | Fory Cornier | forycornier@pigpenpositiverocks.com | (615) 555-0501 | Arena mix |
@@ -81,7 +57,6 @@ const CANONICAL_DIRECTORY = `# THE POSITIVE ROCKS
 | Patch Tech | Sarah Wynn | sarahwynn@pigpenpositiverocks.com | (615) 555-0506 | Signal flow |
 
 # LIGHTING DEPARTMENT
-
 | Role | Name | Email | Mobile | Notes |
 |---|---|---|---|---|
 | Lighting Director | Fred Mann | fredmann@pigpenpositiverocks.com | (615) 555-0601 | Lighting arc |
@@ -91,7 +66,6 @@ const CANONICAL_DIRECTORY = `# THE POSITIVE ROCKS
 | Lighting Crew Chief | Blake Tanner | blaketanner@pigpenpositiverocks.com | (615) 555-0605 | Rig deployment |
 
 # VIDEO / LED / PROJECTION
-
 | Role | Name | Email | Mobile | Notes |
 |---|---|---|---|---|
 | Video Director | Naomi Top | naomitop@pigpenpositiverocks.com | (615) 555-0701 | IMAG + projection |
@@ -100,30 +74,7 @@ const CANONICAL_DIRECTORY = `# THE POSITIVE ROCKS
 | Projection Mapping | Vienna Cray | viennacray@pigpenpositiverocks.com | (615) 555-0704 | Visual overlays |
 | Playback Graphics | Ellie Summers | elliesummers@pigpenpositiverocks.com | (615) 555-0705 | Motion assets |
 
-# SHOWTELA OPERATIONS
-
-| Role | Name | Email | Mobile | Notes |
-|---|---|---|---|---|
-| Runtime Lead | Miles Okada | milesokada@pigpenpositiverocks.com | (615) 555-0801 | Runtime integrity |
-| Continuity Manager | Sam Rivers | samrivers@pigpenpositiverocks.com | (615) 555-0802 | Operational memory |
-| Dispatch Lead | Kay Jing | kayjing@pigpenpositiverocks.com | (615) 555-0803 | Routing + alerts |
-| Voice Runtime Ops | Marcus Stone | marcusstone@pigpenpositiverocks.com | (615) 555-0804 | TELA Talk |
-| Automation Runtime | Otto Matic | ottomatic@pigpenpositiverocks.com | (615) 555-0805 | Auto-generation |
-| Data & Analytics | Eli Tran | elitran@pigpenpositiverocks.com | (615) 555-0806 | Metrics + reporting |
-
-# TOURING OPERATIONS
-
-| Role | Name | Email | Mobile | Notes |
-|---|---|---|---|---|
-| Transportation Captain | Tyler Tiempo | tylertiempo@pigpenpositiverocks.com | (615) 555-0901 | Fleet movement |
-| Bus Coordinator | Liam Brooks | liambrooks@pigpenpositiverocks.com | (615) 555-0902 | Bus schedules |
-| Hotel Coordinator | Maya Chen | mayachen@pigpenpositiverocks.com | (615) 555-0903 | Hospitality routing |
-| Credential Manager | Carmen Wade | carmenwade@pigpenpositiverocks.com | (615) 555-0904 | Access control |
-| Backstage Logistics | Sam Rivers | samrivers@pigpenpositiverocks.com | (615) 555-0905 | Compound movement |
-| Dock Lead | Blake Tanner | blaketanner@pigpenpositiverocks.com | (615) 555-0906 | Load-in/load-out |
-
 # GUEST EXPERIENCE
-
 | Role | Name | Email | Mobile | Notes |
 |---|---|---|---|---|
 | Guest Experience Director | Leah Monroe | leahmonroe@pigpenpositiverocks.com | (615) 555-1001 | Audience journey |
@@ -134,7 +85,6 @@ const CANONICAL_DIRECTORY = `# THE POSITIVE ROCKS
 | Parent Hospitality | Leah Monroe | leahmonroe@pigpenpositiverocks.com | (615) 555-1006 | Family hospitality |
 
 # MARKETING & CONTENT
-
 | Role | Name | Email | Mobile | Notes |
 |---|---|---|---|---|
 | Social Director | Jack Jones | jackjones@pigpenpositiverocks.com | (615) 555-1101 | Social publishing |
@@ -145,7 +95,6 @@ const CANONICAL_DIRECTORY = `# THE POSITIVE ROCKS
 | Vertical Content Team | Jack Jones | jackjones@pigpenpositiverocks.com | (615) 555-1106 | Reels + TikTok |
 
 # SECURITY & SAFETY
-
 | Role | Name | Email | Mobile | Notes |
 |---|---|---|---|---|
 | Head of Security | Marcus Stone | marcusstone@pigpenpositiverocks.com | (615) 555-1201 | Security coordination |
@@ -155,7 +104,6 @@ const CANONICAL_DIRECTORY = `# THE POSITIVE ROCKS
 | Risk Review | Levi Foster | levifoster@pigpenpositiverocks.com | (615) 555-1205 | Threat assessment |
 
 # BACKLINE & TECH
-
 | Role | Name | Email | Mobile | Notes |
 |---|---|---|---|---|
 | Guitar Tech | Caleb Rhodes | calebrhodes@pigpenpositiverocks.com | (615) 555-1301 | Guitar systems |
@@ -164,58 +112,31 @@ const CANONICAL_DIRECTORY = `# THE POSITIVE ROCKS
 | RF Tech | Marcus Stone | marcusstone@pigpenpositiverocks.com | (615) 555-1304 | RF systems |
 | IT / Networking | Miles Okada | milesokada@pigpenpositiverocks.com | (615) 555-1305 | Connectivity |`
 
-export const dynamic = 'force-dynamic'
-
-
-export async function GET(req: Request) {
-  return POST(req)
+async function seed() {
+  const now = new Date().toISOString()
+  const chunks = createEvidenceChunksFromText({
+    sourceFile: 'positive_rocks_tour_team_crew_anchor_directory_v1',
+    extractedText: DIRECTORY,
+  })
+  const artifacts = chunks.map(c => evidenceChunkToArtifact(c, now))
+  await persistDurableContinuity(SHOWTELA_WORKSPACE_ID, { artifacts, entities: [], snapshots: [] })
+  return { ok: true, chunksIndexed: chunks.length }
 }
 
-export async function POST(req: Request) {
-  // Auth: valid session OR seed secret key (for one-time URL triggering)
-  const url = new URL(req.url)
-  const secretKey = url.searchParams.get('key')
-  if (secretKey !== 'tela-seed-2026') {
-    const auth = await requireApiSession(req)
-    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
-  }
-
-  let content = CANONICAL_DIRECTORY
-  let sourceFile = 'positive_rocks_tour_team_crew_anchor_directory_v1'
-
-  // Allow override via request body
+export async function GET() {
   try {
-    const body = await req.json() as { content?: string; sourceFile?: string }
-    if (body.content) content = body.content
-    if (body.sourceFile) sourceFile = body.sourceFile
-  } catch {
-    // No body — use canonical
+    const result = await seed()
+    return NextResponse.json(result)
+  } catch (err) {
+    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 })
   }
+}
 
-  const now = new Date().toISOString()
-
-  // Parse into row-level evidence chunks
-  const chunks = createEvidenceChunksFromText({ sourceFile, extractedText: content })
-
-  // Convert to artifact records
-  const artifacts = chunks.map((chunk) => evidenceChunkToArtifact(chunk, now))
-
-  // Persist to durable memory
-  await persistDurableContinuity(SHOWTELA_WORKSPACE_ID, {
-    artifacts,
-    entities: [],
-    snapshots: [],
-  })
-
-  return NextResponse.json({
-    ok: true,
-    sourceFile,
-    chunksIndexed: chunks.length,
-    artifactsSeeded: artifacts.length,
-    sampleChunks: chunks.slice(0, 3).map((c) => ({
-      id: c.id,
-      section: c.sourceSection,
-      text: c.extractedText.slice(0, 120),
-    })),
-  })
+export async function POST() {
+  try {
+    const result = await seed()
+    return NextResponse.json(result)
+  } catch (err) {
+    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 })
+  }
 }
