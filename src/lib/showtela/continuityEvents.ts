@@ -152,6 +152,9 @@ function continuityEventFromRuntimeEvent(input: {
   const evidence = detectArtifactEvidence(artifact)
   const createdBy = stringValue(payload.submittedBy) ?? stringValue(payload.owner) ?? input.event.source
   const entityId = stringValue(payload.entityId) ?? stringValue(payload.threadId) ?? stringList(payload.linkedEntities)[0] ?? null
+  const evidenceChunkIds = stringList(payload.evidenceChunkIds).length > 0
+    ? stringList(payload.evidenceChunkIds)
+    : artifact?.evidenceChunkIds ?? []
   const common = {
     showtela_id: input.showTelaId,
     entity_id: entityId,
@@ -164,6 +167,7 @@ function continuityEventFromRuntimeEvent(input: {
       replay_sequence: input.event.replaySequence ?? null,
       lineage_id: input.event.lineageId ?? null,
       linked_entities: stringList(payload.linkedEntities).length > 0 ? stringList(payload.linkedEntities) : evidence.linkedEntities,
+      evidence_chunk_ids: evidenceChunkIds,
       artifact_kind: evidence.artifactKind,
       source_artifact_title: evidence.artifactTitle ?? null,
       counts: {

@@ -101,6 +101,7 @@ export type ContinuityEvent = {
   normalizedBy?: 'claude'
   normalizationVersion?: string
   sourceMode?: string
+  evidenceChunkIds?: string[]
   telaWhy?: TELAwhy
 }
 
@@ -114,6 +115,7 @@ export type TELAwhy = {
     eventId?: string
     continuityRecordId?: string
     artifactId?: string
+    evidenceChunkIds?: string[]
   }
   sourceArtifact?: {
     id?: string

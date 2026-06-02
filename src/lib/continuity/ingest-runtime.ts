@@ -14,6 +14,12 @@ import {
   createRuntimeContinuityArtifact,
   extractContinuityEntities,
 } from '@/lib/showtela/continuityRecord'
+import {
+  createEvidenceChunksFromText,
+  evidenceChunkIdsForEvent,
+  evidenceChunkToArtifact,
+  sourceFileLabel,
+} from '@/lib/showtela/evidenceAuthority'
 import { parseMarkdownCalendar } from '@/lib/continuity/parseMarkdownCalendar'
 import { parseMarkdownDirectory } from '@/lib/continuity/parseMarkdownDirectory'
 import { parseMarkdownRider } from '@/lib/venue-intelligence/rider'
@@ -31,6 +37,11 @@ export async function ingestCanonicalContinuity(
   const fileContents = (input.assetContents ?? [])
     .filter(f => f.content.trim().length > 0)
     .map(f => f.content.trim())
+  const evidenceChunks = (input.assetContents ?? []).flatMap((asset) => createEvidenceChunksFromText({
+    sourceFile: sourceFileLabel(asset.name),
+    extractedText: asset.content,
+  }))
+  const evidenceChunkArtifacts = evidenceChunks.map((chunk) => evidenceChunkToArtifact(chunk, timestamp))
   const fileExtractionNotes = (input.assetContents ?? [])
     .map((asset) => {
       const status = asset.extractionStatus ?? (asset.content.trim() ? 'extracted' : 'stored-only')
@@ -44,7 +55,7 @@ export async function ingestCanonicalContinuity(
   const headlineSeed = input.headline?.trim() || input.body?.trim() || 'continuity'
   const ocid = createContinuityOcid(headlineSeed, timestamp)
 
-  const event = await normalizeContinuityIngestionWithLLM(input, {
+  const normalizedEvent = await normalizeContinuityIngestionWithLLM(input, {
     author: submittedBy,
     continuityObjectId: ocid,
     eventId: ocid,
@@ -52,6 +63,10 @@ export async function ingestCanonicalContinuity(
     lineageParentId: options?.lineageParentId,
     timestamp,
   })
+  const event = {
+    ...normalizedEvent,
+    evidenceChunkIds: evidenceChunkIdsForEvent(normalizedEvent, evidenceChunks),
+  }
 
   const lineageId = event.lineageRef?.lineageId ?? ocid
 
@@ -61,7 +76,7 @@ export async function ingestCanonicalContinuity(
   const entities = extractContinuityEntities(event, artifact)
 
   try {
-    await persistDurableContinuity(workspaceId, { artifacts: [artifact], entities, snapshots: [] })
+    await persistDurableContinuity(workspaceId, { artifacts: [artifact, ...evidenceChunkArtifacts], entities, snapshots: [] })
   } catch (err) {
     console.error('[runtimeIngest] durable persistence non-fatal:', String(err))
   }
@@ -84,7 +99,7 @@ export async function ingestCanonicalContinuity(
       parentLineageId: options?.lineageParentId,
       existingLineageChain: options?.existingLineageChain,
     },
-    payload: { ocid, headline: event.headline, insertedId: artifact.id },
+    payload: { ocid, headline: event.headline, insertedId: artifact.id, evidenceChunkIds: event.evidenceChunkIds ?? [] },
   })
 
   await emitRuntimeEvent({
@@ -102,6 +117,7 @@ export async function ingestCanonicalContinuity(
       insertedId: artifact.id,
       threadId: event.threadId,
       linkedEntities: event.linkedEntities ?? [],
+      evidenceChunkIds: event.evidenceChunkIds ?? [],
       sourceMode: event.sourceMode,
     },
   })
@@ -128,6 +144,7 @@ export async function ingestCanonicalContinuity(
       insertedId: artifact.id,
       threadId: event.threadId,
       linkedEntities: event.linkedEntities ?? [],
+      evidenceChunkIds: event.evidenceChunkIds ?? [],
       submittedBy,
       sourceMode: event.sourceMode,
       peopleCount: directory.people.length,
@@ -150,6 +167,7 @@ export async function ingestCanonicalContinuity(
         insertedId: artifact.id,
         threadId: event.threadId,
         linkedEntities: event.linkedEntities ?? [],
+        evidenceChunkIds: event.evidenceChunkIds ?? [],
         submittedBy,
         peopleCount: directory.people.length,
       },
@@ -170,6 +188,7 @@ export async function ingestCanonicalContinuity(
         insertedId: artifact.id,
         threadId: event.threadId,
         linkedEntities: event.linkedEntities ?? [],
+        evidenceChunkIds: event.evidenceChunkIds ?? [],
         submittedBy,
         operationsCount: operationCount,
       },
@@ -190,6 +209,7 @@ export async function ingestCanonicalContinuity(
         insertedId: artifact.id,
         threadId: event.threadId,
         linkedEntities: event.linkedEntities ?? [],
+        evidenceChunkIds: event.evidenceChunkIds ?? [],
         submittedBy,
         calendarCount: calendar.events.length,
       },

@@ -9,6 +9,7 @@ import {
   SHOWTELA_RUNTIME_THREAD_ID,
 } from './runtimeIds'
 import type { ContinuityEvent } from './types'
+import { evidenceChunkIdsForText } from './evidenceAuthority'
 
 const SHOWTELA_RUNTIME_SESSION_ID = 'showtela-runtime-ingest'
 const ENTITY_STOPLIST = new Set(['linked entities', 'owner', 'ocid'])
@@ -65,6 +66,10 @@ function dedupeEntities(entities: EntityRecord[]) {
       relatedArtifacts: Array.from(new Set([...existing.relatedArtifacts, ...entity.relatedArtifacts])),
       relatedThreads: Array.from(new Set([...existing.relatedThreads, ...entity.relatedThreads])),
       temporalClusters: Array.from(new Set([...existing.temporalClusters, ...entity.temporalClusters])),
+      evidenceChunkIds: Array.from(new Set([
+        ...(existing.evidenceChunkIds ?? []),
+        ...(entity.evidenceChunkIds ?? []),
+      ])),
     })
   }
   return [...merged.values()]
@@ -72,6 +77,18 @@ function dedupeEntities(entities: EntityRecord[]) {
 
 function namedEntity(name: string, type: EntityType, artifact: ArtifactRecord, timestamp: string): EntityRecord {
   const id = `${type}:${slugify(name)}`
+  const evidenceChunkIds = evidenceChunkIdsForText(
+    (artifact.evidenceChunkIds ?? []).map((chunkId) => ({
+      id: chunkId,
+      sourceFile: artifact.fileName ?? artifact.title,
+      sourceSection: 'Runtime Artifact',
+      sourceSpan: 'unknown',
+      extractedText: artifact.text ?? '',
+      lineStart: 0,
+      lineEnd: 0,
+    })),
+    name,
+  )
   return {
     id,
     name,
@@ -87,6 +104,7 @@ function namedEntity(name: string, type: EntityType, artifact: ArtifactRecord, t
     relatedArtifacts: [artifact.id],
     relatedThreads: [artifact.threadId],
     temporalClusters: [timestamp.slice(0, 10)],
+    evidenceChunkIds: evidenceChunkIds.length > 0 ? evidenceChunkIds : artifact.evidenceChunkIds,
   }
 }
 
@@ -240,6 +258,7 @@ export function createRuntimeContinuityArtifact(input: {
     projects: input.event.linkedEntities?.filter((item) => item.toLowerCase().includes('crusade') || item.toLowerCase().includes('venue')) ?? [],
     lineageId: input.event.lineageRef?.lineageId,
     artifactGroupId: SHOWTELA_RUNTIME_ARTIFACT_GROUP_ID,
+    evidenceChunkIds: input.event.evidenceChunkIds,
     createdAt,
     pinned: false,
     classification: 'runtime_artifact',

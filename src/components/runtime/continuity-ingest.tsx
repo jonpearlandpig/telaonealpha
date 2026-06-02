@@ -20,7 +20,7 @@ type Props = {
 }
 
 const QUICK_TAGS = ['handoff', 'note', 'risk', 'approval']
-const FILE_ACCEPT = '.pdf,.txt,.md,.markdown,text/plain,text/markdown,application/pdf'
+const FILE_ACCEPT = '.pdf,.docx,.txt,.md,.markdown,image/*,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 
 function fileExtractionLabel(status?: string) {
   if (status === 'extracted') return 'Extracted successfully'
@@ -70,8 +70,12 @@ export function ContinuityIngest({
   const [assetNames, setAssetNames] = useState<string[]>([])
   const [assetContents, setAssetContents] = useState<Array<{ name: string; content: string; type: string; extractionStatus?: 'extracted' | 'stored-only' | 'failed'; extractionDetail?: string }>>([])
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [extracting, setExtracting] = useState(false)
+  const [extractError, setExtractError] = useState<string | null>(null)
 
   const readFileContents = async (files: File[]) => {
+    setExtracting(true)
+    setExtractError(null)
     const results: Array<{ name: string; content: string; type: string; extractionStatus?: 'extracted' | 'stored-only' | 'failed'; extractionDetail?: string }> = []
     for (const file of files) {
       const isText = file.type === 'text/plain' || file.type === 'text/markdown' ||
@@ -96,19 +100,45 @@ export function ContinuityIngest({
           })
         }
       } else {
-        const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
-        results.push({
-          name: file.name,
-          content: '',
-          type: file.type || (isPdf ? 'application/pdf' : 'application/octet-stream'),
-          extractionStatus: isPdf ? 'stored-only' : 'failed',
-          extractionDetail: isPdf
-            ? 'PDF is saved as a source file; detailed venue parsing runs separately.'
-            : 'Only PDF, TXT, and MD files are supported.',
-        })
+        try {
+          const formData = new FormData()
+          formData.append('file', file)
+          const response = await fetch('/api/parse-document', {
+            method: 'POST',
+            body: formData,
+          })
+          const parsed = await response.json() as {
+            text?: string
+            extractionStatus?: 'extracted' | 'stored-only' | 'failed'
+            error?: string
+          }
+          const content = parsed.text ?? ''
+          const detail = content.trim()
+            ? 'Source text was extracted and saved with this update.'
+            : parsed.error ?? 'ShowTELA could not extract text from this file.'
+          if (!content.trim()) setExtractError(detail)
+          results.push({
+            name: file.name,
+            content,
+            type: file.type || 'application/octet-stream',
+            extractionStatus: content.trim() ? 'extracted' : 'failed',
+            extractionDetail: detail,
+          })
+        } catch {
+          const detail = 'ShowTELA could not extract text from this file.'
+          setExtractError(detail)
+          results.push({
+            name: file.name,
+            content: '',
+            type: file.type || 'application/octet-stream',
+            extractionStatus: 'failed',
+            extractionDetail: detail,
+          })
+        }
       }
     }
     setAssetContents(results)
+    setExtracting(false)
   }
 
   const toggleTag = (tag: string) => {
@@ -129,7 +159,7 @@ export function ContinuityIngest({
         ? 'Add the reason this link matters, what changed, or what needs movement.'
         : 'Add the operational thread, blocker, or handoff detail.'
 
-  const canSubmit = Boolean(mode && (headline.trim() || body.trim() || linkUrl.trim() || assetNames.length))
+  const canSubmit = Boolean(mode && !extracting && (headline.trim() || body.trim() || linkUrl.trim() || assetNames.length))
 
   const submit = async () => {
     if (!mode) return
@@ -251,6 +281,8 @@ export function ContinuityIngest({
                   }}
                   className="w-full rounded-[18px] border border-[#DED4C4] bg-white px-4 py-3 text-[13px] text-[#171411] file:mr-3 file:rounded-full file:border-0 file:bg-[#171411] file:px-3 file:py-2 file:text-[12px] file:font-semibold file:text-[#F6EFDF]"
                 />
+                {extracting && <p className="mt-2 text-[12px] text-[#9A7C46]">Extracting PDF content...</p>}
+                {!extracting && extractError && <p className="mt-2 text-[12px] text-[#B84040]">{extractError}</p>}
                 {assetNames.length > 0 && <p className="mt-2 text-[12px] text-[#6B5D4B]">{assetNames.length} item{assetNames.length === 1 ? '' : 's'} ready to save.</p>}
                 {assetContents.length > 0 && (
                   <div className="mt-3 space-y-2">

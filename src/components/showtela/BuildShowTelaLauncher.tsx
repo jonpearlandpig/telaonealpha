@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { WorkspaceEntryActions } from './WorkspaceEntryActions'
 
 type LauncherProps = {
   user: { name: string; email: string; image: string }
@@ -19,6 +20,8 @@ type LauncherProps = {
   }>
   createdShowTelaId?: string
   showTelaCreated?: boolean
+  showTelaRenamed?: boolean
+  showTelaDeleted?: boolean
 }
 
 function formatDateLabel(value: string, includeTime = false) {
@@ -39,6 +42,8 @@ export function BuildShowTelaLauncher({
   archivedShowTelas,
   createdShowTelaId,
   showTelaCreated,
+  showTelaRenamed,
+  showTelaDeleted,
 }: LauncherProps) {
   const createdShowTela = createdShowTelaId
     ? activeShowTelas.find((entry) => entry.showTelaId === createdShowTelaId)
@@ -74,6 +79,20 @@ export function BuildShowTelaLauncher({
                 <p className="mt-2 text-[13px] leading-[1.65] text-[#E1D4BF]">
 	                  Clean state verified. Reopen it from the active list and begin updates.
                 </p>
+              </div>
+            ) : null}
+
+            {showTelaRenamed ? (
+              <div className="mt-6 rounded-[24px] border border-[#2F4A1F] bg-[linear-gradient(180deg,rgba(80,160,47,0.12)_0%,rgba(60,120,40,0.06)_100%)] px-5 py-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8DC46A]">ShowTELA Renamed</p>
+                <p className="mt-2 text-[13px] leading-[1.65] text-[#C4DEB8]">Name updated successfully.</p>
+              </div>
+            ) : null}
+
+            {showTelaDeleted ? (
+              <div className="mt-6 rounded-[24px] border border-[#4A1F1F] bg-[linear-gradient(180deg,rgba(200,47,47,0.12)_0%,rgba(160,40,40,0.06)_100%)] px-5 py-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#E07070]">ShowTELA Deleted</p>
+                <p className="mt-2 text-[13px] leading-[1.65] text-[#DEBEBE]">All workspace data has been permanently removed.</p>
               </div>
             ) : null}
 
@@ -116,6 +135,7 @@ export function BuildShowTelaLauncher({
                             Archive
                           </button>
                         </form>
+                        <WorkspaceEntryActions showTelaId={entry.showTelaId} showTelaName={entry.showTelaName} />
                       </div>
                     </div>
                   </article>

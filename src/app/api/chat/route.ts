@@ -1,4 +1,15 @@
 import { getAnthropicClient, buildSystemPrompt, MODEL } from '@/lib/anthropic'
+import { loadDurableContinuity } from '@/lib/runtime/durableMemory'
+import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
+import { answerRoleFromEvidenceArtifacts } from '@/lib/showtela/evidenceAuthority'
+
+function requestedRole(question: string) {
+  const normalized = question.trim()
+  const whoMatch = normalized.match(/^who\s+is\s+the\s+(.+?)\??$/i)
+  if (whoMatch?.[1]) return whoMatch[1].trim()
+  const roleMatch = normalized.match(/\b(Tour Photographer|Tour Manager|Production Manager|Lighting Director|FOH Engineer|Video Director|Stage Manager)\b/i)
+  return roleMatch?.[1]?.trim()
+}
 
 function buildFallbackOperationalReply(question: string, operationalContext?: string) {
   const normalizedQuestion = question.trim().toLowerCase()
@@ -40,13 +51,41 @@ function streamSingleMessage(text: string) {
 export async function POST(req: Request) {
   try {
     const { messages, wikiContext, operationalContext } = await req.json()
+    const latestQuestion = messages?.at(-1)?.content ?? ''
+    const role = requestedRole(latestQuestion)
+    if (role) {
+      const answer = await loadDurableContinuity(SHOWTELA_WORKSPACE_ID)
+        .then((durable) => answerRoleFromEvidenceArtifacts(durable.artifacts, role))
+        .catch((err) => {
+          console.error('[chat] evidence lookup failed:', err)
+          return null
+        })
+      const text = answer
+        ? [
+          answer.answer,
+          '',
+          `SOURCE FILE: ${answer.sourceFile}`,
+          `SOURCE SECTION: ${answer.sourceSection}`,
+          `MATCHING TEXT: ${answer.matchingText}`,
+          `EVIDENCE CHUNK ID: ${answer.evidenceChunkId}`,
+        ].join('\n')
+        : 'Not found in current ShowTELA sources.'
+
+      return new Response(streamSingleMessage(text), {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          Connection: 'keep-alive',
+        },
+      })
+    }
 
     const operationalBlock = operationalContext
       ? `\n## Live Operational Context\n${operationalContext}`
       : ''
 
     const systemPrompt = buildSystemPrompt(wikiContext || '') + operationalBlock
-    const fallback = buildFallbackOperationalReply(messages?.at(-1)?.content ?? '', operationalContext)
+    const fallback = buildFallbackOperationalReply(latestQuestion, operationalContext)
 
     if (!process.env.ANTHROPIC_API_KEY) {
       return new Response(streamSingleMessage(fallback), {

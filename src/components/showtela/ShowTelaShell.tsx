@@ -21,6 +21,7 @@ import { PearlDropVoice } from './PearlDropVoice'
 import { TelaTalk } from './TelaTalk'
 import { TELAwhyCard } from './TELAwhyCard'
 import { BottomSheet } from './sheets/BottomSheet'
+import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 import type { OperationEntity, ShowTelaViewModel, UnresolvedItem, UnresolvedPressure } from './types'
 import type { ContinuityEvent, TELAwhy } from '@/lib/showtela/types'
 import type { OperationalProjection, OperationalStateRecord } from '@/lib/runtime/state/model'
@@ -244,6 +245,7 @@ export function ShowTelaShell({
   showTelaId,
   showTelaName,
   showTelaCreated,
+  activeShowTelas = [],
   onHydrate,
 }: {
   vm: ShowTelaViewModel
@@ -252,6 +254,7 @@ export function ShowTelaShell({
   showTelaId?: string
   showTelaName?: string
   showTelaCreated?: boolean
+  activeShowTelas?: Array<{ showTelaId: string; showTelaName: string }>
   onHydrate?: () => Promise<boolean>
 }) {
   const initialSurface = getInitialSurfaceState()
@@ -735,6 +738,11 @@ export function ShowTelaShell({
 
           {tab === 'profile' && (
             <div className="px-5 pt-14">
+              <WorkspaceSwitcher
+                currentShowTelaId={showTelaId}
+                currentShowTelaName={showTelaName}
+                activeShowTelas={activeShowTelas}
+              />
               <div className="rounded-[28px] border border-[#E2D7C7] bg-[linear-gradient(180deg,#FFFFFF_0%,#F3EDE3_100%)] px-5 py-6 shadow-[0_12px_30px_rgba(17,17,17,0.06)]">
                 <div className="flex flex-col items-center">
                   <div className="relative h-20 w-20 overflow-hidden rounded-full border-2 border-[#CFB889] bg-stone-800">

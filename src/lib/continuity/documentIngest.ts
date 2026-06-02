@@ -12,6 +12,11 @@ import {
   SHOWTELA_RUNTIME_ARTIFACT_GROUP_ID,
 } from '@/lib/showtela/runtimeIds'
 import { createContinuityOcid } from '@/lib/showtela/continuityRecord'
+import {
+  createEvidenceChunksFromText,
+  evidenceChunkIdsForText,
+  sourceFileLabel,
+} from '@/lib/showtela/evidenceAuthority'
 import type { ContinuityIngestionInput } from './normalize-ingestion'
 import type { EntityRecord } from '@/lib/entities/entityEngine'
 import type { ArtifactRecord } from '@/lib/artifacts/artifactStore'
@@ -22,7 +27,7 @@ function slugify(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
 }
 
-function personEntity(name: string, artifactId: string, timestamp: string): EntityRecord {
+function personEntity(name: string, artifactId: string, timestamp: string, evidenceChunkIds: string[] = []): EntityRecord {
   return {
     id: `person:${slugify(name)}`,
     name,
@@ -40,10 +45,11 @@ function personEntity(name: string, artifactId: string, timestamp: string): Enti
     temporalClusters: [timestamp.slice(0, 10)],
     trustRank: TRUST_RANK['anchor-directory'],
     authoritySource: 'anchor-directory',
+    evidenceChunkIds,
   }
 }
 
-function departmentEntity(name: string, artifactId: string, timestamp: string): EntityRecord {
+function departmentEntity(name: string, artifactId: string, timestamp: string, evidenceChunkIds: string[] = []): EntityRecord {
   return {
     id: `rider-dept:${slugify(name)}`,  // prefix persists through Supabase — operationalContexts field is not in schema
     name,
@@ -61,6 +67,7 @@ function departmentEntity(name: string, artifactId: string, timestamp: string): 
     temporalClusters: [timestamp.slice(0, 10)],
     trustRank: TRUST_RANK['document'],
     authoritySource: 'document',
+    evidenceChunkIds,
   }
 }
 
@@ -135,6 +142,10 @@ export async function ingestDocumentContinuity(input: ContinuityIngestionInput):
   const timestamp = new Date().toISOString()
   const filename = input.assetContents?.[0]?.name ?? input.assetNames?.[0] ?? 'document'
   const content = (input.assetContents ?? []).map(a => a.content).join('\n\n---\n\n')
+  const evidenceChunks = (input.assetContents ?? []).flatMap((asset) => createEvidenceChunksFromText({
+    sourceFile: sourceFileLabel(asset.name),
+    extractedText: asset.content,
+  }))
   const docType = classifyDocument(filename, content)
 
   const extraArtifacts: ArtifactRecord[] = []
@@ -156,7 +167,7 @@ export async function ingestDocumentContinuity(input: ContinuityIngestionInput):
       createdAt: timestamp,
     })
     for (const p of persons) {
-      extraEntities.push(personEntity(p.name, placeholderId, timestamp))
+      extraEntities.push(personEntity(p.name, placeholderId, timestamp, evidenceChunkIdsForText(evidenceChunks, p.name)))
     }
 
     summaryHeadline = `Anchor Directory — ${personsActivated} crew member${personsActivated === 1 ? '' : 's'} activated`
@@ -194,7 +205,7 @@ export async function ingestDocumentContinuity(input: ContinuityIngestionInput):
       createdAt: timestamp,
     })
     for (const dept of departments) {
-      extraEntities.push(departmentEntity(dept, placeholderId, timestamp))
+      extraEntities.push(departmentEntity(dept, placeholderId, timestamp, evidenceChunkIdsForText(evidenceChunks, dept)))
     }
 
     summaryHeadline = `Production Rider — ${departmentsActivated} department${departmentsActivated === 1 ? '' : 's'} activated`

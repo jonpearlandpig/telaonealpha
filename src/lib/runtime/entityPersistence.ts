@@ -7,6 +7,7 @@ export function persistEntity(workspaceId: string, entity: EntityRecord, provena
     ...provenance,
     truthRank: entity.trustRank ?? provenance.truthRank,
     authorityLevel: entity.authoritySource ?? provenance.authorityLevel,
+    snapshotRefs: entity.evidenceChunkIds ?? provenance.snapshotRefs,
   }
   return upsertEntityRow({
     id: entity.id,
@@ -42,6 +43,7 @@ function toEntityRecord(row: DurableEntityRow): EntityRecord {
     temporalClusters: row.temporalClusters,
     trustRank: row.provenance.truthRank,
     authoritySource: row.provenance.authorityLevel as EntityRecord['authoritySource'],
+    evidenceChunkIds: row.provenance.snapshotRefs,
   }
 }
 
