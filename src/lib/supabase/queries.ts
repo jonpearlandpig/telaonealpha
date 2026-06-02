@@ -106,7 +106,7 @@ function toSnapshotRow(db: SnapshotDbRow): DurableSnapshotRow {
 export async function upsertArtifactRow(row: DurableArtifactRow): Promise<DurableArtifactRow> {
   console.log('[supabase:queries:upsertArtifactRow] id:', row.id, 'workspace:', row.workspaceId)
   const db = getSupabaseServerClient()
-  const { error } = await db.from('durable_artifacts').insert([{
+  const { error } = await db.from('durable_artifacts').upsert([{
     id: row.id,
     workspace_id: row.workspaceId,
     thread_id: row.threadId,
@@ -114,7 +114,7 @@ export async function upsertArtifactRow(row: DurableArtifactRow): Promise<Durabl
     created_at: row.createdAt,
     updated_at: row.updatedAt,
     provenance: row.provenance,
-  }])
+  }], { onConflict: 'id' })
   if (error) {
     console.error('[supabase:queries:upsertArtifactRow] failed', {
       message: error.message,
