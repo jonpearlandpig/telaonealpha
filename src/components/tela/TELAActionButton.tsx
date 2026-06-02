@@ -5,12 +5,7 @@
  * Renders a tappable commit button for a TELA-proposed action.
  * Shown inline in the chat after parseTelaActions() finds <<ACTION:{}>> tags.
  *
- * States: idle → signoff (modal) → executing → done | error
- *
- * The signoff modal asks the user:
- *   - Why are you approving this?
- *   - Does it affect Safety / Time / Money?
- * This drives severity classification in the change log.
+ * States: idle → signoff → executing → done | error
  */
 
 import { useState } from 'react'
@@ -21,10 +16,11 @@ interface TELAActionButtonProps {
   onExecute: (action: TelaAction, signoff: TelaSignoff) => Promise<boolean>
 }
 
-type State = 'idle' | 'signoff' | 'executing' | 'done' | 'error'
+type State = 'idle' | 'signoff' | 'done' | 'error'
 
 export function TELAActionButton({ action, onExecute }: TELAActionButtonProps) {
   const [state, setState] = useState<State>('idle')
+  const [executing, setExecuting] = useState(false)
   const [reason, setReason] = useState('')
   const [affectsSafety, setAffectsSafety] = useState(false)
   const [affectsTime, setAffectsTime] = useState(false)
@@ -32,15 +28,20 @@ export function TELAActionButton({ action, onExecute }: TELAActionButtonProps) {
   const [errorMsg, setErrorMsg] = useState('')
 
   const handleCommit = async () => {
-    setState('executing')
+    setExecuting(true)
     const ok = await onExecute(action, {
       reason: reason.trim() || 'Approved via TELA',
       affects_safety: affectsSafety,
       affects_time: affectsTime,
       affects_money: affectsMoney,
     })
-    setState(ok ? 'done' : 'error')
-    if (!ok) setErrorMsg('Action failed — check console')
+    setExecuting(false)
+    if (ok) {
+      setState('done')
+    } else {
+      setErrorMsg('Action failed — check console')
+      setState('error')
+    }
   }
 
   if (state === 'done') {
@@ -153,25 +154,27 @@ export function TELAActionButton({ action, onExecute }: TELAActionButtonProps) {
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             onClick={handleCommit}
-            disabled={state === 'executing'}
+            disabled={executing}
             style={{
               flex: 1,
               padding: '9px 0',
-              background: '#C4973A',
+              background: executing ? 'rgba(196,151,58,0.5)' : '#C4973A',
               border: 'none',
               borderRadius: 8,
               color: '#0A0E17',
               fontFamily: "'DM Sans', sans-serif",
               fontSize: 13,
               fontWeight: 600,
-              cursor: 'pointer',
+              cursor: executing ? 'default' : 'pointer',
               letterSpacing: '0.02em',
+              transition: 'background 0.15s',
             }}
           >
-            {state === 'executing' ? 'Committing…' : 'Commit'}
+            {executing ? 'Committing…' : 'Commit'}
           </button>
           <button
             onClick={() => setState('idle')}
+            disabled={executing}
             style={{
               padding: '9px 16px',
               background: 'transparent',
@@ -180,7 +183,7 @@ export function TELAActionButton({ action, onExecute }: TELAActionButtonProps) {
               color: 'rgba(234,224,210,0.45)',
               fontFamily: "'DM Sans', sans-serif",
               fontSize: 13,
-              cursor: 'pointer',
+              cursor: executing ? 'default' : 'pointer',
             }}
           >
             Cancel
@@ -190,7 +193,7 @@ export function TELAActionButton({ action, onExecute }: TELAActionButtonProps) {
     )
   }
 
-  // idle state
+  // idle
   return (
     <button
       onClick={() => setState('signoff')}
