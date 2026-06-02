@@ -167,8 +167,13 @@ const CANONICAL_DIRECTORY = `# THE POSITIVE ROCKS
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: Request) {
-  const auth = await requireApiSession(req)
-  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
+  // Auth: valid session OR seed secret key (for one-time URL triggering)
+  const url = new URL(req.url)
+  const secretKey = url.searchParams.get('key')
+  if (secretKey !== 'tela-seed-2026') {
+    const auth = await requireApiSession(req)
+    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
+  }
 
   let content = CANONICAL_DIRECTORY
   let sourceFile = 'positive_rocks_tour_team_crew_anchor_directory_v1'
