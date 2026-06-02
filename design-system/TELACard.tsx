@@ -12,21 +12,11 @@
  *   2. TELAUpdateItem    — activity/update list row with status dot
  *   3. TELANextAction    — CTA card with gold progress and arrow button
  *
- * Stack: Next.js 15 · TypeScript · Tailwind CSS v4 · Framer Motion
+ * Stack: Next.js 15 · TypeScript · Tailwind CSS v4
+ * Motion: CSS animations via tokens.css — no framer-motion dependency required.
  */
 
-import { motion } from 'framer-motion';
-
-// ─── Animation Presets ───────────────────────────────────────────────────────
-
-const fadeUp = {
-  hidden:  { opacity: 0, y: 12 },
-  visible: (delay = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.28, ease: [0.16, 1, 0.3, 1], delay },
-  }),
-};
+import React, { useEffect, useRef, useState } from 'react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -60,7 +50,7 @@ interface NextActionProps {
   delay?:   number;
 }
 
-// ─── Color Map ────────────────────────────────────────────────────────────────
+// ─── Color Maps ───────────────────────────────────────────────────────────────
 
 const dotColorMap: Record<DotColor, string> = {
   green:  'var(--color-status-green)',
@@ -77,6 +67,24 @@ const statusBadgeStyle: Record<StatusType, React.CSSProperties> = {
   attention: { background: 'var(--color-status-red-bg)', color: 'var(--color-status-red)' },
   complete:  { background: 'var(--color-status-green-bg)', color: 'var(--color-status-green)' },
 };
+
+// ─── Fade-up hook (CSS-based, no framer-motion) ───────────────────────────────
+
+function useFadeUp(delay = 0) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), delay * 1000);
+    return () => clearTimeout(t);
+  }, [delay]);
+
+  return {
+    style: {
+      opacity: visible ? 1 : 0,
+      transform: visible ? 'translateY(0)' : 'translateY(12px)',
+      transition: `opacity 280ms cubic-bezier(0.16,1,0.3,1), transform 280ms cubic-bezier(0.16,1,0.3,1)`,
+    } as React.CSSProperties,
+  };
+}
 
 // ─── TELAHeroCard ─────────────────────────────────────────────────────────────
 
@@ -95,13 +103,12 @@ export function TELAHeroCard({
   imageUrl,
   delay = 0,
 }: HeroCardProps) {
+  const { style } = useFadeUp(delay);
+
   return (
-    <motion.div
-      variants={fadeUp}
-      initial="hidden"
-      animate="visible"
-      custom={delay}
+    <div
       style={{
+        ...style,
         position: 'relative',
         borderRadius: 'var(--radius-card-lg)',
         overflow: 'hidden',
@@ -143,10 +150,7 @@ export function TELAHeroCard({
       >
         {/* Status badge — top left */}
         <div style={{ position: 'absolute', top: 'var(--space-card)', left: 'var(--space-card)' }}>
-          <span
-            className="tela-badge"
-            style={statusBadgeStyle[status]}
-          >
+          <span className="tela-badge" style={statusBadgeStyle[status]}>
             {statusLabel}
           </span>
         </div>
@@ -157,7 +161,7 @@ export function TELAHeroCard({
             style={{
               fontFamily: 'var(--font-display)',
               fontSize: 'clamp(22px, 6vw, 28px)',
-              fontWeight: 'var(--weight-bold)',
+              fontWeight: 700,
               color: 'var(--color-white)',
               letterSpacing: '-0.01em',
               lineHeight: 1.15,
@@ -182,17 +186,13 @@ export function TELAHeroCard({
           )}
         </div>
 
-        {/* Metadata row */}
+        {/* Metadata */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {location && (
-            <MetaRow icon="📍" text={location} />
-          )}
-          {milestone && (
-            <MetaRow icon="⏱" text={milestone} />
-          )}
+          {location && <MetaRow icon="📍" text={location} />}
+          {milestone && <MetaRow icon="⏱" text={milestone} />}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -221,20 +221,13 @@ function MetaRow({ icon, text }: { icon: string; text: string }) {
  * Icon + text + timestamp on left; colored status dot on right.
  * Tap target always ≥ 44px height.
  */
-export function TELAUpdateItem({
-  icon,
-  text,
-  time,
-  dotColor,
-  delay = 0,
-}: UpdateItemProps) {
+export function TELAUpdateItem({ icon, text, time, dotColor, delay = 0 }: UpdateItemProps) {
+  const { style } = useFadeUp(delay);
+
   return (
-    <motion.div
-      variants={fadeUp}
-      initial="hidden"
-      animate="visible"
-      custom={delay}
+    <div
       style={{
+        ...style,
         display: 'flex',
         alignItems: 'center',
         gap: 'var(--space-3)',
@@ -259,13 +252,13 @@ export function TELAUpdateItem({
         {icon}
       </div>
 
-      {/* Text block */}
+      {/* Text */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <p
           style={{
             fontFamily: 'var(--font-body)',
             fontSize: 'var(--text-body)',
-            fontWeight: 'var(--weight-medium)',
+            fontWeight: 500,
             color: 'var(--color-cream)',
             margin: 0,
             lineHeight: 1.3,
@@ -288,10 +281,15 @@ export function TELAUpdateItem({
 
       {/* Status dot */}
       <div
-        className="tela-status-dot"
-        style={{ background: dotColorMap[dotColor] }}
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          background: dotColorMap[dotColor],
+          flexShrink: 0,
+        }}
       />
-    </motion.div>
+    </div>
   );
 }
 
@@ -302,21 +300,20 @@ export function TELAUpdateItem({
  * Label in small caps above; action text prominent; gold progress bar;
  * gold square arrow button on right.
  */
-export function TELANextAction({
-  label,
-  action,
-  progress,
-  onPress,
-  delay = 0,
-}: NextActionProps) {
+export function TELANextAction({ label, action, progress, onPress, delay = 0 }: NextActionProps) {
+  const { style } = useFadeUp(delay);
+  const [barWidth, setBarWidth] = useState(0);
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    if (mounted.current) return;
+    mounted.current = true;
+    const t = setTimeout(() => setBarWidth(progress), (delay + 0.2) * 1000);
+    return () => clearTimeout(t);
+  }, [delay, progress]);
+
   return (
-    <motion.div
-      variants={fadeUp}
-      initial="hidden"
-      animate="visible"
-      custom={delay}
-      className="tela-card"
-    >
+    <div style={{ ...style, ...cardStyle }}>
       <div
         style={{
           display: 'flex',
@@ -325,14 +322,14 @@ export function TELANextAction({
           gap: 'var(--space-3)',
         }}
       >
-        {/* Left: label + action */}
+        {/* Left */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <span className="tela-label">{label}</span>
           <h3
             style={{
               fontFamily: 'var(--font-body)',
               fontSize: 20,
-              fontWeight: 'var(--weight-semibold)',
+              fontWeight: 600,
               color: 'var(--color-cream)',
               margin: '4px 0 12px',
               lineHeight: 1.2,
@@ -350,20 +347,19 @@ export function TELANextAction({
               overflow: 'hidden',
             }}
           >
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: delay + 0.2 }}
+            <div
               style={{
                 height: '100%',
+                width: `${barWidth}%`,
                 background: 'var(--color-gold)',
                 borderRadius: 2,
+                transition: 'width 600ms cubic-bezier(0.16,1,0.3,1)',
               }}
             />
           </div>
         </div>
 
-        {/* Right: CTA arrow button */}
+        {/* CTA button */}
         <button
           onClick={onPress}
           aria-label={`Proceed: ${action}`}
@@ -380,10 +376,9 @@ export function TELANextAction({
             justifyContent: 'center',
             color: 'var(--color-void)',
             fontSize: 22,
-            fontWeight: 'var(--weight-bold)',
-            transition: `background var(--duration-fast) var(--ease-out),
-                         transform var(--duration-fast) var(--ease-out)`,
+            fontWeight: 700,
             flexShrink: 0,
+            transition: 'transform 150ms cubic-bezier(0.16,1,0.3,1)',
           }}
           onMouseDown={e => (e.currentTarget.style.transform = 'scale(0.94)')}
           onMouseUp={e => (e.currentTarget.style.transform = 'scale(1)')}
@@ -392,16 +387,19 @@ export function TELANextAction({
           →
         </button>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
-// ─── Demo Page (for visual verification) ─────────────────────────────────────
+const cardStyle: React.CSSProperties = {
+  background: 'var(--color-navy)',
+  border: '1px solid var(--color-navy-border)',
+  borderRadius: 'var(--radius-card)',
+  padding: 'var(--space-card)',
+};
 
-/**
- * Drop this into any page route to verify the design system is working.
- * Remove from production.
- */
+// ─── Demo Page ────────────────────────────────────────────────────────────────
+
 export default function TELACardDemo() {
   return (
     <div
@@ -417,7 +415,6 @@ export default function TELACardDemo() {
         margin: '0 auto',
       }}
     >
-      {/* Hero Card */}
       <TELAHeroCard
         status="live"
         statusLabel="Live Status"
@@ -429,14 +426,7 @@ export default function TELACardDemo() {
         delay={0}
       />
 
-      {/* Updates section */}
-      <motion.div
-        className="tela-card"
-        variants={fadeUp}
-        initial="hidden"
-        animate="visible"
-        custom={0.08}
-      >
+      <div style={cardStyle}>
         <div
           style={{
             display: 'flex',
@@ -446,48 +436,16 @@ export default function TELACardDemo() {
           }}
         >
           <span className="tela-label">Since You Were Last Here</span>
-          <span
-            style={{
-              fontFamily: 'var(--font-body)',
-              fontSize: 11,
-              fontWeight: 600,
-              color: 'var(--color-cream-muted)',
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-            }}
-          >
-            3 Updates
-          </span>
+          <span className="tela-label">3 Updates</span>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          <TELAUpdateItem
-            icon="✓"
-            text="Lighting cue changes complete."
-            time="Today · 11:42 AM"
-            dotColor="green"
-            delay={0.12}
-          />
-          <div style={{ height: 1, background: 'var(--color-navy-border)', margin: '0 0' }} />
-          <TELAUpdateItem
-            icon="📄"
-            text="Rigging approvals now in place."
-            time="Today · 10:18 AM"
-            dotColor="green"
-            delay={0.16}
-          />
-          <div style={{ height: 1, background: 'var(--color-navy-border)', margin: '0 0' }} />
-          <TELAUpdateItem
-            icon="⚠"
-            text="Travel lock is next major gate (5 PM)."
-            time="Today · 9:37 AM"
-            dotColor="amber"
-            delay={0.20}
-          />
-        </div>
-      </motion.div>
+        <TELAUpdateItem icon="✓" text="Lighting cue changes complete." time="Today · 11:42 AM" dotColor="green" delay={0.12} />
+        <div style={{ height: 1, background: 'var(--color-navy-border)' }} />
+        <TELAUpdateItem icon="📄" text="Rigging approvals now in place." time="Today · 10:18 AM" dotColor="green" delay={0.16} />
+        <div style={{ height: 1, background: 'var(--color-navy-border)' }} />
+        <TELAUpdateItem icon="⚠" text="Travel lock is next major gate (5 PM)." time="Today · 9:37 AM" dotColor="amber" delay={0.20} />
+      </div>
 
-      {/* Next Action */}
       <TELANextAction
         label="Next Action"
         action="Confirm FOH Setup"
