@@ -40,6 +40,45 @@ function normalizeRole(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 }
 
+// Fuzzy role match — handles typos, missing words, partial matches.
+// "photorgrapher" matches "tour photographer"
+// "guest experience" matches "guest experience director"
+function rolesMatch(chunkRole: string, requestedRole: string): boolean {
+  const a = normalizeRole(chunkRole)
+  const b = normalizeRole(requestedRole)
+
+  // Exact match
+  if (a === b) return true
+
+  // One contains the other (handles partial queries like "guest experience")
+  if (a.includes(b) || b.includes(a)) return true
+
+  // Token overlap — all tokens in the shorter string appear in the longer
+  const tokensA = a.split(' ').filter(Boolean)
+  const tokensB = b.split(' ').filter(Boolean)
+  const [shorter, longer] = tokensA.length <= tokensB.length
+    ? [tokensA, tokensB]
+    : [tokensB, tokensA]
+
+  // Require at least half the tokens to match
+  const matched = shorter.filter(t => longer.some(l => {
+    if (t === l) return true
+    // Simple fuzzy: allow 1 char difference for words > 4 chars
+    if (t.length > 4 && l.length > 4) {
+      let diff = 0
+      const minLen = Math.min(t.length, l.length)
+      for (let i = 0; i < minLen; i++) {
+        if (t[i] !== l[i]) diff++
+      }
+      diff += Math.abs(t.length - l.length)
+      return diff <= 2
+    }
+    return false
+  }))
+
+  return matched.length >= Math.ceil(shorter.length * 0.6)
+}
+
 function sectionFromHeading(line: string) {
   return line.replace(/^#+\s+/, '').trim()
 }
@@ -64,16 +103,14 @@ function collectSourceBlocks(lines: string[]) {
 
     if (isTableSeparator(line)) continue
 
-    if (line.startsWith('|') && (parseTableCells(line).length < 5 || !line.endsWith('|'))) {
+    if (line.startsWith('|') && line.endsWith('|') && !isTableSeparator(line)) {
       const collected = [line]
       let endIndex = index
       for (let lookahead = index + 1; lookahead < lines.length; lookahead += 1) {
         const next = (lines[lookahead] ?? '').trim()
         if (!next || /^#+\s+/.test(next) || isTableSeparator(next)) break
-        if (next.startsWith('|') && parseTableCells(collected.join(' ')).length >= 5 && collected.join(' ').trim().endsWith('|')) break
         collected.push(next)
         endIndex = lookahead
-        if (parseTableCells(collected.join(' ')).length >= 5 && collected.join(' ').trim().endsWith('|')) break
       }
       blocks.push({
         text: collected.join(' ').replace(/\s+/g, ' ').trim(),
@@ -183,7 +220,7 @@ function factFromTableRow(chunk: EvidenceChunk, requestedRole: string): Operatio
   if (cells.length < 2) return null
   const [role, name] = cells
   if (!role || !name) return null
-  if (normalizeRole(role) !== normalizeRole(requestedRole)) return null
+  if (!rolesMatch(role, requestedRole)) return null
   return {
     answer: `${role}: ${name}`,
     sourceFile: chunk.sourceFile,
@@ -200,7 +237,7 @@ function factFromBullet(chunk: EvidenceChunk, requestedRole: string): Operationa
     const index = text.indexOf(separator)
     if (index <= 0) continue
     const role = text.slice(0, index).trim()
-    if (normalizeRole(role) !== normalizeRole(requestedRole)) return null
+    if (!rolesMatch(role, requestedRole)) return null
     return {
       answer: text,
       sourceFile: chunk.sourceFile,
@@ -261,3 +298,4 @@ export function evidenceChunkIdsForEvent(event: ContinuityEvent, chunks: Evidenc
 export function sourceFileLabel(name: string) {
   return name.trim() || `source-${slugify(new Date().toISOString())}`
 }
+
