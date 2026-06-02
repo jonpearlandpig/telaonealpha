@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { ingestVenuePacket } from '@/lib/venue-intelligence/store'
 import type { VenuePacketAsset } from '@/lib/venue-intelligence/types'
+import { requireApiSession } from '@/lib/api-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,6 +35,9 @@ async function toVenueAsset(file: File): Promise<VenuePacketAsset> {
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireApiSession(req)
+    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
     const formData = await req.formData()
     const workspaceId = String(formData.get('workspaceId') ?? '').trim() || undefined
     const files = formData

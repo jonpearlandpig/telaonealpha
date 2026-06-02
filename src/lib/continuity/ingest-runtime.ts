@@ -31,6 +31,15 @@ export async function ingestCanonicalContinuity(
   const fileContents = (input.assetContents ?? [])
     .filter(f => f.content.trim().length > 0)
     .map(f => f.content.trim())
+  const fileExtractionNotes = (input.assetContents ?? [])
+    .map((asset) => {
+      const status = asset.extractionStatus ?? (asset.content.trim() ? 'extracted' : 'stored-only')
+      const detail = asset.extractionDetail ? ` — ${asset.extractionDetail}` : ''
+      return `${asset.name}: ${status}${detail}`
+    })
+  const fileEvidence = fileExtractionNotes.length > 0
+    ? [`File extraction results:\n${fileExtractionNotes.map((line) => `- ${line}`).join('\n')}`]
+    : []
 
   const headlineSeed = input.headline?.trim() || input.body?.trim() || 'continuity'
   const ocid = createContinuityOcid(headlineSeed, timestamp)
@@ -48,7 +57,7 @@ export async function ingestCanonicalContinuity(
 
   // Persist durable artifact + entities — hydrateRuntime() reads these via loadDurableContinuity()
   const constitutionalEvent = await tryCreateContinuityEventRecord({ event, ocid, submittedBy })
-  const artifact = createRuntimeContinuityArtifact({ constitutionalEvent, event, ocid, fileContents })
+  const artifact = createRuntimeContinuityArtifact({ constitutionalEvent, event, ocid, fileContents: [...fileEvidence, ...fileContents] })
   const entities = extractContinuityEntities(event, artifact)
 
   try {

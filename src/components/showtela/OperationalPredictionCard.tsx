@@ -13,7 +13,7 @@ function eventNames(events: OperationalCalendarEvent[], ids: string[]) {
   const names = ids
     .map((id) => events.find((event) => event.id === id)?.title)
     .filter(Boolean) as string[]
-  return names.slice(0, 2).join(' / ') || 'Runtime watch'
+  return names.slice(0, 2).join(' / ') || 'Show watch'
 }
 
 export function OperationalPredictionCard({
@@ -24,7 +24,7 @@ export function OperationalPredictionCard({
   events: OperationalCalendarEvent[]
 }) {
   const tone = RISK_TONE[prediction.riskLevel]
-  const departments = prediction.affectedDepartments.slice(0, 3).join(' / ') || 'Runtime field'
+  const departments = prediction.affectedDepartments.slice(0, 3).join(' / ') || 'General'
 
   return (
     <section className="rounded-[22px] border border-[#E5D8C7] bg-[#FFFDF8] px-4 py-4 shadow-[0_10px_26px_rgba(27,22,16,0.05)]">
@@ -48,7 +48,7 @@ export function OperationalPredictionCard({
         </div>
         <div className="rounded-[14px] bg-[#F6F0E7] px-3 py-2">
           <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#9A825F]">Likelihood</p>
-          <p className="mt-1 text-[12px] font-semibold text-[#2A231B]">{Math.round(prediction.likelihood * 100)}% derived</p>
+          <p className="mt-1 text-[12px] font-semibold text-[#2A231B]">{Math.round(prediction.likelihood * 100)}% likely</p>
         </div>
       </div>
 

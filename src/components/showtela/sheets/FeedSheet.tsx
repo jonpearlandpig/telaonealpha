@@ -1,6 +1,7 @@
 'use client'
 import { BottomSheet } from './BottomSheet'
 import type { ContinuityEvent } from '@/lib/showtela/types'
+import { TELAwhyCard } from '../TELAwhyCard'
 
 function formatTime(iso?: string) {
   if (!iso) return ''
@@ -53,6 +54,11 @@ export function FeedSheet({ item, open, onClose }: { item: ContinuityEvent | nul
         <div className="mb-3 flex items-center gap-2 rounded-[12px] bg-[#FEE2E2] px-4 py-2.5">
           <span className="text-[13px]">🚫</span>
           <p className="text-[12px] text-[#991B1B]">Blocked by {item.blockedBy}</p>
+        </div>
+      )}
+      {item.telaWhy && (
+        <div className="mt-4">
+          <TELAwhyCard why={item.telaWhy} />
         </div>
       )}
     </BottomSheet>

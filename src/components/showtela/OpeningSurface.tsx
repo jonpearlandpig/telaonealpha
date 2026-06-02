@@ -46,6 +46,12 @@ export function OpeningSurface({
         >
           ShowTELA
         </p>
+        <h1 className="mt-4 max-w-[10ch] text-center text-[36px] font-semibold leading-[0.98] tracking-[-0.04em]" style={{ color: '#F8F6F2' }}>
+          Ready.
+        </h1>
+        <p className="mt-3 max-w-[28ch] text-center text-[13px] leading-[1.6]" style={{ color: 'rgba(248,246,242,0.68)' }}>
+          Nothing is saved yet. Add the first update when the show starts moving.
+        </p>
       </div>
 
       {/* Profile + */}
@@ -68,7 +74,7 @@ export function OpeningSurface({
               {showTelaName ?? 'New ShowTELA'}
             </p>
             <p className="mt-2 text-[12px] leading-[1.6]" style={{ color: 'rgba(248,246,242,0.72)' }}>
-              Clean operational state verified. Open and ready for continuity.
+              Clean state verified. Open and ready for updates.
             </p>
             <div className="mt-4 grid grid-cols-3 gap-2 text-[11px]">
               <div className="rounded-[16px] px-3 py-3" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
@@ -84,7 +90,7 @@ export function OpeningSurface({
                 <p className="mt-1 font-semibold" style={{ color: '#F8F6F2' }}>{creationSummary.calendar}</p>
               </div>
               <div className="rounded-[16px] px-3 py-3" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
-                <p style={{ color: 'rgba(200,155,47,0.74)' }}>Artifacts</p>
+                <p style={{ color: 'rgba(200,155,47,0.74)' }}>Files</p>
                 <p className="mt-1 font-semibold" style={{ color: '#F8F6F2' }}>{creationSummary.artifacts}</p>
               </div>
               <div className="rounded-[16px] px-3 py-3" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
@@ -120,7 +126,7 @@ export function OpeningSurface({
           </div>
           <button
             onClick={() => onOpenIngest(null)}
-            aria-label="Begin continuity ingestion"
+            aria-label="Add first update"
             className="absolute -bottom-1 -right-1 flex h-[28px] w-[28px] items-center justify-center rounded-full transition-opacity hover:opacity-90 active:opacity-75"
             style={{
               backgroundColor: '#C89B2F',
@@ -149,8 +155,21 @@ export function OpeningSurface({
           className="mt-1.5 text-[10px] font-medium uppercase tracking-[0.18em]"
           style={{ color: 'rgba(200,155,47,0.36)' }}
         >
-          {creationSummary ? 'ready for continuity' : 'operational origin node'}
+          {creationSummary ? 'ready for updates' : 'ready to begin'}
         </p>
+        {!creationSummary && (
+          <div
+            className="mt-5 grid w-[min(86vw,340px)] grid-cols-4 gap-2 rounded-[22px] border px-3 py-3"
+            style={{ borderColor: 'rgba(200,155,47,0.16)', backgroundColor: 'rgba(255,255,255,0.035)' }}
+          >
+            {['Home', 'Play', 'Memory', 'Calendar'].map((label) => (
+              <div key={label} className="text-center">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'rgba(200,155,47,0.52)' }}>{label}</p>
+                <p className="mt-1 text-[11px] font-semibold" style={{ color: 'rgba(248,246,242,0.78)' }}>Ready</p>
+              </div>
+            ))}
+          </div>
+        )}
         {showTelaName ? (
           <p
             className="mt-3 text-[16px] font-semibold tracking-[-0.03em]"

@@ -15,11 +15,25 @@ type Props = {
   operations: Option[]
   initialMode?: ContinuityIngestionMode | null
   onClose: () => void
-  onSubmit: (input: ContinuityIngestionInput) => void
+  onSubmit: (input: ContinuityIngestionInput) => boolean | Promise<boolean>
   onVoiceNote?: () => void
 }
 
 const QUICK_TAGS = ['handoff', 'note', 'risk', 'approval']
+const FILE_ACCEPT = '.pdf,.txt,.md,.markdown,text/plain,text/markdown,application/pdf'
+
+function fileExtractionLabel(status?: string) {
+  if (status === 'extracted') return 'Extracted successfully'
+  if (status === 'stored-only') return 'Stored only'
+  if (status === 'failed') return 'Extraction failed'
+  return 'Pending'
+}
+
+function fileExtractionTone(status?: string) {
+  if (status === 'extracted') return 'border-[#C9DDBF] bg-[#F2F7EF] text-[#344A2A]'
+  if (status === 'failed') return 'border-[#E4B0A4] bg-[#FFF0ED] text-[#8B2D1F]'
+  return 'border-[#E6D4A7] bg-[#FFF7E8] text-[#7A4F09]'
+}
 
 const INGEST_OPTIONS: Array<{
   id: ContinuityIngestionMode
@@ -27,12 +41,12 @@ const INGEST_OPTIONS: Array<{
   eyebrow: string
   description: string
 }> = [
-  { id: 'voice-note', label: 'Voice Note', eyebrow: 'Immediate', description: 'Capture spoken continuity without leaving the field.' },
-  { id: 'quick-update', label: 'Quick Update', eyebrow: 'Fastest', description: 'Log what changed, what matters, and what needs movement.' },
-  { id: 'upload-files', label: 'Upload Files', eyebrow: 'Artifacts', description: 'Stage docs into continuity as traced operational objects.' },
-  { id: 'paste-notes', label: 'Paste Notes', eyebrow: 'Raw Intake', description: 'Drop messy notes and let continuity hold the thread.' },
-  { id: 'add-photos', label: 'Add Photos', eyebrow: 'Visual Field', description: 'Capture photos as operational memory, not loose media.' },
-  { id: 'add-link', label: 'Add Link', eyebrow: 'Reference', description: 'Anchor an external thread or source inside continuity.' },
+      { id: 'voice-note', label: 'Voice Note', eyebrow: 'Immediate', description: 'Capture a spoken update without leaving the screen.' },
+      { id: 'quick-update', label: 'Quick Update', eyebrow: 'Fastest', description: 'Log what changed, what matters, and what needs movement.' },
+      { id: 'upload-files', label: 'Upload Files', eyebrow: 'Files', description: 'Add docs and keep their source attached.' },
+      { id: 'paste-notes', label: 'Paste Notes', eyebrow: 'Raw Intake', description: 'Drop messy notes and keep them with the right thread.' },
+      { id: 'add-photos', label: 'Add Photos', eyebrow: 'Visual Notes', description: 'Add photos as useful context, not loose media.' },
+      { id: 'add-link', label: 'Add Link', eyebrow: 'Reference', description: 'Save an external thread or source with this work.' },
 ]
 
 export function ContinuityIngest({
@@ -54,22 +68,44 @@ export function ContinuityIngest({
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [linkUrl, setLinkUrl] = useState('')
   const [assetNames, setAssetNames] = useState<string[]>([])
-  const [assetContents, setAssetContents] = useState<Array<{ name: string; content: string; type: string }>>([])
+  const [assetContents, setAssetContents] = useState<Array<{ name: string; content: string; type: string; extractionStatus?: 'extracted' | 'stored-only' | 'failed'; extractionDetail?: string }>>([])
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const readFileContents = async (files: File[]) => {
-    const results: Array<{ name: string; content: string; type: string }> = []
+    const results: Array<{ name: string; content: string; type: string; extractionStatus?: 'extracted' | 'stored-only' | 'failed'; extractionDetail?: string }> = []
     for (const file of files) {
       const isText = file.type === 'text/plain' || file.type === 'text/markdown' ||
         file.name.endsWith('.md') || file.name.endsWith('.txt') || file.name.endsWith('.markdown')
       if (isText) {
         try {
           const content = await file.text()
-          results.push({ name: file.name, content, type: file.type || 'text/plain' })
+          results.push({
+            name: file.name,
+            content,
+            type: file.type || 'text/plain',
+            extractionStatus: content.trim() ? 'extracted' : 'failed',
+            extractionDetail: content.trim() ? 'Text was saved with this update.' : 'The file was empty or unreadable.',
+          })
         } catch {
-          results.push({ name: file.name, content: '', type: file.type })
+          results.push({
+            name: file.name,
+            content: '',
+            type: file.type,
+            extractionStatus: 'failed',
+            extractionDetail: 'ShowTELA could not read this text file.',
+          })
         }
       } else {
-        results.push({ name: file.name, content: '', type: file.type })
+        const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+        results.push({
+          name: file.name,
+          content: '',
+          type: file.type || (isPdf ? 'application/pdf' : 'application/octet-stream'),
+          extractionStatus: isPdf ? 'stored-only' : 'failed',
+          extractionDetail: isPdf
+            ? 'PDF is saved as a source file; detailed venue parsing runs separately.'
+            : 'Only PDF, TXT, and MD files are supported.',
+        })
       }
     }
     setAssetContents(results)
@@ -95,8 +131,9 @@ export function ContinuityIngest({
 
   const canSubmit = Boolean(mode && (headline.trim() || body.trim() || linkUrl.trim() || assetNames.length))
 
-  const submit = () => {
+  const submit = async () => {
     if (!mode) return
+    setSubmitError(null)
 
     console.log('[TELA:TRACE] continuity-ingest submit', {
       mode,
@@ -105,7 +142,7 @@ export function ContinuityIngest({
       firstContentPreview: assetContents[0]?.content?.slice(0, 500) ?? null,
     })
 
-    onSubmit({
+    const ok = await onSubmit({
       mode,
       headline: headline.trim() || undefined,
       body,
@@ -117,7 +154,8 @@ export function ContinuityIngest({
       assetNames,
       assetContents: assetContents.length > 0 ? assetContents : undefined,
     })
-    onClose()
+    if (ok) onClose()
+    else setSubmitError('Update failed. File statuses above were not stored.')
   }
 
   if (!open) return null
@@ -131,13 +169,13 @@ export function ContinuityIngest({
         <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-[#D5CCBD]" />
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Add Continuity</p>
-            <h2 className="mt-1 text-[22px] font-semibold tracking-[-0.02em] text-[#171411]">Bring messy reality into continuity.</h2>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Add Update</p>
+            <h2 className="mt-1 text-[22px] font-semibold tracking-[-0.02em] text-[#171411]">Capture what changed.</h2>
           </div>
           <button
             onClick={onClose}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-[#EAE3D7] text-[#5E5348]"
-            aria-label="Close continuity ingest"
+            aria-label="Close update form"
           >
             ×
           </button>
@@ -171,7 +209,7 @@ export function ContinuityIngest({
           <div className="mt-5 space-y-3">
             <div className="flex items-center justify-between rounded-[18px] border border-[#E5DBCB] bg-white/75 px-4 py-3">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9A7C46]">Continuity Mode</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9A7C46]">Update Type</p>
                 <p className="mt-1 text-[14px] font-semibold text-[#171411]">{option?.label}</p>
               </div>
               <button type="button" onClick={() => setMode(null)} className="text-[12px] font-medium text-[#6B5D4B]">
@@ -205,7 +243,7 @@ export function ContinuityIngest({
                 <input
                   type="file"
                   multiple
-                  accept={mode === 'add-photos' ? 'image/*' : undefined}
+                  accept={mode === 'add-photos' ? 'image/*' : FILE_ACCEPT}
                   onChange={(event) => {
                     const files = Array.from(event.target.files ?? [])
                     setAssetNames(files.map(f => f.name))
@@ -213,7 +251,17 @@ export function ContinuityIngest({
                   }}
                   className="w-full rounded-[18px] border border-[#DED4C4] bg-white px-4 py-3 text-[13px] text-[#171411] file:mr-3 file:rounded-full file:border-0 file:bg-[#171411] file:px-3 file:py-2 file:text-[12px] file:font-semibold file:text-[#F6EFDF]"
                 />
-                {assetNames.length > 0 && <p className="mt-2 text-[12px] text-[#6B5D4B]">{assetNames.length} item{assetNames.length === 1 ? '' : 's'} staged into continuity.</p>}
+                {assetNames.length > 0 && <p className="mt-2 text-[12px] text-[#6B5D4B]">{assetNames.length} item{assetNames.length === 1 ? '' : 's'} ready to save.</p>}
+                {assetContents.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {assetContents.map((asset) => (
+                      <div key={asset.name} className={`rounded-[14px] border px-3 py-2 ${fileExtractionTone(asset.extractionStatus)}`}>
+                        <p className="text-[12px] font-semibold">{asset.name}</p>
+                        <p className="mt-1 text-[11px] leading-relaxed">{fileExtractionLabel(asset.extractionStatus)}. {asset.extractionDetail}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </label>
             )}
 
@@ -227,6 +275,12 @@ export function ContinuityIngest({
                   className="w-full rounded-[18px] border border-[#DED4C4] bg-white px-4 py-3 text-[14px] text-[#171411] outline-none placeholder:text-[#A69987]"
                 />
               </label>
+            )}
+
+            {submitError && (
+              <p className="rounded-[14px] border border-[#E4B0A4] bg-[#FFF0ED] px-3 py-2 text-[12px] font-medium text-[#8B2D1F]">
+                {submitError}
+              </p>
             )}
 
             <div className="grid grid-cols-2 gap-3">
@@ -260,13 +314,13 @@ export function ContinuityIngest({
               </label>
 
               <label className="block">
-                <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6B5D4B]">Linked Entity</span>
+                <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6B5D4B]">Linked Person</span>
                 <select
                   value={linkedEntity}
                   onChange={(event) => setLinkedEntity(event.target.value)}
                   className="w-full rounded-[18px] border border-[#DED4C4] bg-white px-4 py-3 text-[14px] text-[#171411] outline-none"
                 >
-                  <option value="">No direct entity link</option>
+                  <option value="">No direct person link</option>
                   {people.map((person) => (
                     <option key={person.id} value={person.label}>{person.label}</option>
                   ))}
@@ -301,14 +355,14 @@ export function ContinuityIngest({
         )}
 
         <div className="mt-5 flex items-center justify-between gap-3">
-          <p className="text-[12px] leading-relaxed text-[#7A6D5A]">Every entry captures who, what, when, linked entity, and linked crusade without changing runtime memory paths.</p>
+          <p className="text-[12px] leading-relaxed text-[#7A6D5A]">Every entry captures who, what, when, linked person, and linked project without changing how ShowTELA stores it.</p>
           <button
             type="button"
-            onClick={submit}
+            onClick={() => void submit()}
             disabled={!canSubmit}
             className="rounded-full bg-[#171411] px-4 py-2.5 text-[13px] font-semibold text-[#F6EFDF] disabled:opacity-45"
           >
-            Add Continuity
+            Add Update
           </button>
         </div>
       </div>

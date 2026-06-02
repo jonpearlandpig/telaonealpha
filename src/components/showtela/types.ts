@@ -1,4 +1,4 @@
-import type { ContinuityEvent, ReadinessReview, ShowTelaHydrationSummary, ShowTelaRuntimeSnapshotMeta } from '@/lib/showtela/types'
+import type { ContinuityEvent, ReadinessReview, ShowTelaHydrationSummary, ShowTelaRuntimeSnapshotMeta, TELAwhy } from '@/lib/showtela/types'
 import type { OperationalCalendarEvent } from '@/lib/showtela/calendar'
 import type { ShowTelaHealth } from '@/lib/showtela/continuityEvents'
 
@@ -48,6 +48,7 @@ export interface FeedItem {
   unresolved: boolean
   linkedEntities: string[]
   pressure?: string
+  telaWhy?: TELAwhy
 }
 
 export interface ShowTelaViewModel {
@@ -60,7 +61,7 @@ export interface ShowTelaViewModel {
   continuityObjects: ContinuityEvent[]
   readinessReviews?: ReadinessReview[]
   runtimeTimeline: Array<{ id: string; timestamp: string; actor: string; summary: string; continuityObjectId: string; pressureDelta: number }>
-  continuityTimeline: Array<{ id: string; timestamp: string; eventType: string; title: string; description: string }>
+  continuityTimeline: Array<{ id: string; timestamp: string; eventType: string; title: string; description: string; telaWhy?: TELAwhy }>
   showTelaHealth: ShowTelaHealth
   showTelaStatus: 'active' | 'archived'
   source?: 'supabase' | 'notion' | 'empty'
@@ -81,4 +82,5 @@ export interface ContinuityFeedItem {
   owner: string
   unresolved: boolean
   linkedEntities: string[]
+  telaWhy?: TELAwhy
 }

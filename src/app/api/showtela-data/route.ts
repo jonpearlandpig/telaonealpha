@@ -2,10 +2,14 @@ import { NextResponse } from 'next/server'
 import { hydrateRuntime } from '@/lib/runtime/runtimeHydration'
 import { buildShowTelaVMFromHydratedState } from '@/lib/showtela/buildViewModel'
 import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
+import { requireApiSession } from '@/lib/api-auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: Request) {
+  const auth = await requireApiSession(req)
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
   const { searchParams } = new URL(req.url)
   const workspaceId = searchParams.get('workspaceId')?.trim() || searchParams.get('workspace')?.trim() || SHOWTELA_WORKSPACE_ID
   const state = await hydrateRuntime(workspaceId)

@@ -59,7 +59,7 @@ export function TelaReasoningPanel({
     <section className="rounded-[24px] bg-[#FFF9F1] px-4 py-4 text-[#2C241C] shadow-[0_10px_24px_rgba(20,16,12,0.05)]">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">TELAwhy</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Why this matters</p>
           <h2 className="mt-1 text-[18px] font-semibold leading-tight">Why this matters today</h2>
         </div>
         <span className="text-[10px] text-[#9A8A76]">{trustLine}</span>

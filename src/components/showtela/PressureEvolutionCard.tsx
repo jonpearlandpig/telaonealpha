@@ -27,7 +27,7 @@ export function PressureEvolutionCard({ evolution }: { evolution: PressureEvolut
           <h2 className="mt-1 text-[17px] font-semibold leading-tight text-[#17130F]">How pressure moved</h2>
         </div>
         <span className="rounded-full bg-[#F1E6D4] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#7D6132]">
-          Derived
+          Estimated
         </span>
       </div>
 
@@ -51,7 +51,7 @@ export function PressureEvolutionCard({ evolution }: { evolution: PressureEvolut
           <p className="mt-1 line-clamp-1 text-[12px] font-semibold text-[#2A231B]">{listLine(evolution.escalationDrivers, 'No escalation')}</p>
         </div>
         <div className="rounded-[14px] bg-[#F6F0E7] px-3 py-2">
-          <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#9A825F]">Drift</p>
+          <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#9A825F]">Update Age</p>
           <p className="mt-1 text-[12px] font-semibold text-[#2A231B]">{STATE_LABEL[evolution.continuityDrift]}</p>
         </div>
       </div>

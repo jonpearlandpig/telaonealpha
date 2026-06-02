@@ -22,8 +22,8 @@ export function DependencyChainCard({
   if (!dependency) {
     return (
       <section className="rounded-[22px] border border-dashed border-[#D6C9B7] px-4 py-5 text-center">
-        <p className="text-[13px] font-semibold text-[#6B5D4B]">No dependency chain derived yet.</p>
-        <p className="mt-1 text-[12px] leading-relaxed text-[#8B847B]">Sequencing appears clear until more operational events arrive.</p>
+        <p className="text-[13px] font-semibold text-[#6B5D4B]">No dependency chain yet.</p>
+        <p className="mt-1 text-[12px] leading-relaxed text-[#8B847B]">Sequencing appears clear until more events arrive.</p>
       </section>
     )
   }

@@ -18,8 +18,8 @@ export function ContinuityMemoryPanel({ memory }: { memory: ContinuityMemorySumm
     <section className="rounded-[24px] border border-[#D8C59D] bg-[#17130F] px-4 py-4 text-[#F8F1E2] shadow-[0_18px_38px_rgba(20,16,12,0.18)]">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#D7BC7F]">Continuity Memory</p>
-          <h2 className="mt-1 text-[18px] font-semibold leading-tight">Operational memory</h2>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#D7BC7F]">Saved Updates</p>
+          <h2 className="mt-1 text-[18px] font-semibold leading-tight">Show memory</h2>
         </div>
         <span className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ backgroundColor: tone.bg, color: tone.text }}>
           {tone.label}

@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation'
 
 export function VenueUploadPanel({
   workspaceId,
+  proofMode,
 }: {
   workspaceId: string
+  proofMode?: boolean
 }) {
   const router = useRouter()
   const [files, setFiles] = useState<File[]>([])
@@ -30,7 +32,8 @@ export function VenueUploadPanel({
 
     try {
       setIsUploading(true)
-      const res = await fetch('/api/venue-intelligence/upload', {
+      const proofQuery = proofMode ? '?showtela_proof=1' : ''
+      const res = await fetch(`/api/venue-intelligence/upload${proofQuery}`, {
         method: 'POST',
         body: form,
       })

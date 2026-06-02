@@ -4,16 +4,18 @@ import type { ActionType } from './FeedActionBar'
 import type { ContinuityFeedItem } from './types'
 
 type Props =
-  | { feed: ContinuityEvent[]; onFeedTap?: (item: ContinuityEvent) => void }
-  | { items: ContinuityFeedItem[]; onCardAction: (itemId: string, action: ActionType) => void; onFeedTap?: (item: ContinuityEvent) => void }
+  | { feed: ContinuityEvent[]; onFeedTap?: (item: ContinuityEvent) => void; onWhyTap?: (item: ContinuityEvent) => void }
+  | { items: ContinuityFeedItem[]; onCardAction: (itemId: string, action: ActionType) => void; onFeedTap?: (item: ContinuityEvent) => void; onWhyTap?: (item: ContinuityEvent) => void }
 
 export function ContinuityFeed(props: Props) {
   const onFeedTap = props.onFeedTap
+  const onWhyTap = props.onWhyTap
   const feed = 'feed' in props ? props.feed
     : props.items.map((item) => ({
         id: item.id, headline: item.title, body: item.summary,
         timestamp: item.timestamp, image: item.image, tags: item.linkedEntities ?? [],
         owner: { id: item.owner, name: item.owner },
+        telaWhy: item.telaWhy,
       }))
 
   return (
@@ -23,13 +25,22 @@ export function ContinuityFeed(props: Props) {
       </div>
       <div className="divide-y divide-[#EDE8E1]">
         {feed.map((item) => (
-          <button key={item.id} className="w-full text-left" onClick={() => onFeedTap?.(item)}>
-            <ContinuityCard item={item} />
-          </button>
+          <article key={item.id} className="py-5">
+            <button className="w-full text-left" onClick={() => onFeedTap?.(item)}>
+              <ContinuityCard item={item} />
+            </button>
+            <button
+              type="button"
+              onClick={() => onWhyTap?.(item)}
+              className="mt-2 rounded-full border border-[#D8C8AC] bg-[#FBF7EF] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7A6240]"
+            >
+              Why this matters
+            </button>
+          </article>
         ))}
         {feed.length === 0 && (
           <div className="rounded-[18px] border border-dashed border-[#D4C9B4] px-4 py-8 text-center">
-            <p className="text-[13px] font-medium text-[#8B847B]">No continuity has entered the runtime.</p>
+            <p className="text-[13px] font-medium text-[#8B847B]">No updates have been saved yet.</p>
           </div>
         )}
       </div>

@@ -52,14 +52,14 @@ export function BuildShowTelaLauncher({
           Active ShowTELAs
         </h1>
         <p className="mt-4 max-w-[42ch] text-[16px] leading-[1.65] text-[#CFC5B8]">
-          Build a clean ShowTELA, see what is active, and reopen continuity without exposing internal runtime language.
+          Build a clean ShowTELA, see what is active, and reopen saved show history without exposing internal system language.
         </p>
 
         <div className="mt-10 grid gap-6 lg:grid-cols-[1.18fr_0.82fr]">
           <section className="rounded-[32px] border border-[#2A2D34] bg-[linear-gradient(180deg,#171A21_0%,#101217_100%)] p-6 shadow-[0_24px_60px_rgba(0,0,0,0.28)]">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Registry</p>
+	                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Active List</p>
                 <p className="mt-2 text-[22px] font-semibold tracking-[-0.03em] text-[#F8F6F2]">Active ShowTELAs</p>
               </div>
               <div className="rounded-full border border-[#3A3E47] bg-[#111319] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#CFC5B8]">
@@ -72,7 +72,7 @@ export function BuildShowTelaLauncher({
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#D9B35A]">ShowTELA Created</p>
                 <p className="mt-2 text-[22px] font-semibold tracking-[-0.03em] text-[#F8F6F2]">{createdShowTela.showTelaName}</p>
                 <p className="mt-2 text-[13px] leading-[1.65] text-[#E1D4BF]">
-                  Clean state verified. Reopen it from the active registry and begin continuity.
+	                  Clean state verified. Reopen it from the active list and begin updates.
                 </p>
               </div>
             ) : null}
@@ -82,7 +82,7 @@ export function BuildShowTelaLauncher({
                 <div className="rounded-[24px] border border-dashed border-[#3A3E47] bg-[#111319] px-5 py-6">
                   <p className="text-[16px] font-semibold text-[#F8F6F2]">No active ShowTELAs yet</p>
                   <p className="mt-2 max-w-[36ch] text-[13px] leading-[1.65] text-[#A89B8D]">
-                    Build the first ShowTELA to establish a clean continuity origin and register it here.
+	                    Build the first ShowTELA to start from a clean state and register it here.
                   </p>
                 </div>
               ) : (
@@ -139,7 +139,7 @@ export function BuildShowTelaLauncher({
                   <div className="rounded-[24px] border border-dashed border-[#3A3E47] bg-[#111319] px-5 py-6">
                     <p className="text-[16px] font-semibold text-[#F8F6F2]">No archived ShowTELAs yet</p>
                     <p className="mt-2 max-w-[36ch] text-[13px] leading-[1.65] text-[#A89B8D]">
-                      Archive preserves replay. Nothing is deleted.
+	                      Archive preserves saved history. Nothing is deleted.
                     </p>
                   </div>
                 ) : (
@@ -153,7 +153,7 @@ export function BuildShowTelaLauncher({
                               Archived {formatDateLabel(entry.archivedAt, true)}
                             </span>
                             <span className="rounded-full border border-[#30343D] bg-[#181B21] px-3 py-2">
-                              Replay Available
+	                              Saved History Available
                             </span>
                           </div>
                         </div>
@@ -161,7 +161,7 @@ export function BuildShowTelaLauncher({
                           href={`/showtela?showtela=${encodeURIComponent(entry.showTelaId)}`}
                           className="inline-flex rounded-full border border-[#C89B2F] px-5 py-3 text-[13px] font-semibold uppercase tracking-[0.16em] text-[#E6C570]"
                         >
-                          Open Replay
+	                          Open History
                         </Link>
                       </div>
                     </article>
@@ -210,7 +210,7 @@ export function BuildShowTelaLauncher({
                 <p className="mt-1 text-[#9A7C46]">0</p>
               </div>
               <div className="rounded-[18px] border border-[#2F343E] bg-[#111319] px-3 py-3">
-                <p className="font-semibold text-[#F8F6F2]">Artifacts</p>
+	                <p className="font-semibold text-[#F8F6F2]">Files</p>
                 <p className="mt-1 text-[#9A7C46]">0</p>
               </div>
               <div className="rounded-[18px] border border-[#2F343E] bg-[#111319] px-3 py-3">
@@ -227,7 +227,7 @@ export function BuildShowTelaLauncher({
 
             <div className="mt-6 flex items-center justify-between gap-4">
               <p className="max-w-[28ch] text-[12px] leading-[1.65] text-[#A89B8D]">
-                Build a clean ShowTELA, register it to the active list, then reopen it to begin continuity.
+	                Build a clean ShowTELA, register it to the active list, then reopen it to begin updates.
               </p>
               <button
                 type="submit"

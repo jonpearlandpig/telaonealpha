@@ -37,7 +37,7 @@ export function OperationalRiskTimeline({
           <h2 className="mt-1 text-[17px] font-semibold leading-tight text-[#17130F]">Upcoming pressure</h2>
         </div>
         <span className="rounded-full bg-[#F1E6D4] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#7D6132]">
-          Derived
+          Estimated
         </span>
       </div>
 
@@ -52,7 +52,7 @@ export function OperationalRiskTimeline({
               <div className="flex items-center justify-between gap-3">
                 <p className="text-[12px] font-semibold text-[#2A231B]">{shortDay(key)}</p>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#8B7C68]">
-                  {risk.unresolved} open / {risk.decay} decay
+                  {risk.unresolved} open / {risk.decay} aging
                 </p>
               </div>
               <div className="mt-2 h-1.5 rounded-full bg-[#E3D8C9]">
@@ -62,7 +62,7 @@ export function OperationalRiskTimeline({
           )
         })}
         {keys.length === 0 && (
-          <p className="rounded-[15px] bg-[#F6F0E7] px-3 py-3 text-[12px] text-[#8B847B]">No operational timeline risk derived yet.</p>
+          <p className="rounded-[15px] bg-[#F6F0E7] px-3 py-3 text-[12px] text-[#8B847B]">No upcoming timeline risk yet.</p>
         )}
       </div>
     </section>

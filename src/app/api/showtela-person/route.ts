@@ -1,105 +1,66 @@
 import { NextResponse } from 'next/server'
-import { isLikelyNotionDatabaseId, resolveShowTelaDatabase } from '@/lib/showtela/env'
+import { requireApiSession } from '@/lib/api-auth'
+import { hydrateRuntime } from '@/lib/runtime/runtimeHydration'
+import { buildShowTelaVMFromHydratedState } from '@/lib/showtela/buildViewModel'
+import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
 
-const NOTION_VERSION = '2022-06-28'
-const headers = () => ({
-  Authorization: `Bearer ${process.env.NOTION_API_KEY}`,
-  'Notion-Version': NOTION_VERSION,
-  'Content-Type': 'application/json',
-})
-
-function richText(prop: Record<string, unknown> | undefined) {
-  if (!prop) return ''
-  const rt = (prop as { rich_text?: Array<{ plain_text?: string }> }).rich_text
-  const title = (prop as { title?: Array<{ plain_text?: string }> }).title
-  return rt?.[0]?.plain_text ?? title?.[0]?.plain_text ?? ''
+function firstName(value: string) {
+  return value.trim().toLowerCase().split(/\s+/)[0] ?? ''
 }
 
-function selectName(prop: Record<string, unknown> | undefined) {
-  return (prop as { select?: { name?: string } } | undefined)?.select?.name
-}
-
-function checkbox(prop: Record<string, unknown> | undefined) {
-  return (prop as { checkbox?: boolean } | undefined)?.checkbox
-}
-
-function numberVal(prop: Record<string, unknown> | undefined) {
-  return (prop as { number?: number } | undefined)?.number
-}
-
-function dateStart(prop: Record<string, unknown> | undefined) {
-  return (prop as { date?: { start?: string } } | undefined)?.date?.start
-}
-
-type NotionPage = { id: string; properties?: Record<string, Record<string, unknown>>; last_edited_time?: string }
-
-async function queryDB(dbId: string | undefined, filter?: Record<string, unknown>): Promise<NotionPage[]> {
-  if (!dbId) return []
-  if (!isLikelyNotionDatabaseId(dbId)) {
-    console.error('[showtela-person] invalid Notion database ID format')
-    return []
-  }
-  const body: Record<string, unknown> = { page_size: 50 }
-  if (filter) body.filter = filter
-  const res = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
-    method: 'POST', headers: headers(), body: JSON.stringify(body), cache: 'no-store',
-  })
-  if (!res.ok) {
-    const body = await res.text().catch(() => '')
-    console.error('[showtela-person] Notion query failed:', res.status, body.slice(0, 300))
-    return []
-  }
-  const data = await res.json() as { results?: NotionPage[] }
-  return data.results ?? []
+function matchesPerson(candidate: string, query: string) {
+  const normalizedCandidate = candidate.trim().toLowerCase()
+  const normalizedQuery = query.trim().toLowerCase()
+  if (!normalizedCandidate || !normalizedQuery) return false
+  return normalizedCandidate === normalizedQuery ||
+    normalizedCandidate.includes(normalizedQuery) ||
+    firstName(normalizedCandidate) === firstName(normalizedQuery)
 }
 
 export async function GET(request: Request) {
+  const auth = await requireApiSession(request)
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
   const { searchParams } = new URL(request.url)
   const name = searchParams.get('name') ?? ''
+  const workspaceId = searchParams.get('workspaceId')?.trim() || SHOWTELA_WORKSPACE_ID
 
-  const unresolvedDb = resolveShowTelaDatabase('unresolved').value
-  const eventsDb = resolveShowTelaDatabase('continuity').value
-  const peopleDb = resolveShowTelaDatabase('people').value
+  const state = await hydrateRuntime(workspaceId)
+  const vm = buildShowTelaVMFromHydratedState(state)
+  const person = vm.activeOps.find((item) => matchesPerson(item.name, name))
 
-  const [allUnresolved, allFeed, allPeople] = await Promise.all([
-    queryDB(unresolvedDb),
-    queryDB(eventsDb),
-    queryDB(peopleDb),
-  ])
+  if (!person) {
+    return NextResponse.json({ unresolved: [], feed: [], notes: 'No runtime entity matched this person.' }, { headers: { 'Cache-Control': 'no-store' } })
+  }
 
-  const personRecord = allPeople.find((p) => {
-    const n = richText(p.properties?.['Name'])
-    return n.toLowerCase().includes(name.toLowerCase().split(' ')[0].toLowerCase())
-  })
-
-  const notes = personRecord ? richText(personRecord.properties?.['Notes']) : ''
-
-  const unresolved = allUnresolved
-    .filter((u) => {
-      const owner = richText(u.properties?.['Owner'])
-      return owner.toLowerCase().includes(name.toLowerCase().split(' ')[0].toLowerCase())
-    })
-    .map((u) => ({
-      id: u.id,
-      title: richText(u.properties?.['Title']),
-      severity: selectName(u.properties?.['Severity']),
-      blocking: checkbox(u.properties?.['Blocking']),
-      operation: richText(u.properties?.['Operation']),
-      aging: numberVal(u.properties?.['Aging']),
+  const personFirst = firstName(person.name)
+  const unresolved = vm.unresolved
+    .filter((item) => item.owner ? matchesPerson(item.owner, person.name) : false)
+    .map((item) => ({
+      id: item.id,
+      title: item.title,
+      severity: item.severity,
+      blocking: item.blocking,
+      operation: item.operation,
+      aging: item.aging,
     }))
 
-  const feed = allFeed
-    .filter((e) => {
-      const owner = richText(e.properties?.['Owner'])
-      return owner.toLowerCase().includes(name.toLowerCase().split(' ')[0].toLowerCase())
+  const feed = vm.feed
+    .filter((item) => {
+      const linked = item.linkedEntities.some((entity) => matchesPerson(entity, person.name))
+      return linked || matchesPerson(item.owner, person.name) || item.summary.toLowerCase().includes(personFirst)
     })
     .slice(0, 5)
-    .map((e) => ({
-      id: e.id,
-      headline: richText(e.properties?.['Name']),
-      body: richText(e.properties?.['Summary']),
-      timestamp: dateStart(e.properties?.['Updated']) ?? e.last_edited_time,
+    .map((item) => ({
+      id: item.id,
+      headline: item.title,
+      body: item.summary,
+      timestamp: item.timestamp,
     }))
 
-  return NextResponse.json({ unresolved, feed, notes }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({
+    unresolved,
+    feed,
+    notes: `${person.name}${person.latest ? ` · ${person.latest}` : ''}. Source: ${vm.source ?? 'runtime'}.`,
+  }, { headers: { 'Cache-Control': 'no-store' } })
 }

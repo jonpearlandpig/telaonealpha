@@ -22,8 +22,8 @@ export function OperationalLineageCard({ event }: { event?: OperationalLineageEv
   if (!event) {
     return (
       <section className="rounded-[22px] border border-dashed border-[#D6C9B7] px-4 py-5 text-center">
-        <p className="text-[13px] font-semibold text-[#6B5D4B]">No lineage movement derived yet.</p>
-        <p className="mt-1 text-[12px] leading-relaxed text-[#8B847B]">Operational memory will appear when continuity, pressure, or unresolved state moves.</p>
+        <p className="text-[13px] font-semibold text-[#6B5D4B]">No source movement yet.</p>
+        <p className="mt-1 text-[12px] leading-relaxed text-[#8B847B]">Saved history will appear when updates, pressure, or open items move.</p>
       </section>
     )
   }
@@ -34,7 +34,7 @@ export function OperationalLineageCard({ event }: { event?: OperationalLineageEv
     <section className="rounded-[22px] border border-[#E5D8C7] bg-[#FFFDF8] px-4 py-4 shadow-[0_10px_26px_rgba(27,22,16,0.05)]">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Operational Lineage</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Source History</p>
           <h2 className="mt-1 text-[17px] font-semibold leading-tight text-[#17130F]">{CHANGE_LABEL[event.eventType]}</h2>
         </div>
         <span className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ backgroundColor: tone.bg, color: tone.text }}>
@@ -57,7 +57,7 @@ export function OperationalLineageCard({ event }: { event?: OperationalLineageEv
       </div>
 
       <div className="mt-3 rounded-[16px] border border-[#E3D3B8] bg-[#FBF5EA] px-3 py-2">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9A7C46]">Causality</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9A7C46]">Cause</p>
         <p className="mt-1 text-[12px] leading-relaxed text-[#5B4D3D]">
           {event.previousState} to {event.nextState} / {event.linkedDependencies.length} linked dependencies
         </p>

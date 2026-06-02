@@ -91,12 +91,17 @@ export function ShowTelaRuntime({
       new URLSearchParams(window.location.search).get('showtela_debug') === '1'
     )
   )
+  const [proofApiParam] = useState(() =>
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('showtela_proof') === '1'
+      ? '&showtela_proof=1'
+      : ''
+  )
 
   async function hydrateFromServer(previousSignature?: string) {
     const maxAttempts = previousSignature ? 24 : 1
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const res = await fetch(`/api/showtela-data?workspaceId=${encodeURIComponent(workspaceId)}`, {
+      const res = await fetch(`/api/showtela-data?workspaceId=${encodeURIComponent(workspaceId)}${proofApiParam}`, {
         cache: 'no-store',
       })
       if (!res.ok) throw new Error(`Hydration fetch failed with HTTP ${res.status}`)

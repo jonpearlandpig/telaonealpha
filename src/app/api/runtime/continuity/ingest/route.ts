@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server'
 import { ingestCanonicalContinuity } from '@/lib/continuity/ingest-runtime'
 import type { ContinuityIngestionInput } from '@/lib/continuity/normalize-ingestion'
+import { requireApiSession } from '@/lib/api-auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireApiSession(req)
+    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
     const input = (await req.json()) as ContinuityIngestionInput
     const hasBody = Boolean(input?.body?.trim())
     const hasFileContent = Boolean(input?.assetContents?.some((asset) => asset.content.trim().length > 0))

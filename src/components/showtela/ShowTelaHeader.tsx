@@ -35,14 +35,14 @@ export function ShowTelaHeader({
     autoscan.blockersLabel,
     autoscan.movementLabel,
     autoscan.readinessLabel,
-    'governance movement holding steady',
+    'approvals holding steady',
   ].filter(Boolean)
   const tickerText = tickerItems.join('  /  ')
 
   return (
     <header className="px-5 pb-9 pt-[58px]">
       <div className="mb-10 flex items-center justify-between">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#C89B2F]">{runtimeLabel ?? 'Operational Runtime'}</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#C89B2F]">{runtimeLabel ?? 'ShowTELA'}</p>
         <button className="relative flex h-12 w-12 items-center justify-center rounded-full bg-black/[0.035]">
           <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
             <path d="M8 2a4 4 0 00-4 4v3l-1 1.5h10L12 9V6a4 4 0 00-4-4zM6.5 13a1.5 1.5 0 003 0" stroke="#141210" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
@@ -63,8 +63,8 @@ export function ShowTelaHeader({
             <p className="text-[11px] font-medium tracking-[0.06em] text-[#8A7351]">TELAtop</p>
             <span className="telatop-pulse h-2 w-2 flex-shrink-0 rounded-full bg-[#D5C1A1]" />
           </div>
-          <p className="mt-6 max-w-[34ch] text-[15px] font-semibold leading-[1.35] tracking-[-0.2px] text-[#171411]">Awaiting continuity.</p>
-          <p className="mt-4 max-w-[34ch] text-[12px] leading-[1.55] text-[#6E6A63]">Add a call sheet, production document, or operational update to begin runtime hydration.</p>
+          <p className="mt-6 max-w-[34ch] text-[15px] font-semibold leading-[1.35] tracking-[-0.2px] text-[#171411]">Awaiting first update.</p>
+          <p className="mt-4 max-w-[34ch] text-[12px] leading-[1.55] text-[#6E6A63]">Add a call sheet, production document, or update to begin.</p>
         </div>
       ) : (
         <div className="mt-8 overflow-hidden rounded-[20px] bg-[linear-gradient(160deg,#FCF9F2_0%,#F1E6D0_100%)] px-7 py-6 shadow-[0_10px_28px_rgba(17,17,17,0.05)]">
@@ -73,7 +73,7 @@ export function ShowTelaHeader({
               <p className="text-[11px] font-medium tracking-[0.06em] text-[#8A7351]">TELAtop</p>
               <span className="telatop-pulse h-2 w-2 flex-shrink-0 rounded-full bg-[#D5C1A1]" />
             </div>
-            <p className="text-[11px] font-medium text-[#A89880]">{statusLabel ?? 'projection live'}</p>
+            <p className="text-[11px] font-medium text-[#A89880]">{statusLabel ?? 'live view'}</p>
           </div>
           <p className="mt-6 max-w-[34ch] text-[15px] font-semibold leading-[1.35] tracking-[-0.2px] text-[#171411]">{autoscan.currentTruth}</p>
           <p className="mt-4 max-w-[34ch] text-[12px] leading-[1.55] text-[#6E6A63]">{autoscan.mattersNow}</p>

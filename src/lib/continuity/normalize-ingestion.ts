@@ -15,6 +15,8 @@ export type AssetContent = {
   name: string
   content: string
   type: string
+  extractionStatus?: 'extracted' | 'stored-only' | 'failed'
+  extractionDetail?: string
 }
 
 export type ContinuityIngestionInput = {

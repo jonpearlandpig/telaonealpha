@@ -101,6 +101,42 @@ export type ContinuityEvent = {
   normalizedBy?: 'claude'
   normalizationVersion?: string
   sourceMode?: string
+  telaWhy?: TELAwhy
+}
+
+export type TELAwhyStatus = 'verified' | 'low-provenance' | 'insufficient-continuity'
+
+export type TELAwhy = {
+  id: string
+  status: TELAwhyStatus
+  whyThisExists: string
+  evidenceRefs?: {
+    eventId?: string
+    continuityRecordId?: string
+    artifactId?: string
+  }
+  sourceArtifact?: {
+    id?: string
+    title?: string
+    fileName?: string
+  }
+  importTimestamp?: string
+  author?: string
+  linkedEntities: string[]
+  linkedOperations: string[]
+  linkedCalendarEvents: string[]
+  continuityEvent?: {
+    id: string
+    type: string
+    title?: string
+    timestamp?: string
+  }
+  evidence: string[]
+  lineage: string[]
+  freshness?: {
+    lastUpdated?: string
+    label: string
+  }
 }
 
 export type MediaMemoryType = 'image' | 'pdf' | 'stage_plot' | 'screenshot' | 'bus_schedule' | 'venue_packet' | 'contract' | 'voice_memo'

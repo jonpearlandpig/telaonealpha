@@ -4,7 +4,6 @@ import { parseMarkdownDirectory } from '@/lib/continuity/parseMarkdownDirectory'
 import { parseMarkdownRider } from '@/lib/venue-intelligence/rider'
 import type { ShowTelaHydrationSummary, ShowTelaRuntimeSnapshotMeta } from './types'
 import { buildReadinessReviewsFromEvents } from './readiness'
-import type { OperationalCalendarEvent } from './calendar'
 import type {
   FeedItem,
   OperationEntity,
@@ -16,6 +15,8 @@ import type {
 import type { HydratedRuntimeState } from '@/lib/runtime/runtimeHydrationModel'
 import { SHOWTELA_CREATED_EVENT_TYPE } from './lifecycleRegistry'
 import { buildShowTelaContinuityEvents } from './continuityEvents'
+import { buildCanonicalCalendarEvents } from './calendarAuthority'
+import { buildTELAwhyFromContinuityRecord } from './telawhy'
 
 function slugify(value: string) {
   return value
@@ -43,17 +44,17 @@ function detectArtifactKind(input: {
   return 'generic' as const
 }
 
-function collectArtifactViewData(artifacts: ArtifactRecord[]) {
+function collectArtifactViewData(artifacts: ArtifactRecord[], calendarEvents: ReturnType<typeof buildCanonicalCalendarEvents>) {
   const people = new Map<string, PersonItem>()
   const operations = new Map<string, OperationEntity>()
   const feed = new Map<string, FeedItem>()
-  const calendarEvents = new Map<string, OperationalCalendarEvent>()
 
-  for (const artifact of artifacts.sort((left, right) => left.createdAt.localeCompare(right.createdAt))) {
+  for (const artifact of [...artifacts].sort((left, right) => left.createdAt.localeCompare(right.createdAt))) {
     const text = artifact.text ?? ''
     const directory = parseMarkdownDirectory(text)
     const calendar = parseMarkdownCalendar(text)
     const rider = parseMarkdownRider(text)
+    const calendarEventsForArtifact = calendarEvents.filter((event) => event.sourceArtifactId === artifact.id)
     const kind = detectArtifactKind({
       artifact,
       text,
@@ -136,8 +137,9 @@ function collectArtifactViewData(artifacts: ArtifactRecord[]) {
       continue
     }
 
-    if (calendar.events.length > 0) {
-      for (const department of calendar.departments) {
+    if (calendarEventsForArtifact.length > 0) {
+      const departments = Array.from(new Set(calendarEventsForArtifact.flatMap((event) => event.departments)))
+      for (const department of departments) {
         const id = `operation:${slugify(department)}`
         if (!operations.has(id)) {
           operations.set(id, {
@@ -152,37 +154,17 @@ function collectArtifactViewData(artifacts: ArtifactRecord[]) {
       }
     }
 
-    for (const event of calendar.events) {
-      calendarEvents.set(event.id, {
-        id: event.id,
-        title: event.title,
-        type: 'show',
-        status: 'active',
-        source: 'system',
-        timestamp: event.isoTimestamp,
-        startTime: event.isoTimestamp,
-        people: event.owner ? [event.owner] : [],
-        departments: [event.department],
-        location: event.location,
-        summary: event.location ? `${event.department} · ${event.location}` : event.department,
-        unresolvedCount: 0,
-        pressureState: 'active',
-        continuityState: 'fresh',
-        density: 'light',
-        telaHint: 'Uploaded calendar row now drives the visible field.',
-        lineagePlaceholder: artifact.id,
-        sourceEntityId: artifact.id,
-      })
+    for (const event of calendarEventsForArtifact) {
       feed.set(`feed:${event.id}`, {
         id: `feed:${event.id}`,
-        timestamp: event.isoTimestamp,
+        timestamp: event.timestamp,
         title: event.title,
-        summary: event.location ? `${event.department} · ${event.location}` : event.department,
-        owner: event.owner ?? '',
+        summary: event.summary ?? event.departments.join(' / '),
+        owner: event.people[0] ?? '',
         image: '',
         avatar: '',
         unresolved: false,
-        linkedEntities: [event.department],
+        linkedEntities: event.departments,
       })
     }
 
@@ -207,7 +189,6 @@ function collectArtifactViewData(artifacts: ArtifactRecord[]) {
     people: [...people.values()],
     operations: [...operations.values()],
     feed: [...feed.values()].sort((left, right) => left.timestamp.localeCompare(right.timestamp)),
-    calendarEvents: [...calendarEvents.values()].sort((left, right) => left.timestamp.localeCompare(right.timestamp)),
   }
 }
 
@@ -220,7 +201,6 @@ function collectArtifactViewData(artifacts: ArtifactRecord[]) {
 export function buildShowTelaVMFromHydratedState(
   state: HydratedRuntimeState,
 ): ShowTelaViewModel {
-  const artifactView = collectArtifactViewData(state.artifacts)
   const replayEvents = state.events ?? []
   const createdEvent = replayEvents.find((event) => event.type === SHOWTELA_CREATED_EVENT_TYPE)
   const showTelaName = typeof createdEvent?.payload?.showTelaName === 'string' ? createdEvent.payload.showTelaName : undefined
@@ -231,6 +211,21 @@ export function buildShowTelaVMFromHydratedState(
     runtimeEvents: replayEvents,
     artifacts: state.artifacts,
   })
+  const calendarEvents = buildCanonicalCalendarEvents({
+    artifacts: state.artifacts,
+    continuityEvents: continuityRecords,
+    hydratedAt: state.diagnostics.hydratedAt,
+  })
+  const artifactView = collectArtifactViewData(state.artifacts, calendarEvents)
+  const artifactsById = new Map(state.artifacts.map((artifact) => [artifact.id, artifact]))
+  const telaWhyByEventId = new Map(continuityRecords.map((record) => [
+    record.event_id,
+    buildTELAwhyFromContinuityRecord({
+      record,
+      artifact: record.artifact_id ? artifactsById.get(record.artifact_id) : undefined,
+      hydratedAt: state.diagnostics.hydratedAt,
+    }),
+  ]))
   const readinessReviews = buildReadinessReviewsFromEvents(replayEvents, { showTelaId })
   const latestContinuity = continuityRecords[0]
   const showTelaStatus = continuityRecords.some((event) => event.event_type === 'SHOWTELA_ARCHIVED') ? 'archived' as const : 'active' as const
@@ -307,6 +302,7 @@ export function buildShowTelaVMFromHydratedState(
         ? record.metadata.linked_entities.filter((item): item is string => typeof item === 'string')
         : [],
       pressure: record.event_type.includes('ARCHIVED') ? 'low' : undefined,
+      telaWhy: telaWhyByEventId.get(record.event_id),
     }))
   const feed = replayFeed.length > 0 ? replayFeed : artifactView.feed
 
@@ -354,6 +350,7 @@ export function buildShowTelaVMFromHydratedState(
         ? record.metadata.linked_entities.filter((item): item is string => typeof item === 'string')
         : [],
       sourceMode: record.source,
+      telaWhy: telaWhyByEventId.get(record.event_id),
     })),
     readinessReviews,
     runtimeTimeline: continuityRecords.slice(0, 24).map((record) => ({
@@ -370,11 +367,12 @@ export function buildShowTelaVMFromHydratedState(
       eventType: record.event_type,
       title: record.title,
       description: record.description,
+      telaWhy: telaWhyByEventId.get(record.event_id),
     })),
     showTelaHealth: {
       people: activeOps.length,
       operations: crusadeOperations.length,
-      calendarEvents: artifactView.calendarEvents.length,
+      calendarEvents: calendarEvents.length,
       artifacts: state.artifacts.length,
       events: continuityRecords.length,
       lastActivityAt: latestContinuity?.created_at ?? state.replay.lastEventAt,
@@ -384,7 +382,7 @@ export function buildShowTelaVMFromHydratedState(
     diagnosticState: 'persistence-connected',
     hydration,
     runtimeSnapshotMeta,
-    calendarEvents: artifactView.calendarEvents.length > 0 ? artifactView.calendarEvents : undefined,
+    calendarEvents,
     // operationalProjection intentionally absent — sovereign path does not inject projection into ViewModel
   }
 }

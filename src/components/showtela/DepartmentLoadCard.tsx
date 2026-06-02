@@ -47,7 +47,7 @@ export function DepartmentLoadCard({ load }: { load: DepartmentLoadAnalysis }) {
             ? 'Protect handoffs and confirm ownership.'
             : load.loadState === 'active'
               ? 'Keep updates fresh while load is moving.'
-              : 'No load imbalance derived yet.'}
+              : 'No load imbalance yet.'}
       </p>
     </section>
   )

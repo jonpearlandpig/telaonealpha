@@ -56,6 +56,7 @@ type ArtifactEvidence = {
   peopleCount: number
   operationsCount: number
   calendarCount: number
+  requirementsCount: number
   linkedEntities: string[]
 }
 
@@ -74,6 +75,7 @@ function detectArtifactEvidence(artifact?: ArtifactRecord): ArtifactEvidence {
       peopleCount: 0,
       operationsCount: 0,
       calendarCount: 0,
+      requirementsCount: 0,
       linkedEntities: [],
     }
   }
@@ -105,6 +107,7 @@ function detectArtifactEvidence(artifact?: ArtifactRecord): ArtifactEvidence {
     peopleCount: directory.people.length,
     operationsCount,
     calendarCount: calendar.events.length,
+    requirementsCount: rider.requirements.length,
     linkedEntities: Array.from(new Set([
       ...(artifact.entities ?? []),
       ...(artifact.projects ?? []),
@@ -162,10 +165,12 @@ function continuityEventFromRuntimeEvent(input: {
       lineage_id: input.event.lineageId ?? null,
       linked_entities: stringList(payload.linkedEntities).length > 0 ? stringList(payload.linkedEntities) : evidence.linkedEntities,
       artifact_kind: evidence.artifactKind,
+      source_artifact_title: evidence.artifactTitle ?? null,
       counts: {
         people: evidence.peopleCount,
         operations: evidence.operationsCount,
         calendar_events: evidence.calendarCount,
+        requirements: evidence.requirementsCount,
       },
     },
   }

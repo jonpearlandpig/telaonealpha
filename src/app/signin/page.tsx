@@ -31,7 +31,7 @@ export default async function SignInPage() {
         </div>
         <div className="rounded-[24px] border border-[#EAE4DA] bg-white px-6 py-8 shadow-[0_8px_32px_rgba(17,17,17,0.08)]">
           <h1 className="text-[20px] font-semibold text-[#141210]">Sign in</h1>
-          <p className="mt-1 text-[13px] text-[#8B847B]">Operational continuity, live.</p>
+	          <p className="mt-1 text-[13px] text-[#8B847B]">Live show updates, saved.</p>
           <a href={googleAuthUrl} className="mt-6 flex w-full items-center justify-center gap-3 rounded-[14px] border border-[#EAE4DA] bg-white px-4 py-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
             <svg width="20" height="20" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>

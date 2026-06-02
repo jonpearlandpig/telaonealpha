@@ -94,7 +94,7 @@ export function ActiveOpsRail({
                 onAddContinuity?.()
               }}
               className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#F8F6F2] bg-[#141210] shadow-[0_2px_8px_rgba(0,0,0,0.24)]"
-              aria-label="Add continuity"
+              aria-label="Add update"
             >
               <span className="text-[14px] font-semibold leading-none text-white">+</span>
             </button>

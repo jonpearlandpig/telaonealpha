@@ -3,12 +3,16 @@ import { NextResponse } from 'next/server'
 import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
 import { getAllReplayEventsForWorkspace } from '@/lib/runtime/eventStore'
 import { buildContinuityReplay, renderContinuityReplayAnswer } from '@/lib/runtime/continuity/replay'
+import { requireApiSession } from '@/lib/api-auth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
   try {
+    const auth = await requireApiSession(request)
+    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
     const url = new URL(request.url)
     const workspaceId = url.searchParams.get('workspaceId')?.trim() || SHOWTELA_WORKSPACE_ID
     const query = url.searchParams.get('query')?.trim() || undefined

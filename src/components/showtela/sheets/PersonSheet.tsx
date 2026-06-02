@@ -7,8 +7,9 @@ type FeedItem = { id: string; headline: string; body?: string; timestamp?: strin
 
 const SEVERITY_COLOR: Record<string, string> = { high: '#F87171', medium: '#F59E0B', low: '#4ADE80' }
 
-async function fetchPersonData(name: string) {
-  const res = await fetch(`/api/showtela-person?name=${encodeURIComponent(name)}`)
+async function fetchPersonData(name: string, workspaceId: string, proofMode?: boolean) {
+  const proofQuery = proofMode ? '&showtela_proof=1' : ''
+  const res = await fetch(`/api/showtela-person?name=${encodeURIComponent(name)}&workspaceId=${encodeURIComponent(workspaceId)}${proofQuery}`)
   if (!res.ok) return { unresolved: [], feed: [], notes: '' }
   return res.json() as Promise<{ unresolved: UnresolvedItem[]; feed: FeedItem[]; notes: string }>
 }
@@ -19,7 +20,21 @@ function formatTime(iso?: string) {
   catch { return '' }
 }
 
-export function PersonSheet({ name, role, open, onClose }: { name: string; role?: string; open: boolean; onClose: () => void }) {
+export function PersonSheet({
+  name,
+  role,
+  open,
+  workspaceId,
+  proofMode,
+  onClose,
+}: {
+  name: string
+  role?: string
+  open: boolean
+  workspaceId: string
+  proofMode?: boolean
+  onClose: () => void
+}) {
   const [data, setData] = useState<{ unresolved: UnresolvedItem[]; feed: FeedItem[]; notes: string } | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -28,7 +43,7 @@ export function PersonSheet({ name, role, open, onClose }: { name: string; role?
     let cancelled = false
     const timer = window.setTimeout(() => {
       setLoading(true)
-      fetchPersonData(name).then((d) => {
+      fetchPersonData(name, workspaceId, proofMode).then((d) => {
         if (cancelled) return
         setData(d)
         setLoading(false)
@@ -38,7 +53,7 @@ export function PersonSheet({ name, role, open, onClose }: { name: string; role?
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [open, name])
+  }, [open, name, workspaceId, proofMode])
 
   return (
     <BottomSheet open={open} onClose={onClose} title={name}>

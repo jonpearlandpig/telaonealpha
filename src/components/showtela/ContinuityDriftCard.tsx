@@ -17,7 +17,7 @@ export function ContinuityDriftCard({ drift }: { drift: ContinuityDriftAnalysis 
     <section className="rounded-[22px] border border-[#E5D8C7] bg-[#FFFDF8] px-4 py-4 shadow-[0_10px_26px_rgba(27,22,16,0.05)]">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Continuity Drift</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Update Drift</p>
           <h2 className="mt-1 text-[17px] font-semibold leading-tight text-[#17130F]">{drift.operationalRiskSummary}</h2>
         </div>
         <span className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ backgroundColor: tone.bg, color: tone.text }}>

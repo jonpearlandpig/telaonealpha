@@ -11,7 +11,7 @@ export function OperationalPressureCard({ reason }: { reason?: OperationalPressu
   if (!reason) return null
 
   const tone = SEVERITY_TONE[reason.severity]
-  const departments = reason.affectedDepartments.slice(0, 3).join(' / ') || 'Runtime field'
+  const departments = reason.affectedDepartments.slice(0, 3).join(' / ') || 'General'
 
   return (
     <section className="rounded-[22px] border border-[#E5D8C7] bg-[#FFFDF8] px-4 py-4 shadow-[0_10px_26px_rgba(27,22,16,0.05)]">

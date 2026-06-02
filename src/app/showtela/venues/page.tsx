@@ -26,8 +26,10 @@ export default async function VenueDashboardPage({
   const params = searchParams ? await searchParams : {}
   const workspaceParam = Array.isArray(params.workspace) ? params.workspace[0] : params.workspace
   const showTelaParam = Array.isArray(params.showtela) ? params.showtela[0] : params.showtela
+  const proofMode = (Array.isArray(params.showtela_proof) ? params.showtela_proof[0] : params.showtela_proof) === '1'
   const showTela = showTelaParam?.trim() ? await resolveShowTela(showTelaParam.trim()) : null
   const workspaceId = workspaceParam?.trim() || showTela?.workspaceId || SHOWTELA_WORKSPACE_ID
+  const proofSuffix = proofMode ? '&showtela_proof=1' : ''
   const { rider, venues, assessments } = await loadVenueDashboard(workspaceId)
   const venueById = new Map(venues.map((venue) => [venue.id, venue]))
 
@@ -39,27 +41,27 @@ export default async function VenueDashboardPage({
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9A7C46]">Venue Dashboard</p>
             <h1 className="mt-2 text-[40px] font-semibold tracking-[-0.04em]">Venue Intelligence</h1>
             <p className="mt-3 max-w-[60ch] text-[15px] leading-[1.7] text-[#6E6A63]">
-              Upload venue packets, normalize them into venue entities, compare them against the active production rider, and keep the resulting readiness inside Supabase.
+              Upload venue packets, turn them into venue profiles, compare them against the active production rider, and save the readiness report.
             </p>
           </div>
           <Link
             href={showTela?.showTelaId
-              ? `/showtela?showtela=${encodeURIComponent(showTela.showTelaId)}`
-              : `/showtela?workspace=${encodeURIComponent(workspaceId)}`}
+              ? `/showtela?showtela=${encodeURIComponent(showTela.showTelaId)}${proofSuffix}`
+              : `/showtela?workspace=${encodeURIComponent(workspaceId)}${proofSuffix}`}
             className="rounded-full border border-[#D9CDB8] bg-white px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.16em] text-[#5B5145]"
           >
-            Back To Runtime
+            Back To ShowTELA
           </Link>
         </div>
 
         <div className="mt-8 grid gap-6 xl:grid-cols-[1.05fr_1.6fr]">
-          <VenueUploadPanel workspaceId={workspaceId} />
+          <VenueUploadPanel workspaceId={workspaceId} proofMode={proofMode} />
 
           <section className="rounded-[30px] border border-[#DED4C4] bg-white p-6 shadow-[0_18px_40px_rgba(17,17,17,0.05)]">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9A7C46]">Active Rider</p>
             <h2 className="mt-2 text-[24px] font-semibold tracking-[-0.03em] text-[#171411]">{rider.title}</h2>
             <p className="mt-3 text-[14px] leading-[1.65] text-[#6E6A63]">
-              {rider.requirements.length} normalized requirements across {rider.departments.length} departments.
+              {rider.requirements.length} requirements across {rider.departments.length} departments.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               {rider.departments.map((department) => (
