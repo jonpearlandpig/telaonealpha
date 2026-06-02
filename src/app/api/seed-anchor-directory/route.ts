@@ -166,6 +166,11 @@ const CANONICAL_DIRECTORY = `# THE POSITIVE ROCKS
 
 export const dynamic = 'force-dynamic'
 
+
+export async function GET(req: Request) {
+  return POST(req)
+}
+
 export async function POST(req: Request) {
   // Auth: valid session OR seed secret key (for one-time URL triggering)
   const url = new URL(req.url)
