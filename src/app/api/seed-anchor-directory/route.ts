@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createEvidenceChunksFromText, evidenceChunkToArtifact } from '@/lib/showtela/evidenceAuthority'
-import { persistDurableContinuity } from '@/lib/runtime/durableMemory'
+import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
+import { persistDurableContinuity } from '@/lib/runtime/durableMemory'
 
 export const dynamic = 'force-dynamic'
 
@@ -113,7 +114,15 @@ const DIRECTORY = `# EXECUTIVE & TOUR LEADERSHIP
 | IT / Networking | Miles Okada | milesokada@pigpenpositiverocks.com | (615) 555-1305 | Connectivity |`
 
 async function seed() {
+  const db = getSupabaseServerClient()
   const now = new Date().toISOString()
+
+  // Delete all existing directory chunks for clean re-seed
+  await db.from('durable_artifacts')
+    .delete()
+    .eq('workspace_id', SHOWTELA_WORKSPACE_ID)
+    .like('thread_id', 'showtela-runtime-continuity')
+
   const chunks = createEvidenceChunksFromText({
     sourceFile: 'positive_rocks_tour_team_crew_anchor_directory_v1',
     extractedText: DIRECTORY,
@@ -133,10 +142,5 @@ export async function GET() {
 }
 
 export async function POST() {
-  try {
-    const result = await seed()
-    return NextResponse.json(result)
-  } catch (err) {
-    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 })
-  }
+  return GET()
 }
