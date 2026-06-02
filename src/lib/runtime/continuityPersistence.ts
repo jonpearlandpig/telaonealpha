@@ -48,6 +48,7 @@ function toArtifactRecord(row: DurableArtifactRow): ArtifactRecord {
         projects: parsed.projects,
         lineageId: parsed.lineageId ?? row.lineageId,
         artifactGroupId: parsed.artifactGroupId ?? row.artifactGroupId,
+        evidenceChunkIds: parsed.evidenceChunkIds,
         createdAt: parsed.createdAt ?? row.createdAt,
         pinned: parsed.pinned,
         classification: parsed.classification,

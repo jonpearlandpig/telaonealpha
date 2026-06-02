@@ -16,6 +16,7 @@ export type ArtifactRecord = {
   projects?: string[]
   lineageId?: string
   artifactGroupId?: string
+  evidenceChunkIds?: string[]
   createdAt: string
   pinned?: boolean
   classification?: 'runtime_artifact' | 'assistant_message'

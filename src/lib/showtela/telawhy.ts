@@ -48,6 +48,7 @@ export function buildTELAwhyFromContinuityRecord(input: {
   const counts = recordValue(record.metadata.counts)
   const artifactKind = stringValue(record.metadata.artifact_kind)
   const linkedEntities = stringList(record.metadata.linked_entities)
+  const evidenceChunkIds = stringList(record.metadata.evidence_chunk_ids)
   const peopleCount = numberValue(counts.people)
   const operationsCount = numberValue(counts.operations)
   const calendarCount = numberValue(counts.calendar_events)
@@ -76,6 +77,7 @@ export function buildTELAwhyFromContinuityRecord(input: {
       eventId: record.event_id,
       continuityRecordId: record.event_id,
       artifactId: record.artifact_id ?? artifact?.id,
+      evidenceChunkIds: evidenceChunkIds.length > 0 ? evidenceChunkIds : artifact?.evidenceChunkIds,
     },
     sourceArtifact: hasArtifact ? {
       id: record.artifact_id ?? artifact?.id,
@@ -97,6 +99,7 @@ export function buildTELAwhyFromContinuityRecord(input: {
       `Event ID: ${record.event_id}`,
       `Continuity Record ID: ${record.event_id}`,
       record.artifact_id || artifact?.id ? `Artifact ID: ${record.artifact_id ?? artifact?.id}` : undefined,
+      ...((evidenceChunkIds.length > 0 ? evidenceChunkIds : artifact?.evidenceChunkIds ?? []).map((id) => `Evidence Chunk ID: ${id}`)),
       ...(evidence.length > 0 ? evidence : ['LOW PROVENANCE: no source artifact metadata is attached.']),
     ].filter((item): item is string => Boolean(item)),
     lineage: [

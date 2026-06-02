@@ -25,6 +25,8 @@ export default async function HomePage({
   const error = Array.isArray(params.error) ? params.error[0] : params.error
   const createdShowTelaId = Array.isArray(params.showtela) ? params.showtela[0] : params.showtela
   const showTelaCreated = (Array.isArray(params.showtela_created) ? params.showtela_created[0] : params.showtela_created) === '1'
+  const showTelaRenamed = (Array.isArray(params.showtela_renamed) ? params.showtela_renamed[0] : params.showtela_renamed) === '1'
+  const showTelaDeleted = (Array.isArray(params.showtela_deleted) ? params.showtela_deleted[0] : params.showtela_deleted) === '1'
 
   return (
     <BuildShowTelaLauncher
@@ -35,6 +37,8 @@ export default async function HomePage({
       archivedShowTelas={archivedShowTelas}
       createdShowTelaId={createdShowTelaId}
       showTelaCreated={showTelaCreated}
+      showTelaRenamed={showTelaRenamed}
+      showTelaDeleted={showTelaDeleted}
     />
   )
 }

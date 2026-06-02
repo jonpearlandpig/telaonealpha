@@ -1,5 +1,6 @@
 export const SHOWTELA_CREATED_EVENT_TYPE = 'showtela.lifecycle.created'
 export const SHOWTELA_ARCHIVED_EVENT_TYPE = 'showtela.lifecycle.archived'
+export const SHOWTELA_RENAMED_EVENT_TYPE = 'showtela.lifecycle.renamed'
 
 export type ShowTelaCreatedEventRow = {
   id: string
@@ -15,6 +16,14 @@ export type ShowTelaArchivedEventRow = {
   created_at: string
   payload: {
     showTelaId?: string
+    showTelaName?: string
+  } | null
+}
+
+export type ShowTelaRenamedEventRow = {
+  workspace_id: string
+  created_at: string
+  payload: {
     showTelaName?: string
   } | null
 }
@@ -49,9 +58,11 @@ export function buildShowTelaRegistry(
   activityRows: ShowTelaActivityRow[],
   archivedRows: ShowTelaArchivedEventRow[],
   normalizeShowTelaName: (input: string) => string,
+  renamedRows: ShowTelaRenamedEventRow[] = [],
 ): ShowTelaRegistry {
   const lastActivityByWorkspace = new Map<string, string>()
   const archivedAtByWorkspace = new Map<string, string>()
+  const latestNameByWorkspace = new Map<string, string>()
 
   for (const row of activityRows) {
     const existing = lastActivityByWorkspace.get(row.workspace_id)
@@ -67,9 +78,20 @@ export function buildShowTelaRegistry(
     }
   }
 
+  for (const row of renamedRows) {
+    const name = normalizeShowTelaName(String(row.payload?.showTelaName ?? ''))
+    if (!name) continue
+    const existing = latestNameByWorkspace.get(row.workspace_id)
+    const existingTime = renamedRows.find((r) => r.workspace_id === row.workspace_id && r.payload?.showTelaName === existing)?.created_at
+    if (!existing || !existingTime || existingTime < row.created_at) {
+      latestNameByWorkspace.set(row.workspace_id, name)
+    }
+  }
+
   const registry = createdRows
     .map((row): ActiveShowTela | null => {
-      const showTelaName = normalizeShowTelaName(String(row.payload?.showTelaName ?? ''))
+      const baseName = normalizeShowTelaName(String(row.payload?.showTelaName ?? ''))
+      const showTelaName = latestNameByWorkspace.get(row.workspace_id) ?? baseName
       if (!showTelaName) return null
       const archivedAt = archivedAtByWorkspace.get(row.workspace_id)
 
@@ -98,6 +120,7 @@ export function buildActiveShowTelaRegistry(
   createdRows: ShowTelaCreatedEventRow[],
   activityRows: ShowTelaActivityRow[],
   normalizeShowTelaName: (input: string) => string,
+  renamedRows: ShowTelaRenamedEventRow[] = [],
 ): ActiveShowTela[] {
-  return buildShowTelaRegistry(createdRows, activityRows, [], normalizeShowTelaName).active
+  return buildShowTelaRegistry(createdRows, activityRows, [], normalizeShowTelaName, renamedRows).active
 }

@@ -2,7 +2,7 @@ import { ShowTelaRuntime } from '@/components/showtela/ShowTelaRuntime'
 import { notFound } from 'next/navigation'
 import { hydrateRuntime } from '@/lib/runtime/runtimeHydration'
 import { buildShowTelaVMFromHydratedState } from '@/lib/showtela/buildViewModel'
-import { resolveShowTela } from '@/lib/showtela/lifecycle'
+import { listActiveShowTelas, resolveShowTela } from '@/lib/showtela/lifecycle'
 import { SHOWTELA_WORKSPACE_ID } from '@/lib/showtela/runtimeIds'
 import { getSession } from '@/lib/auth'
 
@@ -32,9 +32,10 @@ export default async function ShowTelaHome({
   }
 
   const workspaceId = workspaceParam || showTela?.workspaceId || SHOWTELA_WORKSPACE_ID
-  const [state, session] = await Promise.all([
+  const [state, session, activeShowTelas] = await Promise.all([
     hydrateRuntime(workspaceId),
     getSession(),
+    listActiveShowTelas(),
   ])
 
   const userImage = session?.image ? upgradeGooglePhoto(session.image) : undefined
@@ -74,6 +75,7 @@ export default async function ShowTelaHome({
       showTelaId={showTela?.showTelaId}
       showTelaName={showTela?.showTelaName}
       showTelaCreated={firstQueryValue(params.showtela_created) === '1'}
+      activeShowTelas={activeShowTelas}
     />
   )
 }

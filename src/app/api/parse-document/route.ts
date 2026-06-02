@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getClaudeClient } from '@/lib/ai/claude'
 
 export const runtime = 'nodejs'
 
@@ -36,6 +37,34 @@ export async function POST(req: NextRequest) {
       ext === 'markdown'
     ) {
       text = buffer.toString('utf-8')
+    } else if (mimeType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
+      const client = getClaudeClient()
+      const result = await client.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        temperature: 0,
+        system: 'Extract only visible text from the image. Preserve headings, table rows, pipes, phone numbers, emails, and line breaks. Do not infer, summarize, complete, or add text.',
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: (mimeType || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+                data: buffer.toString('base64'),
+              },
+            },
+            {
+              type: 'text',
+              text: 'OCR this image exactly. Return only extracted text.',
+            },
+          ],
+        }],
+      })
+      text = result.content
+        .map((block) => block.type === 'text' ? block.text : '')
+        .join('\n')
     } else {
       return NextResponse.json({ error: 'Unsupported file type' }, { status: 415 })
     }
@@ -45,6 +74,7 @@ export async function POST(req: NextRequest) {
       charCount: text.trim().length,
       fileName,
       mimeType,
+      extractionStatus: text.trim().length > 0 ? 'extracted' : 'failed',
     })
   } catch (err) {
     console.error('[parse-document] extraction failed:', err)

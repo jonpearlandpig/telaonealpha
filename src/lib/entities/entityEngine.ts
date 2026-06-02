@@ -20,6 +20,7 @@ export type EntityRecord = {
   temporalClusters: string[]
   trustRank?: number
   authoritySource?: AuthoritySource
+  evidenceChunkIds?: string[]
 }
 
 const PATTERNS: Array<{ type: EntityType; regex: RegExp }> = [
