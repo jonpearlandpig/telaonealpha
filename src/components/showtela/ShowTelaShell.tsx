@@ -782,9 +782,11 @@ export function ShowTelaShell({
                   <p className="mt-1 text-[12px] leading-relaxed text-[#6B5D4B]">See what matters today, what may slip, and the next move.</p>
                 </button>
               </div>
-              <a href="/api/auth/signout" className="mt-4 flex items-center justify-between rounded-2xl bg-white px-4 py-3.5 shadow-sm">
-                <p className="text-sm font-medium text-red-500">Sign Out</p>
-              </a>
+              <form action="/api/auth/signout" method="post" className="mt-4">
+                <button type="submit" className="flex w-full items-center justify-between rounded-2xl bg-white px-4 py-3.5 shadow-sm">
+                  <span className="text-sm font-medium text-red-500">Sign Out</span>
+                </button>
+              </form>
             </div>
           )}
 

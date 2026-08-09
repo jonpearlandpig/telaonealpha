@@ -1,25 +1,17 @@
 import { cookies } from 'next/headers'
+import { verifySessionCookie } from './auth-session'
 import { SESSION_COOKIE_NAME } from './auth-config'
-export { getGoogleRedirectUri, SESSION_COOKIE_NAME, shouldUseSecureSessionCookie } from './auth-config'
 
-export interface ShowTelaUser {
-  id: string
-  name: string
-  email: string
-  image: string
-}
+export {
+  createSessionCookie,
+  verifySessionCookie,
+} from './auth-session'
+export type { ShowTelaUser } from './auth-session'
+export { SESSION_COOKIE_NAME } from './auth-config'
 
-export async function getSession(): Promise<ShowTelaUser | null> {
+export async function getSession() {
   const cookieStore = await cookies()
   const session = cookieStore.get(SESSION_COOKIE_NAME)
   if (!session?.value) return null
-  try {
-    return JSON.parse(Buffer.from(session.value, 'base64').toString())
-  } catch {
-    return null
-  }
-}
-
-export function createSessionCookie(user: ShowTelaUser): string {
-  return Buffer.from(JSON.stringify(user)).toString('base64')
+  return verifySessionCookie(session.value)
 }
